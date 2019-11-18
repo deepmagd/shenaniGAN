@@ -1,5 +1,6 @@
 import argparse
-from dataloaders.dataloaders import DATASETS, create_dataloaders
+from dataloaders.dataloaders import create_dataloaders
+from utils.utils import DATASETS
 import sys
 import tensorflow as tf
 from utils.utils import get_default_settings
@@ -20,13 +21,13 @@ def parse_arguments(args_to_parse):
         'name', type=str, help="The name of the model - used for saving and loading."
     )
     general.add_argument(
-        '-d', '--dataset', help="Path to training data.", default=default_settings['dataset'], choices=DATASETS
+        '-d', '--dataset-name', help="Name of the dataset to use during training.", default=default_settings['dataset'], choices=DATASETS
     )
 
     return parser.parse_args(args_to_parse)
 
 def main(args):
-    train_loader, cv_loader, test_loader = create_dataloaders(args.dataset)
+    train_loader, cv_loader, test_loader = create_dataloaders(args)
 
 
 if __name__ == '__main__':
