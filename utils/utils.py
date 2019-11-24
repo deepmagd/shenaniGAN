@@ -1,6 +1,8 @@
+# from ast import eval
 import glob
 import numpy as np
 import os
+import pathlib
 import tensorflow as tf
 import yaml
 
@@ -53,13 +55,13 @@ class BirdsDataset(StackedGANDataset):
     """ Container for the birds dataset properties """
     def __init__(self):
         super().__init__()
-        self.directory = os.path.join('data/CUB_200_2011/CUB_200_2011/images')
+        self.directory = pathlib.Path(os.path.join('data/CUB_200_2011/CUB_200_2011/images'))
         self.classes = np.array(
             [item.name for item in self.directory.glob('*') if os.path.isdir(item.name)]
         )
         # TODO: Insert the dimensions
-        self.width = None
-        self.height = None
+        self.width = 500
+        self.height = 364
         self.get_image_label_pairs()
 
 class FlowersDataset(StackedGANDataset):
@@ -80,7 +82,8 @@ def get_dataset(dataset_name):
     """
     if dataset_name in DATASETS:
         dataset = DATASETS_DICT[dataset_name]
-        return dataset()
+        print(dataset)
+        return eval(dataset)()
     else:
         raise Exception('Invalid dataset name {}.'.format(dataset_name))
 
