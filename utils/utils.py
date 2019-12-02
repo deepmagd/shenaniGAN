@@ -90,3 +90,16 @@ def get_dataset(dataset_name):
 def get_default_settings(settings_file='settings.yml'):
     with open(settings_file) as f:
         return yaml.safe_load(f)
+
+def sample_normal(mean, log_var):
+    """ Use the reparameterization trick to sample a normal distribution.
+        Arguments
+        mean : Tensor
+            Mean of the normal distribution. Shape (batch_size, latent_dim)
+        log_var : Tensor
+            Diagonal log variance of the normal distribution. Shape (batch_size,
+            latent_dim)
+    """
+    std = tf.math.exp(0.5 * log_var)
+    epsilon = tf.random.normal(std)
+    return mean + std * epsilon
