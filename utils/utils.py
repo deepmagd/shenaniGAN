@@ -59,10 +59,13 @@ class BirdsDataset(StackedGANDataset):
         self.classes = np.array(
             [item.name for item in self.directory.glob('*') if os.path.isdir(item.name)]
         )
-        # TODO: Insert the dimensions
         self.width = 500
         self.height = 364
+        self.num_channels = 3
         self.get_image_label_pairs()
+    
+    def get_dims(self):
+        return (self.num_channels, self.height, self.width)
 
 class FlowersDataset(StackedGANDataset):
     """ TODO: Container for the birds dataset properties """

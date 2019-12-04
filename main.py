@@ -1,5 +1,6 @@
 import argparse
 from dataloaders.dataloaders import create_dataloaders
+from models.conditional_gans import StackGAN1
 from models.trainer import Trainer
 import sys
 import tensorflow as tf
@@ -37,12 +38,17 @@ def parse_arguments(args_to_parse):
     return parser.parse_args(args_to_parse)
 
 def main(args):
-    train_loader, _ = create_dataloaders(args)
+    train_loader, val_generator, dataset_dims = create_dataloaders(args)
+
+    # Create the model
+    # TODO: Check and see how many latent dims should be used and inser CLI argument
+    model = StackGAN1(
+        img_size=dataset_dims,
+        num_latent_dims=10
+    )
 
     # NOTE: For now, no model passed to the trainer
-    trainer = Trainer(
-        model=None
-    )
+    trainer = Trainer(model=model)
     trainer(train_loader, num_epochs=args.num_epochs)
 
 if __name__ == '__main__':

@@ -32,4 +32,4 @@ def create_dataloaders(args):
         classes=dataset.classes,
         subset='validation'
     )
-    return train_generator, val_generator
+    return train_generator, val_generator, dataset.get_dims()

@@ -3,7 +3,7 @@ from tqdm import trange
 
 
 class Trainer():
-    def __init__(self, model, optimiser, loss_fn, show_progress_bar=True):
+    def __init__(self, model, show_progress_bar=True):
         """ Initialise the model trainer
             Arguments:
             model: models.ConditionalGAN
@@ -11,8 +11,6 @@ class Trainer():
         """
         self.show_progress_bar = show_progress_bar
         self.model = model
-        self.optimiser = optimiser
-        self.loss_fn = loss_fn
 
     def __call__(self, data_loader, num_epochs):
         """ Trains the model.
@@ -34,22 +32,19 @@ class Trainer():
         )
         with tf.GradientTape() as tape:
             with trange(len(train_loader), **kwargs) as t:
-                for real_images in train_loader:
-                    # TODO: Implement this here
-                    # Just images without text for now
-                    print(real_images)
-
-                    noise = None
+                for real_images, one_hot_labels in train_loader:
+                    # Assuming that batch is the first dimension
+                    # and that we use a normal distribution for noise
+                    batch_size = real_images.shape[0]
+                    noise = tf.random.normal([batch_size, self.model.generator.num_latent_dims])
                     fake_images = self.model.generator(noise)
 
                     real_predictions = self.model.discriminator(real_images)
                     fake_predictions = self.model.discriminator(fake_images)
 
+                    # TODO: Fix bug here
                     generator_loss = self.model.generator.loss(fake_predictions)
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
-
-                    # Loss calculation
-                    loss = None
 
                     # Update gradients
                     generator_gradients = tape.gradient(generator_loss, self.model.trainable_variables)
@@ -62,5 +57,5 @@ class Trainer():
                         zip(discriminator_gradients, self.model.discriminator.trainable_variables)
                     )
                     # Update tqdm
-                    t.set_postfix(loss=loss)
+                    t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
                     t.update()

@@ -16,6 +16,7 @@ class Discriminator(Model):
         self.img_size = img_size
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
+        # TODO: Add layers
 
     def call(self, images):
         pass
