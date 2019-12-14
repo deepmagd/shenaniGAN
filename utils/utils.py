@@ -3,7 +3,9 @@ import glob
 import numpy as np
 import os
 import pathlib
+import tarfile
 import tensorflow as tf
+import urllib.request
 import yaml
 
 
@@ -56,6 +58,8 @@ class BirdsDataset(StackedGANDataset):
     def __init__(self):
         super().__init__()
         self.directory = pathlib.Path(os.path.join('data/CUB_200_2011/CUB_200_2011/images'))
+        if not os.path.isdir(self.directory):
+            download_dataset(dataset='birds')
         self.classes = np.array(
             [item.name for item in self.directory.glob('*') if os.path.isdir(item.name)]
         )
@@ -78,6 +82,26 @@ class XRaysDataset(StackedGANDataset):
     def __init__(self):
         super().__init__()
         raise NotImplementedError
+
+def download_dataset(dataset):
+    if dataset == 'birds':
+        download_cub()
+    elif dataset == 'flowers':
+        raise NotImplementedError
+    elif dataset == 'xrays':
+        raise NotImplementedError
+    else:
+        raise NotImplementedError
+
+def download_cub():
+    """ Download the birds dataset (CUB-200-2011) """
+    BIRDS_DATASET_URL = "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
+    print('Downloading CUB dataset from: {}'.format(BIRDS_DATASET_URL))
+    download_location = pathlib.Path('data/CUB_200_2011.tgz')
+    urllib.request.urlretrieve(BIRDS_DATASET_URL, download_location)
+    tar = tarfile.open(download_location, "r:gz")
+    tar.extractall("data/CUB_200_2011")
+    os.remove(download_location)
 
 def get_dataset(dataset_name):
     """ Get the dataset object which contains information

@@ -43,6 +43,7 @@ class Trainer():
                     fake_predictions = self.model.discriminator(fake_images)
 
                     # TODO: Fix bug here
+                    raise Exception('Not yet implemented')
                     generator_loss = self.model.generator.loss(fake_predictions)
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
 
