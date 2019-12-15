@@ -87,7 +87,7 @@ def download_dataset(dataset):
     if dataset == 'birds':
         download_cub()
     elif dataset == 'flowers':
-        raise NotImplementedError
+        download_flowers()
     elif dataset == 'xrays':
         raise NotImplementedError
     else:
@@ -102,6 +102,25 @@ def download_cub():
     tar = tarfile.open(download_location, "r:gz")
     tar.extractall("data/CUB_200_2011")
     os.remove(download_location)
+
+def download_flowers():
+    """ Download the flowers dataset """
+    FLOWERS_DATASET_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
+    print('Downloading the flowers dataset from: {}'.format(FLOWERS_DATASET_URL))
+
+    flowers_download_loc = pathlib.Path('data/flowers/flowers.tgz')
+    urllib.request.urlretrieve(FLOWERS_DATASET_URL, flowers_download_loc)
+    tar = tarfile.open(flowers_download_loc, "r:gz")
+    tar.extractall("data/flowers/images")
+    os.remove(flowers_download_loc)
+
+    DATA_SPLITS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
+    data_splits_download_loc = pathlib.Path('data/flowers/setid.mat')
+    urllib.request.urlretrieve(DATA_SPLITS_URL, data_splits_download_loc)
+
+    IMAGE_LABELS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
+    image_labels_download_loc = pathlib.Path('data/flowers/imagelabels.mat')
+    urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
 
 def get_dataset(dataset_name):
     """ Get the dataset object which contains information
