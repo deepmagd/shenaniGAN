@@ -1,13 +1,15 @@
 import tensorflow as tf
 from tensorflow.keras import Model
+from tensorflow.keras.layers import Conv2D, Dense, Flatten
 
 
 class Discriminator(Model):
     """ The definition for a network which
         classifies inputs as fake or genuine.
     """
-    def __init__(self, img_size):
+    def __init__(self, img_size, kernel_size, num_filters, num_channels=3):
         """ Initialise a Generator instance.
+            TODO: Deal with this parameters and make it more logical
                 Arguments:
                 img_size : tuple of ints
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
@@ -16,7 +18,12 @@ class Discriminator(Model):
         self.img_size = img_size
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
-        # TODO: Add layers
+        # TODO: Add the correct layers and check this (untested)
+        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, activation='relu')
+        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu')
+        self.flatten = Flatten()
+        self.dense1 = Dense(units=32, activation='relu')
+        self.dense2 = Dense(units=1, activation='sigmoid')
 
     def call(self, images):
         pass

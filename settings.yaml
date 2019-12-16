@@ -2,3 +2,5 @@ dataset: 'birds'
 seed: 1234
 num_epochs: 2
 batch_size: 8
+kernel_size: 4
+num_filters: 64

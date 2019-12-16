@@ -1,25 +1,38 @@
 import tensorflow as tf
 from tensorflow.keras import Model
+from tensorflow.keras.layers import Conv2D, Dense, UpSampling2D, Reshape
 
 
 class Generator(Model):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
-    def __init__(self, img_size, num_latent_dims):
+    def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
+                 reshape_dims, output_channels=3):
         """ Initialise a Generator instance.
+            TODO: Deal with this parameters and make it more logical
                 Arguments:
                 img_size : tuple of ints
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
                 num_latent_dims : int
                     Dimensionality of latent input.
+                kernel_size : tuple
+                    (height, width)
+                reshape_dims : tuple or list
+                    [7, 7, 128]
+                output_channels : int
+                    Depending on whether the image is RGB or grey scale
         """
         super().__init__()
         self.img_size = img_size
         self.num_latent_dims = num_latent_dims
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
-        # TODO: Add layers
+        # TODO: Add correct layers and check this (untested)
+        self.reshape_layer = Reshape(reshape_dims)
+        self.dense1 = Dense(units=128, activation='relu')
+        self.conv1 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu')
+        self.output = Conv2D(filters=output_channels, kernel_size=kernel_size, activation='tanh', padding="same")
 
     def call(self, noise):
         pass

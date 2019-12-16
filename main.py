@@ -35,7 +35,18 @@ def parse_arguments(args_to_parse):
         '-b', '--batch-size', type=int, default=default_settings['batch_size'],
         help='The number of images to use in a batch during training'
     )
-    return parser.parse_args(args_to_parse)
+    training.add_argument(
+        '-k', '--kernel-size', type=int, default=default_settings['kernel_size'],
+        help='Integer which indicates the size of the kernel. \
+              E.g. --kernel-size = 4 results in a (4, 4) kernel'
+    )
+    training.add_argument(
+        '-f', '--num-filters', type=int, default=default_settings['num_filters'],
+        help='The number of filters to stack.'
+    )
+    args = parser.parse_args(args_to_parse)
+    args.kernel_size = (args.kernel_size, args.kernel_size)
+    return args
 
 def main(args):
     train_loader, val_generator, dataset_dims = create_dataloaders(args)
@@ -44,7 +55,11 @@ def main(args):
     # TODO: Check and see how many latent dims should be used and inser CLI argument
     model = StackGAN1(
         img_size=dataset_dims,
-        num_latent_dims=10
+        num_latent_dims=10,
+        kernel_size=args.kernel_size,
+        num_filters=args.num_filters,
+        reshape_dims=[1, 1, 1],
+        num_image_channels=dataset_dims[0]
     )
 
     # NOTE: For now, no model passed to the trainer
