@@ -149,3 +149,12 @@ def sample_normal(mean, log_var):
     std = tf.math.exp(0.5 * log_var)
     epsilon = tf.random.normal(std)
     return mean + std * epsilon
+
+def product_list(num_list):
+    """ A helper function to simply find the
+        product of all elements in the list.
+    """
+    product = 1
+    for dim in num_list:
+        product *= dim
+    return product
