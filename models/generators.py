@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Conv2D, Dense, UpSampling2D, Reshape
+from utils.utils import product_list
 
 
 class Generator(Model):
@@ -19,7 +20,7 @@ class Generator(Model):
                 kernel_size : tuple
                     (height, width)
                 reshape_dims : tuple or list
-                    [7, 7, 128]
+                    [91, 125, 128]
                 output_channels : int
                     Depending on whether the image is RGB or grey scale
         """
@@ -28,14 +29,22 @@ class Generator(Model):
         self.num_latent_dims = num_latent_dims
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
-        # TODO: Add correct layers and check this (untested)
+        # TODO: Add correct layers as given by the paper
+        self.dense1 = Dense(units=product_list(reshape_dims), activation='relu')
         self.reshape_layer = Reshape(reshape_dims)
-        self.dense1 = Dense(units=128, activation='relu')
-        self.conv1 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu')
-        self.output = Conv2D(filters=output_channels, kernel_size=kernel_size, activation='tanh', padding="same")
+        self.upsample1 = UpSampling2D()
+        self.conv1 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu', padding='same')
+        self.upsample2 = UpSampling2D()
+        self.conv2 = Conv2D(filters=output_channels, kernel_size=kernel_size, activation='tanh', padding='same')
 
     def call(self, noise):
-        pass
+        x = self.dense1(noise)
+        x = self.reshape_layer(x)
+        x = self.upsample1(x)
+        x = self.conv1(x)
+        x = self.upsample2(x)
+        x = self.conv2(x)
+        return x
 
     def loss(self, predictions_on_fake):
         """ Only calculate the loss based on the discriminator

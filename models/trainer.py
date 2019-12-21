@@ -30,7 +30,7 @@ class Trainer():
                       leave=False,
                       disable=not self.show_progress_bar
         )
-        with tf.GradientTape() as tape:
+        with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
             with trange(len(train_loader), **kwargs) as t:
                 for real_images, one_hot_labels in train_loader:
                     # Assuming that batch is the first dimension
@@ -39,17 +39,25 @@ class Trainer():
                     noise = tf.random.normal([batch_size, self.model.generator.num_latent_dims])
                     fake_images = self.model.generator(noise)
 
+                    assert fake_images.shape == real_images.shape, \
+                        'Real ({}) and fakes ({}) images must have the same dimensions'.format(
+                            real_images.shape, fake_images.shape
+                        )
+
                     real_predictions = self.model.discriminator(real_images)
                     fake_predictions = self.model.discriminator(fake_images)
 
-                    # TODO: Fix bug here
-                    raise Exception('Not yet implemented')
+                    assert real_predictions.shape == fake_predictions.shape, \
+                        'Predictions for real ({}) and fakes ({}) images must have the same dimensions'.format(
+                            real_predictions.shape, fake_predictions.shape
+                        )
+
                     generator_loss = self.model.generator.loss(fake_predictions)
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
 
                     # Update gradients
-                    generator_gradients = tape.gradient(generator_loss, self.model.trainable_variables)
-                    discriminator_gradients = tape.gradient(discriminator_loss, self.model.trainable_variables)
+                    generator_gradients = generator_tape.gradient(generator_loss, self.model.trainable_variables)
+                    discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.trainable_variables)
 
                     self.model.generator.optimiser.apply_gradients(
                         zip(generator_gradients, self.model.generator.trainable_variables)

@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Conv2D, Dense, Flatten
+from tensorflow.keras.layers import Conv2D, Dense, Flatten, LeakyReLU
 
 
 class Discriminator(Model):
@@ -18,15 +18,24 @@ class Discriminator(Model):
         self.img_size = img_size
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
-        # TODO: Add the correct layers and check this (untested)
-        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, activation='relu')
-        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu')
+        # TODO: Add the correct layers as per the paper
+        self.leaky_relu_1 = LeakyReLU()
+        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, activation='relu', padding='same')
+        self.leaky_relu_2 = LeakyReLU()
+        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu', padding="same")
         self.flatten = Flatten()
         self.dense1 = Dense(units=32, activation='relu')
         self.dense2 = Dense(units=1, activation='sigmoid')
 
     def call(self, images):
-        pass
+        x = self.leaky_relu_1(images)
+        x = self.conv1(x)
+        x = self.leaky_relu_2(x)
+        x = self.conv2(x)
+        x = self.flatten(x)
+        x = self.dense1(x)
+        x = self.dense2(x)
+        return x
 
     def loss(self, predictions_on_real, predictions_on_fake):
         """ Calculate the loss for the predictions made on real and fake images.

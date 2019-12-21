@@ -55,10 +55,10 @@ def main(args):
     # TODO: Check and see how many latent dims should be used and inser CLI argument
     model = StackGAN1(
         img_size=dataset_dims,
-        num_latent_dims=10,
+        num_latent_dims=100,
         kernel_size=args.kernel_size,
         num_filters=args.num_filters,
-        reshape_dims=[1, 1, 1],
+        reshape_dims=[91, 125, args.num_filters],
         num_image_channels=dataset_dims[0]
     )
 
