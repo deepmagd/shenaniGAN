@@ -106,3 +106,6 @@ venv.bak/
 # Data and trained models
 data/
 results/
+
+# Ignore vscode preferences
+.vscode
