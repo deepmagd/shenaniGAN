@@ -1,4 +1,3 @@
-# from ast import eval
 import glob
 import numpy as np
 import os
@@ -158,3 +157,27 @@ def product_list(num_list):
     for dim in num_list:
         product *= dim
     return product
+
+def mkdir(directory):
+    """ Create directory if it does not exist. """
+    if not os.path.exists(directory):
+        try:
+            os.makedirs(directory)
+        except OSError:
+            print("Directory {} already exists.".format(directory))
+
+def save_options(options, save_dir):
+    """ Save all options to file.
+        Arguments:
+            options: An object from argparse
+            save_dir: String location to save the options
+    """
+    opt_list = []
+    for option in vars(options):
+        line = "".ljust(4) + "--{0:20}{1}".format(option, getattr(options, option))
+        opt_list.append(line)
+
+    mkdir(save_dir)
+    opts_file_path = os.path.join(save_dir, 'opts.txt')
+    with open(opts_file_path, 'w') as args_file:
+            args_file.write('\n'.join(opt_list))

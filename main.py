@@ -2,12 +2,14 @@ import argparse
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
 from models.trainer import Trainer
+import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings
+from utils.utils import DATASETS, get_default_settings, save_options
 
 
 SETTINGS_FILE = 'settings.yaml'
+RESULTS_ROOT = 'results'
 
 
 def parse_arguments(args_to_parse):
@@ -49,6 +51,10 @@ def parse_arguments(args_to_parse):
     return args
 
 def main(args):
+    # Save options:
+    results_dir = os.path.join(RESULTS_ROOT, args.name)
+    save_options(options=args, save_dir=results_dir)
+
     train_loader, val_generator, dataset_dims = create_dataloaders(args)
 
     # Create the model
@@ -63,7 +69,10 @@ def main(args):
     )
 
     # NOTE: For now, no model passed to the trainer
-    trainer = Trainer(model=model)
+    trainer = Trainer(
+        model=model,
+        save_location=results_dir
+    )
     trainer(train_loader, num_epochs=args.num_epochs)
 
 if __name__ == '__main__':
