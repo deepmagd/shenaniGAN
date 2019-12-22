@@ -30,9 +30,9 @@ class Trainer():
                       leave=False,
                       disable=not self.show_progress_bar
         )
-        with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
-            with trange(len(train_loader), **kwargs) as t:
-                for real_images, one_hot_labels in train_loader:
+        with trange(len(train_loader), **kwargs) as t:
+            for real_images, one_hot_labels in train_loader:
+                with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     # Assuming that batch is the first dimension
                     # and that we use a normal distribution for noise
                     batch_size = real_images.shape[0]
@@ -56,8 +56,8 @@ class Trainer():
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
 
                     # Update gradients
-                    generator_gradients = generator_tape.gradient(generator_loss, self.model.trainable_variables)
-                    discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.trainable_variables)
+                    generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
+                    discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.discriminator.trainable_variables)
 
                     self.model.generator.optimiser.apply_gradients(
                         zip(generator_gradients, self.model.generator.trainable_variables)
