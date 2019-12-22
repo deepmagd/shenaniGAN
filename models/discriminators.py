@@ -17,7 +17,7 @@ class Discriminator(Model):
         super().__init__()
         self.img_size = img_size
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-        self.optimizer = tf.keras.optimizers.Adam(1e-4)
+        self.optimiser = tf.keras.optimizers.Adam(1e-4)
         # TODO: Add the correct layers as per the paper
         self.leaky_relu_1 = LeakyReLU()
         self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, activation='relu', padding='same')

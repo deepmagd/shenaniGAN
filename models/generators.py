@@ -28,7 +28,7 @@ class Generator(Model):
         self.img_size = img_size
         self.num_latent_dims = num_latent_dims
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-        self.optimizer = tf.keras.optimizers.Adam(1e-4)
+        self.optimiser = tf.keras.optimizers.Adam(1e-4)
         # TODO: Add correct layers as given by the paper
         self.dense1 = Dense(units=product_list(reshape_dims), activation='relu')
         self.reshape_layer = Reshape(reshape_dims)
