@@ -76,5 +76,4 @@ class Trainer():
                     t.update()
 
     def save_model(self):
-        model_location = os.path.join(self.save_dir, 'model.h5')
-        raise NotImplementedError
+        tf.saved_model.save(self.model, self.save_dir)

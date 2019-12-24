@@ -5,7 +5,7 @@ from models.trainer import Trainer
 import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings, save_options
+from utils.utils import DATASETS, get_default_settings, save_options, save_summary
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -67,6 +67,7 @@ def main(args):
         reshape_dims=[91, 125, args.num_filters],
         num_image_channels=dataset_dims[0]
     )
+    save_summary(model, save_dir=results_dir)
 
     # NOTE: For now, no model passed to the trainer
     trainer = Trainer(
