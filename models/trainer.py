@@ -32,13 +32,13 @@ class Trainer():
         )
         with trange(len(train_loader), **kwargs) as t:
             for real_images, one_hot_labels in train_loader:
-                with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     # Assuming that batch is the first dimension
                     # and that we use a normal distribution for noise
-                    batch_size = real_images.shape[0]
-                    noise = tf.random.normal([batch_size, self.model.generator.num_latent_dims])
-                    fake_images = self.model.generator(noise)
+                batch_size = real_images.shape[0]
+                noise = tf.random.normal([batch_size, self.model.generator.num_latent_dims])
 
+                with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
+                    fake_images = self.model.generator(noise)
                     assert fake_images.shape == real_images.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
                             real_images.shape, fake_images.shape
@@ -55,16 +55,16 @@ class Trainer():
                     generator_loss = self.model.generator.loss(fake_predictions)
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
 
-                    # Update gradients
-                    generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
-                    discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.discriminator.trainable_variables)
+                # Update gradients
+                generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
+                discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.discriminator.trainable_variables)
 
-                    self.model.generator.optimiser.apply_gradients(
-                        zip(generator_gradients, self.model.generator.trainable_variables)
-                    )
-                    self.model.discriminator.optimiser.apply_gradients(
-                        zip(discriminator_gradients, self.model.discriminator.trainable_variables)
-                    )
-                    # Update tqdm
-                    t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
-                    t.update()
+                self.model.generator.optimiser.apply_gradients(
+                    zip(generator_gradients, self.model.generator.trainable_variables)
+                )
+                self.model.discriminator.optimiser.apply_gradients(
+                    zip(discriminator_gradients, self.model.discriminator.trainable_variables)
+                )
+                # Update tqdm
+                t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
+                t.update()
