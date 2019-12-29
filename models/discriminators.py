@@ -28,6 +28,7 @@ class Discriminator(Model):
         self.dense1 = Dense(units=32, activation='relu')
         self.dense2 = Dense(units=1, activation='sigmoid')
 
+    @tf.function
     def call(self, images):
         x = self.leaky_relu_1(images)
         x = self.conv1(x)

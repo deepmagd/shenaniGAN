@@ -64,7 +64,7 @@ def main(args):
     # Create the model
     # TODO: Check and see how many latent dims should be used and insert CLI argument
     if args.use_pretrained:
-        model = tf.keras.models.load_model(results_dir)
+        model = tf.saved_model.load(results_dir)
     else:
         model = StackGAN1(
             img_size=dataset_dims,

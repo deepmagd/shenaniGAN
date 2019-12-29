@@ -36,6 +36,7 @@ class Generator(Model):
         self.upsample2 = UpSampling2D()
         self.conv2 = Conv2D(filters=num_output_channels, kernel_size=kernel_size, activation='tanh', padding='same')
 
+    @tf.function
     def call(self, noise):
         x = self.dense1(noise)
         x = self.reshape_layer(x)
