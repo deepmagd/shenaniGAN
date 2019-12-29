@@ -9,7 +9,7 @@ class Generator(Model):
         fabricates images from a noisy distribution.
     """
     def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
-                 reshape_dims, output_channels=3):
+                 reshape_dims):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -21,11 +21,10 @@ class Generator(Model):
                     (height, width)
                 reshape_dims : tuple or list
                     [91, 125, 128]
-                output_channels : int
-                    Depending on whether the image is RGB or grey scale
         """
         super().__init__()
         self.img_size = img_size
+        num_output_channels = self.img_size[0]
         self.num_latent_dims = num_latent_dims
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimiser = tf.keras.optimizers.Adam(1e-4)
@@ -35,7 +34,7 @@ class Generator(Model):
         self.upsample1 = UpSampling2D()
         self.conv1 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu', padding='same')
         self.upsample2 = UpSampling2D()
-        self.conv2 = Conv2D(filters=output_channels, kernel_size=kernel_size, activation='tanh', padding='same')
+        self.conv2 = Conv2D(filters=num_output_channels, kernel_size=kernel_size, activation='tanh', padding='same')
 
     def call(self, noise):
         x = self.dense1(noise)

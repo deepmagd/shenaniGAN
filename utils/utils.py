@@ -181,8 +181,3 @@ def save_options(options, save_dir):
     opts_file_path = os.path.join(save_dir, 'opts.txt')
     with open(opts_file_path, 'w') as args_file:
             args_file.write('\n'.join(opt_list))
-
-def save_summary(model, save_dir):
-    """ Save the model summary to file """
-    with open(os.path.join(save_dir, 'model-summary.txt'), 'w') as summary_file:
-        model.summary(print_fn=lambda x: summary_file.write('{}\n'.format(x)))
