@@ -3,14 +3,19 @@ from tqdm import trange
 
 
 class Trainer():
-    def __init__(self, model, show_progress_bar=True):
+    def __init__(self, model, save_location,
+                 show_progress_bar=True):
         """ Initialise the model trainer
             Arguments:
             model: models.ConditionalGAN
                 The model to train
+            save_location: str
+                The directory in which to save all
+                results from training the model.
         """
         self.show_progress_bar = show_progress_bar
         self.model = model
+        self.save_dir = save_location
 
     def __call__(self, data_loader, num_epochs):
         """ Trains the model.
@@ -22,6 +27,7 @@ class Trainer():
         """
         for epoch_num in range(num_epochs):
             self.train_epoch(data_loader, epoch_num)
+            self.save_model()
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -32,8 +38,8 @@ class Trainer():
         )
         with trange(len(train_loader), **kwargs) as t:
             for real_images, one_hot_labels in train_loader:
-                    # Assuming that batch is the first dimension
-                    # and that we use a normal distribution for noise
+                # Assuming that batch is the first dimension
+                # and that we use a normal distribution for noise
                 batch_size = real_images.shape[0]
                 noise = tf.random.normal([batch_size, self.model.generator.num_latent_dims])
 
@@ -68,3 +74,6 @@ class Trainer():
                 # Update tqdm
                 t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
                 t.update()
+
+    def save_model(self):
+        tf.saved_model.save(self.model, self.save_dir)

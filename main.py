@@ -2,12 +2,14 @@ import argparse
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
 from models.trainer import Trainer
+import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings
+from utils.utils import DATASETS, get_default_settings, save_options
 
 
 SETTINGS_FILE = 'settings.yaml'
+RESULTS_ROOT = 'results'
 
 
 def parse_arguments(args_to_parse):
@@ -27,6 +29,10 @@ def parse_arguments(args_to_parse):
     )
 
     training = parser.add_argument_group('Training settings')
+    training.add_argument(
+        '--use-pretrained', action='store_true', default=False,
+        help='Load a pretrained model for inference'
+    )
     training.add_argument(
         '-e', '--num-epochs', type=int, default=default_settings['num_epochs'],
         help='Maximum number of epochs to run for.'
@@ -49,22 +55,32 @@ def parse_arguments(args_to_parse):
     return args
 
 def main(args):
+    # Save options:
+    results_dir = os.path.join(RESULTS_ROOT, args.name)
+    save_options(options=args, save_dir=results_dir)
+
     train_loader, val_generator, dataset_dims = create_dataloaders(args)
 
     # Create the model
-    # TODO: Check and see how many latent dims should be used and inser CLI argument
-    model = StackGAN1(
-        img_size=dataset_dims,
-        num_latent_dims=100,
-        kernel_size=args.kernel_size,
-        num_filters=args.num_filters,
-        reshape_dims=[91, 125, args.num_filters],
-        num_image_channels=dataset_dims[0]
-    )
+    # TODO: Check and see how many latent dims should be used and insert CLI argument
+    if args.use_pretrained:
+        model = tf.saved_model.load(results_dir)
+    else:
+        model = StackGAN1(
+            img_size=dataset_dims,
+            num_latent_dims=100,
+            kernel_size=args.kernel_size,
+            num_filters=args.num_filters,
+            reshape_dims=[91, 125, args.num_filters]
+        )
 
-    # NOTE: For now, no model passed to the trainer
-    trainer = Trainer(model=model)
-    trainer(train_loader, num_epochs=args.num_epochs)
+        # NOTE: For now, no model passed to the trainer
+        trainer = Trainer(
+            model=model,
+            save_location=results_dir
+        )
+        trainer(train_loader, num_epochs=args.num_epochs)
+
 
 if __name__ == '__main__':
     args = parse_arguments(sys.argv[1:])
