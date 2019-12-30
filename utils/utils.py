@@ -1,4 +1,5 @@
 import glob
+import json
 import numpy as np
 import os
 import pathlib
@@ -166,17 +167,15 @@ def mkdir(directory):
         print("Directory {} already exists.".format(directory))
 
 def save_options(options, save_dir):
-    """ Save all options to file.
+    """ Save all options to JSON file.
         Arguments:
             options: An object from argparse
             save_dir: String location to save the options
     """
-    opt_list = []
+    opt_dict = {}
     for option in vars(options):
-        line = "".ljust(4) + "--{0:20}{1}".format(option, getattr(options, option))
-        opt_list.append(line)
+        opt_dict[option] = getattr(options, option)
 
-    mkdir(save_dir)
-    opts_file_path = os.path.join(save_dir, 'opts.txt')
-    with open(opts_file_path, 'w') as args_file:
-            args_file.write('\n'.join(opt_list))
+    opts_file_path = os.path.join(save_dir, 'opts.json')
+    with open(opts_file_path, 'w') as opt_file:
+        json.dump(opt_dict, opt_file)
