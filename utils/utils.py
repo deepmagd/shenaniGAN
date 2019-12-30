@@ -160,11 +160,10 @@ def product_list(num_list):
 
 def mkdir(directory):
     """ Create directory if it does not exist. """
-    if not os.path.exists(directory):
-        try:
-            os.makedirs(directory)
-        except OSError:
-            print("Directory {} already exists.".format(directory))
+    try:
+        os.makedirs(directory)
+    except OSError:
+        print("Directory {} already exists.".format(directory))
 
 def save_options(options, save_dir):
     """ Save all options to file.
