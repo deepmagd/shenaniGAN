@@ -52,7 +52,7 @@ class ConditionalGAN(Model):
         """ Given a list of images, return the prediction
             for whether it is fake or real.
             Arguments:
-                images: list of images (and later image & text pairs)
+                images: list of images (TODO: later add image & text pairs)
         """
         predictions = []
         for image in images:
