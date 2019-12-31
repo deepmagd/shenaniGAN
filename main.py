@@ -73,6 +73,12 @@ def parse_arguments(args_to_parse):
         '-c', '--images-to-classify', type=int, default=default_settings['num_images_to_classify'],
         help='The number of images to classify and visualise.'
     )
+    training.add_argument(
+        '-s', '--target-size', type=int, default=default_settings['target_size'],
+        help='The target dimension for the training data. \
+              E.g. --target-size = 256 results in a (256, 256) image'
+    )
+
     args = parser.parse_args(args_to_parse)
     args.kernel_size = (args.kernel_size, args.kernel_size)
     return args
@@ -95,7 +101,8 @@ def main(args):
             num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
-            reshape_dims=[91, 125, args.num_filters]
+            reshape_dims=[args.target_size//4, args.target_size//4, args.num_filters] # NOTE divide by 4 based on 2 upsample layers in generator, will need to adjust this number
+                                                                                      # based on the number of layers
         )
 
         trainer_class = get_trainer(args.dataset_name)
