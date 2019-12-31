@@ -74,6 +74,7 @@ class Trainer():
                 # Update tqdm
                 t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
                 t.update()
+                break
 
     def save_model(self):
         tf.saved_model.save(self.model, self.save_dir)

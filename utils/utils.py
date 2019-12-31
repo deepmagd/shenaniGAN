@@ -191,17 +191,17 @@ def sample_real_images(num_images, dataset_name):
                 The directory where the images are saved to disk
     """
     dataset = get_dataset(dataset_name)
-    sampled_image_paths = sample_image_paths(dataset.directory)
-    sampled_images = get_images_from_paths(image_paths, dataset)
+    sampled_image_paths = sample_image_paths(dataset.directory, num_images)
+    sampled_images = get_images_from_paths(sampled_image_paths, dataset)
     return sampled_images
 
-def sample_image_paths(data_dir):
+def sample_image_paths(data_dir, num_paths):
     """ Randomly sample image paths from the provided data directory """
     for root, dirs, names in os.walk(data_dir):
         image_paths = [os.path.join(root, name) for name in names]
 
     sampled_image_paths = []
-    for _ in range(num_images):
+    for _ in range(num_paths):
         sample_idx = randint(0, len(image_paths) - 1)
         sampled_image_paths.append(image_paths[sample_idx])
     return sampled_image_paths
@@ -215,5 +215,8 @@ def get_images_from_paths(sampled_image_paths, dataset):
         image = tf.io.read_file(image_path)
         image = tf.image.decode_jpeg(image, channels=NUM_COLOUR_CHANNELS)
         image = tf.image.convert_image_dtype(image, tf.float32)
-        images.append(tf.image.resize(image, [dataset.width, dataset.height]))
+        # NOTE: Really not sure why the height and the width need to be
+        #       this way around here but above they are reversed
+        image = tf.image.resize(image, [dataset.height, dataset.width])
+        images.append(tf.expand_dims(image, axis=0))
     return images

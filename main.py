@@ -6,7 +6,7 @@ from models.trainer import Trainer
 import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings, save_options
+from utils.utils import DATASETS, get_default_settings, save_options, sample_real_images
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -95,6 +95,7 @@ def main(args):
         trainer(train_loader, num_epochs=args.num_epochs)
 
     if args.visualise:
+        # TODO: Check if the model is in eval mode
         # Visualise fake images
         fake_images = model.generate_images(num_images=args.images_to_generate)
 
@@ -103,8 +104,10 @@ def main(args):
         num_fakes_to_generate = floor(num_images_to_classify / 2)
         num_real_images = num_images_to_classify - num_fakes_to_generate
 
-        images = sample_real_images(num_images=num_real_images, dataset_name=args.dataset_name)
-        images.extend(model.generate_images(num_images=num_fakes_to_generate))
+        real_images = sample_real_images(num_images=num_real_images, dataset_name=args.dataset_name)
+        fake_images = model.generate_images(num_images=num_fakes_to_generate)
+
+        images = real_images + fake_images
         predictions = model.classify_images(images)
 
 
