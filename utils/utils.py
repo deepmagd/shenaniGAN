@@ -3,6 +3,7 @@ import json
 import numpy as np
 import os
 import pathlib
+from random import randint
 import tarfile
 import tensorflow as tf
 import urllib.request
@@ -179,3 +180,40 @@ def save_options(options, save_dir):
     opts_file_path = os.path.join(save_dir, 'opts.json')
     with open(opts_file_path, 'w') as opt_file:
         json.dump(opt_dict, opt_file)
+
+def sample_real_images(num_images, dataset_name):
+    """ Randomly sample images (with replacement) from all
+        available images in the data directory.
+        Arguments:
+            num_images: int
+                The number of images to sample from the dataset
+            data_dir: str
+                The directory where the images are saved to disk
+    """
+    dataset = get_dataset(dataset_name)
+    sampled_image_paths = sample_image_paths(dataset.directory)
+    sampled_images = get_images_from_paths(image_paths, dataset)
+    return sampled_images
+
+def sample_image_paths(data_dir):
+    """ Randomly sample image paths from the provided data directory """
+    for root, dirs, names in os.walk(data_dir):
+        image_paths = [os.path.join(root, name) for name in names]
+
+    sampled_image_paths = []
+    for _ in range(num_images):
+        sample_idx = randint(0, len(image_paths) - 1)
+        sampled_image_paths.append(image_paths[sample_idx])
+    return sampled_image_paths
+
+def get_images_from_paths(sampled_image_paths, dataset):
+    """ Given a list of paths to images, and the dataset object
+        to which they belong, load all images into a list.
+    """
+    images = []
+    for image_path in sampled_image_paths:
+        image = tf.io.read_file(image_path)
+        image = tf.image.decode_jpeg(image, channels=NUM_COLOUR_CHANNELS)
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        images.append(tf.image.resize(image, [dataset.width, dataset.height]))
+    return images
