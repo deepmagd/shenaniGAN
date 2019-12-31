@@ -1,5 +1,6 @@
 import glob
 import json
+from matplotlib import pyplot as plt
 import numpy as np
 import os
 import pathlib
@@ -220,3 +221,13 @@ def get_images_from_paths(sampled_image_paths, dataset):
         image = tf.image.resize(image, [dataset.height, dataset.width])
         images.append(tf.expand_dims(image, axis=0))
     return images
+
+def show_image_list(image_tensor_list, save_dir, name='fake-images.png'):
+    """ Visualise and save the tensor image list to file """
+    plt.figure(figsize=(10, 10))
+    for idx, image_tensor in enumerate(image_tensor_list):
+        image_tensor = image_tensor
+        x = plt.subplot(5, 5, idx + 1)
+        plt.imshow(tf.squeeze(image_tensor, axis=0))
+        plt.axis('off')
+    plt.savefig(os.path.join(save_dir, name))
