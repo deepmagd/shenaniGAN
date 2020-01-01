@@ -1,11 +1,12 @@
 import argparse
 from dataloaders.dataloaders import create_dataloaders
+from math import floor
 from models.conditional_gans import StackGAN1
 from models.trainer import Trainer
 import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings, save_options
+from utils.utils import DATASETS, get_default_settings, save_options, sample_real_images, show_image_list
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -50,6 +51,19 @@ def parse_arguments(args_to_parse):
         '-f', '--num-filters', type=int, default=default_settings['num_filters'],
         help='The number of filters to stack.'
     )
+    visualisation = parser.add_argument_group('Visualisation settings')
+    visualisation.add_argument(
+        '--visualise', action='store_true', default=False,
+        help='Run visualisations after loading / training the model'
+    )
+    visualisation.add_argument(
+        '-i', '--images-to-generate', type=int, default=default_settings['num_images_to_generate'],
+        help='The number of images to generate and visualise.'
+    )
+    visualisation.add_argument(
+        '-c', '--images-to-classify', type=int, default=default_settings['num_images_to_classify'],
+        help='The number of images to classify and visualise.'
+    )
     args = parser.parse_args(args_to_parse)
     args.kernel_size = (args.kernel_size, args.kernel_size)
     return args
@@ -74,12 +88,30 @@ def main(args):
             reshape_dims=[91, 125, args.num_filters]
         )
 
-        # NOTE: For now, no model passed to the trainer
         trainer = Trainer(
             model=model,
             save_location=results_dir
         )
         trainer(train_loader, num_epochs=args.num_epochs)
+
+    if args.visualise:
+        # TODO: Check if the model is in eval mode
+        # Visualise fake images
+        fake_images = model.generate_images(num_images=args.images_to_generate)
+        show_image_list(fake_images, save_dir=results_dir)
+
+        # Classify images
+        num_images_to_classify = args.images_to_classify
+        num_fakes_to_generate = floor(num_images_to_classify / 2)
+        num_real_images = num_images_to_classify - num_fakes_to_generate
+
+        real_images = sample_real_images(num_images=num_real_images, dataset_name=args.dataset_name)
+        fake_images = model.generate_images(num_images=num_fakes_to_generate)
+
+        images = real_images + fake_images
+        predictions = model.classify_images(images)
+        print('Predictions: {}'.format([prediction.numpy() for prediction in predictions]))
+        print('The first {} are real, while the lst {} are fake'.format(len(real_images), len(fake_images)))
 
 
 if __name__ == '__main__':

@@ -1,8 +1,10 @@
 import glob
 import json
+from matplotlib import pyplot as plt
 import numpy as np
 import os
 import pathlib
+from random import randint
 import tarfile
 import tensorflow as tf
 import urllib.request
@@ -179,3 +181,53 @@ def save_options(options, save_dir):
     opts_file_path = os.path.join(save_dir, 'opts.json')
     with open(opts_file_path, 'w') as opt_file:
         json.dump(opt_dict, opt_file)
+
+def sample_real_images(num_images, dataset_name):
+    """ Randomly sample images (with replacement) from all
+        available images in the data directory.
+        Arguments:
+            num_images: int
+                The number of images to sample from the dataset
+            data_dir: str
+                The directory where the images are saved to disk
+    """
+    dataset = get_dataset(dataset_name)
+    sampled_image_paths = sample_image_paths(dataset.directory, num_images)
+    sampled_images = get_images_from_paths(sampled_image_paths, dataset)
+    return sampled_images
+
+def sample_image_paths(data_dir, num_paths):
+    """ Randomly sample image paths from the provided data directory """
+    for root, dirs, names in os.walk(data_dir):
+        image_paths = [os.path.join(root, name) for name in names]
+
+    sampled_image_paths = []
+    for _ in range(num_paths):
+        sample_idx = randint(0, len(image_paths) - 1)
+        sampled_image_paths.append(image_paths[sample_idx])
+    return sampled_image_paths
+
+def get_images_from_paths(sampled_image_paths, dataset):
+    """ Given a list of paths to images, and the dataset object
+        to which they belong, load all images into a list.
+    """
+    images = []
+    for image_path in sampled_image_paths:
+        image = tf.io.read_file(image_path)
+        image = tf.image.decode_jpeg(image, channels=NUM_COLOUR_CHANNELS)
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        # NOTE: Really not sure why the height and the width need to be
+        #       this way around here but above they are reversed
+        image = tf.image.resize(image, [dataset.height, dataset.width])
+        images.append(tf.expand_dims(image, axis=0))
+    return images
+
+def show_image_list(image_tensor_list, save_dir, name='fake-images.png'):
+    """ Visualise and save the tensor image list to file """
+    plt.figure(figsize=(10, 10))
+    for idx, image_tensor in enumerate(image_tensor_list):
+        image_tensor = image_tensor
+        x = plt.subplot(5, 5, idx + 1)
+        plt.imshow(tf.squeeze(image_tensor, axis=0))
+        plt.axis('off')
+    plt.savefig(os.path.join(save_dir, name))
