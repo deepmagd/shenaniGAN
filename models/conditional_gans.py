@@ -1,7 +1,10 @@
+import tensorflow as tf
+from tensorflow.keras import Model
+from tf.keras.layers import Dense, Flatten
+
 from models.discriminators import Discriminator
 from models.generators import Generator
-from tensorflow.keras import Model
-import tensorflow as tf
+from utils.utils import product_list, sample_normal
 
 
 class ConditionalGAN(Model):
@@ -67,6 +70,42 @@ class StackGAN1(ConditionalGAN):
                  num_filters, reshape_dims):
         super().__init__(img_size, num_latent_dims, kernel_size,
                          num_filters, reshape_dims)
+
+        self.flatten = Flatten()
+        self.dense_mean = Dense(units=product_list(reshape_dims)//2, activation='relu')
+        self.dense_sigma = Dense(units=product_list(reshape_dims)//2, activation='relu')
+
+    def generate_conditionals(self, embedding):
+        """ Generate distribution for text embedding.
+            Arguments
+            embedding : Tensor
+                text embedding. Shape (batch_size, feature_size, embedding_size)
+
+            Returns
+            Tensor
+                learnt mean of embedding distribution. Shape (batch_size, reshape_dims/2)
+            Tensor
+                learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
+
+        """
+        x = self.flatten(embedding)
+        mean = self.dense_mean(x)
+        sigma = self.dense_sigma(x)
+        return mean, sigma
+
+    def conditioning_augmentation(self, embedding):
+        """ Perform conditional augmentation by sampling embedding.
+            Arguments
+            embedding : Tensor
+                text embedding. Shape (batch_size, feature_size, embedding_size)
+
+            Returns
+            Tensor
+                sampled embedding. Shape (batch_size, reshape_dims/2)
+        """
+        mean, sigma = self.generate_conditionals(embedding)
+        smoothed_embedding = sample_normal(mean, sigma)
+        return smoothed_embedding
 
 
 class StackGAN2(ConditionalGAN):
