@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Conv2D, Dense, UpSampling2D, Reshape
+from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
+                                     Dense, Reshape, UpSampling2D)
+
 from utils.utils import product_list
 
 
@@ -33,15 +35,18 @@ class Generator(Model):
         self.reshape_layer = Reshape(reshape_dims)
         self.upsample1 = UpSampling2D()
         self.conv1 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu', padding='same')
+        self.bn1 = BatchNormalization()
         self.upsample2 = UpSampling2D()
         self.conv2 = Conv2D(filters=num_output_channels, kernel_size=kernel_size, activation='tanh', padding='same')
 
     @tf.function
-    def call(self, noise):
-        x = self.dense1(noise)
+    def call(self, noise, embedding):
+        x = tf.concat([noise, embedding], 1)
+        x = self.dense1(x)
         x = self.reshape_layer(x)
         x = self.upsample1(x)
         x = self.conv1(x)
+        x = self.bn1(x)
         x = self.upsample2(x)
         x = self.conv2(x)
         return x
