@@ -1,4 +1,5 @@
 import glob
+from google_drive_downloader import GoogleDriveDownloader as gdd
 import json
 from matplotlib import pyplot as plt
 import numpy as np
@@ -14,6 +15,7 @@ import yaml
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 DATASETS_DICT = {
     "birds": "BirdsDataset",
+    "birds-with-text": "BirdsWithWordsDataset",
     "flowers": "FlowersDataset",
     "xrays": "XRaysDataset"
 }
@@ -56,7 +58,7 @@ class StackedGANDataset(object):
         return tf.image.resize(img, [self.width, self.height])
 
 class BirdsDataset(StackedGANDataset):
-    """ Container for the birds dataset properties """
+    """ Container for the birds dataset properties. """
     def __init__(self):
         super().__init__()
         self.directory = pathlib.Path(os.path.join('data/CUB_200_2011/CUB_200_2011/images'))
@@ -73,6 +75,25 @@ class BirdsDataset(StackedGANDataset):
     def get_dims(self):
         return (self.num_channels, self.height, self.width)
 
+class BirdsWithWordsDataset(StackedGANDataset):
+    """ Container for the birds dataset which includes word captions """
+    def __init__(self):
+        """ TODO: Not yet implemented
+        """
+        super().__init__()
+        # The directory to the TFRecords
+        self.directory = pathlib.Path(
+            os.path.join('data/CUB_200_2011_with_text/CUB_200_2011/images')
+        )
+        if not os.path.isdir(self.directory):
+            download_dataset(dataset='birds-with-text')
+            create_tfrecords(tfrecords_dir=self.directory)
+        self.classes = None
+        self.width = 500
+        self.height = 364
+        self.num_channels = 3
+        self.get_image_text_label_tuple()
+
 class FlowersDataset(StackedGANDataset):
     """ TODO: Container for the birds dataset properties """
     def __init__(self):
@@ -88,6 +109,8 @@ class XRaysDataset(StackedGANDataset):
 def download_dataset(dataset):
     if dataset == 'birds':
         download_cub()
+    elif dataset == 'birds-with-text':
+        download_cub(include_text=True)
     elif dataset == 'flowers':
         download_flowers()
     elif dataset == 'xrays':
@@ -95,15 +118,28 @@ def download_dataset(dataset):
     else:
         raise NotImplementedError
 
-def download_cub():
+def download_cub(include_text=False):
     """ Download the birds dataset (CUB-200-2011) """
     BIRDS_DATASET_URL = "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
     print('Downloading CUB dataset from: {}'.format(BIRDS_DATASET_URL))
-    download_location = pathlib.Path('data/CUB_200_2011.tgz')
-    urllib.request.urlretrieve(BIRDS_DATASET_URL, download_location)
-    tar = tarfile.open(download_location, "r:gz")
+    cub_download_location = pathlib.Path('data/CUB_200_2011.tgz')
+    urllib.request.urlretrieve(BIRDS_DATASET_URL, cub_download_location)
+    tar = tarfile.open(cub_download_location, "r:gz")
     tar.extractall("data/CUB_200_2011")
-    os.remove(download_location)
+    os.remove(cub_download_location)
+
+    if include_text:
+        # Download the image captions
+        BIRDS_TEXT_GDRIVE_ID = '0B3y_msrWZaXLT1BZdVdycDY5TEE'
+        print('Downloading CUB text from Google Drive ID: {}'.format(BIRDS_TEXT_GDRIVE_ID))
+        cub_text_download_location = "data/birds.zip"
+        gdd.download_file_from_google_drive(file_id=BIRDS_TEXT_GDRIVE_ID,
+                                            dest_path=cub_text_download_location,
+                                            unzip=True)
+        os.remove(cub_text_download_location)
+
+def create_tfrecords(tfrecords_dir):
+    raise NotImplementedError
 
 def download_flowers():
     """ Download the flowers dataset """
