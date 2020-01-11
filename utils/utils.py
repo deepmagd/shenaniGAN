@@ -82,8 +82,9 @@ class BirdsWithWordsDataset(StackedGANDataset):
         """
         super().__init__()
         # The directory to the TFRecords
+        # os.path.join('data/CUB_200_2011_with_text/CUB_200_2011/images')
         self.directory = pathlib.Path(
-            os.path.join('data/CUB_200_2011_with_text/CUB_200_2011/images')
+            os.path.join('data/CUB_200_2011_with_text/')
         )
         if not os.path.isdir(self.directory):
             download_dataset(dataset='birds-with-text')
@@ -124,8 +125,13 @@ def download_cub(include_text=False):
     print('Downloading CUB dataset from: {}'.format(BIRDS_DATASET_URL))
     cub_download_location = pathlib.Path('data/CUB_200_2011.tgz')
     urllib.request.urlretrieve(BIRDS_DATASET_URL, cub_download_location)
+    # Extract image data
     tar = tarfile.open(cub_download_location, "r:gz")
-    tar.extractall("data/CUB_200_2011")
+    if include_text:
+        images_save_location = 'data/CUB_200_2011_with_text/images/'
+    else:
+        images_save_location = 'data/CUB_200_2011'
+    tar.extractall(images_save_location)
     os.remove(cub_download_location)
 
     if include_text:
@@ -136,10 +142,41 @@ def download_cub(include_text=False):
         gdd.download_file_from_google_drive(file_id=BIRDS_TEXT_GDRIVE_ID,
                                             dest_path=cub_text_download_location,
                                             unzip=True)
+        # Move and clean up data
+        extracted_text_dir = cub_text_download_location[:-4]
+        if os.path.isdir(extracted_text_dir):
+            os.rename(extracted_text_dir, 'data/CUB_200_2011_with_text/text/')
+        else:
+            raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
         os.remove(cub_text_download_location)
 
 def create_tfrecords(tfrecords_dir):
     raise NotImplementedError
+
+    # for subset in ['train', 'test']:
+    #     file_names, class_info, char_CNN_RNN_embeddings = read_text_subset(subset)
+
+def read_text_subset(subset, target_dir='data/birds'):
+    """ Read the pretrained embedding caption text for the birds and flowers datasets
+        as encoded using a pretrained char-CNN-RNN network from:
+        https://arxiv.org/abs/1605.05396
+    """
+    file_names_path = os.path.join(target_dir, subset, 'filenames.pickle')
+    file_names = read_pickle(file_names_path)
+
+    class_info_path = os.path.join(target_dir, subset, 'class_info.pickle')
+    class_info = read_pickle(class_info_path)
+
+    pretrained_embeddings_path = os.path.join(target_dir, subset, 'char-CNN-RNN-embeddings.pickle')
+    char_CNN_RNN_embeddings = read_pickle(pretrained_embeddings_path)
+
+    return file_names, class_info, char_CNN_RNN_embeddings
+
+def read_pickle(path_to_pickle):
+    """ Read a pickle file in latin encoding and return the contents """
+    with open(path_to_pickle, 'rb') as pickle_file:
+        content = pickle.load(pickle_file, encoding='latin1')
+    return content
 
 def download_flowers():
     """ Download the flowers dataset """
