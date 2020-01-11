@@ -29,6 +29,12 @@ def parse_arguments(args_to_parse):
         default=default_settings['dataset'], choices=DATASETS
     )
 
+    data = parser.add_argument_group('Data settings')
+    data.add_argument(
+        '--samples-per-shard', type=int, default=default_settings['samples_per_shard'],
+        help="The number of samples to save in each TFRecord shard."
+    )
+
     training = parser.add_argument_group('Training settings')
     training.add_argument(
         '--use-pretrained', action='store_true', default=False,
@@ -51,6 +57,7 @@ def parse_arguments(args_to_parse):
         '-f', '--num-filters', type=int, default=default_settings['num_filters'],
         help='The number of filters to stack.'
     )
+
     visualisation = parser.add_argument_group('Visualisation settings')
     visualisation.add_argument(
         '--visualise', action='store_true', default=False,
