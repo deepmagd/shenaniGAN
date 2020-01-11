@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import os
 import pathlib
+import pickle
 from random import randint
 import tarfile
 import tensorflow as tf
@@ -83,16 +84,23 @@ class BirdsWithWordsDataset(StackedGANDataset):
         super().__init__()
         # The directory to the TFRecords
         # os.path.join('data/CUB_200_2011_with_text/CUB_200_2011/images')
+        self.width = 500
+        self.height = 364
+        self.num_channels = 3
+
         self.directory = pathlib.Path(
             os.path.join('data/CUB_200_2011_with_text/')
         )
         if not os.path.isdir(self.directory):
             download_dataset(dataset='birds-with-text')
-            create_tfrecords(tfrecords_dir=self.directory)
+            create_tfrecords(
+                tfrecords_dir=os.path.join(self.directory, 'records'),
+                image_source_dir=os.path.join(self.directory, 'images'),
+                text_source_dir=os.path.join(self.directory, 'text'),
+                image_dims=(self.height, self.width),
+                samples_per_shard=10
+            )
         self.classes = None
-        self.width = 500
-        self.height = 364
-        self.num_channels = 3
         self.get_image_text_label_tuple()
 
 class FlowersDataset(StackedGANDataset):
@@ -150,24 +158,39 @@ def download_cub(include_text=False):
             raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
         os.remove(cub_text_download_location)
 
-def create_tfrecords(tfrecords_dir):
-    raise NotImplementedError
+def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims, samples_per_shard):
+    """ Create the TFRecords dataset
+        Arguments:
+            tfrecords_dir: str
+                Root save location for the TFRecrods
+            image_source_dir: str
+                Root source directory from which to read the images
+            text_source_dir: str
+                Root source directory from which to read the text
+            image_dims: tuple
+                (height (int), width (int))
+            samples_per_shard: int
+                Number of samples to include in each TFRecord shard
+    """
+    for subset in ['train', 'test']:
+        file_names, class_info, text_embeddings = read_text_subset(subset, text_source_dir)
+        file_names = [os.path.join(image_source_dir, '{}.jpg'.format(file_name)).encode('utf-8') for file_name in file_names]
+        images = get_images_from_paths(file_names, image_dims)
+        shard_iterator = arrange_into_shards(file_names, class_info, text_embeddings, images, samples_per_shard)
+        write_shards_to_file(shard_iterator, subset, tfrecords_dir)
 
-    # for subset in ['train', 'test']:
-    #     file_names, class_info, char_CNN_RNN_embeddings = read_text_subset(subset)
-
-def read_text_subset(subset, target_dir='data/birds'):
+def read_text_subset(subset, source_dir='data/CUB_200_2011_with_text/text'):
     """ Read the pretrained embedding caption text for the birds and flowers datasets
         as encoded using a pretrained char-CNN-RNN network from:
         https://arxiv.org/abs/1605.05396
     """
-    file_names_path = os.path.join(target_dir, subset, 'filenames.pickle')
+    file_names_path = os.path.join(source_dir, subset, 'filenames.pickle')
     file_names = read_pickle(file_names_path)
 
-    class_info_path = os.path.join(target_dir, subset, 'class_info.pickle')
+    class_info_path = os.path.join(source_dir, subset, 'class_info.pickle')
     class_info = read_pickle(class_info_path)
 
-    pretrained_embeddings_path = os.path.join(target_dir, subset, 'char-CNN-RNN-embeddings.pickle')
+    pretrained_embeddings_path = os.path.join(source_dir, subset, 'char-CNN-RNN-embeddings.pickle')
     char_CNN_RNN_embeddings = read_pickle(pretrained_embeddings_path)
 
     return file_names, class_info, char_CNN_RNN_embeddings
@@ -177,6 +200,76 @@ def read_pickle(path_to_pickle):
     with open(path_to_pickle, 'rb') as pickle_file:
         content = pickle.load(pickle_file, encoding='latin1')
     return content
+
+def arrange_into_shards(file_names, class_info_list, text_embeddings, images, samples_per_shard):
+    """ Convert the listed variables: file_names, class_info_list, text_embeddings, and images
+        into chunks to be stored into shards for separate storage as TFRecords.
+        Arguments:
+            file_names: List
+            class_info_list: List
+            text_embeddings: List
+            images: List
+            samples_per_shard: int
+        Returns:
+            iterator
+    """
+    assert len(class_info) == num_samples and len(text_embeddings) == num_samples and len(images) == num_samples, \
+        'Expected length of {}'.format(num_samples)
+
+    num_samples = len(file_names)
+    num_chunks = math.floor(num_samples / samples_per_shard)
+    end_point = num_chunks * num_samples
+
+    chunked_file_names = chunk_list(file_names, num_chunks, end_point)
+    chunked_class_info_list = chunk_list(class_info_list, num_chunks, end_point)
+    chunked_text_embeddings = chunk_list(text_embeddings, num_chunks, end_point)
+    chunked_images = chunk_list(images, num_chunks, end_point)
+
+    return zip(chunked_file_names, chunked_class_info_list, chunked_text_embeddings, chunked_images)
+
+def chunk_list(unchuncked_list, num_chunks, end_point):
+    """ Split a list up into evenly sized chunks / shards.
+        Arguments:
+            unchuncked_list: List
+                A one-dimensional list
+            num_chunks: int
+                The number of chunks to create
+            end_point: int
+                The last index that can be equally chunked
+    """
+    chunked_list = list(chunks(unchuncked_list[:end_point], num_chunks))
+    chunked_list[-1].extend(unchuncked_list[end_point:])
+    return chunked_list
+
+def chunks(unchuncked_list, n):
+    """ Yield successive n-sized chunks from a list. """
+    for i in range(0, len(unchuncked_list), n):
+        yield unchuncked_list[i:i + n]
+
+def write_shards_to_file(shard_iterable, subset_name, tfrecords_dir):
+    """ Save the TFRecord dataset into separate `shards`.
+        Arguments:
+            shard_iterable: zip object (iterable)
+                Each iteration yields a tuple of 4 objects
+            subset_name: str
+                Name of the subset (train/test)
+            tfrecords_dir: str
+                Directory in which the save the TFRecords
+    """
+    for i, (file_names, classes, text_embeddings, images) in enumerate(shard_iterable):
+        example = tf.train.Example(
+            features=tf.train.Features(
+                feature={
+                    'images': tf.train.Feature(float_list=tf.train.FloatList(value=images)),
+                    'names': tf.train.Feature(bytes_list=tf.train.BytesList(value=file_names)),
+                    'text': tf.train.Feature(float_list=tf.train.FloatList(value=text_embeddings)),
+                    'classes': tf.train.Feature(float_list=tf.train.FloatList(value=classes))
+                }
+            )
+        )
+        # Write a separate file to disk for each shard
+        with tf.io.TFRecordWriter(os.path.join(tfrecords_dir, subset_name, 'shard-{}.tfrecord'.format(i))) as writer:
+            writer.write(example.SerializeToString())
 
 def download_flowers():
     """ Download the flowers dataset """
@@ -266,7 +359,7 @@ def sample_real_images(num_images, dataset_name):
     """
     dataset = get_dataset(dataset_name)
     sampled_image_paths = sample_image_paths(dataset.directory, num_images)
-    sampled_images = get_images_from_paths(sampled_image_paths, dataset)
+    sampled_images = get_images_from_paths(sampled_image_paths, (dataset.height, dataset.width))
     return sampled_images
 
 def sample_image_paths(data_dir, num_paths):
@@ -280,10 +373,11 @@ def sample_image_paths(data_dir, num_paths):
         sampled_image_paths.append(image_paths[sample_idx])
     return sampled_image_paths
 
-def get_images_from_paths(sampled_image_paths, dataset):
-    """ Given a list of paths to images, and the dataset object
+def get_images_from_paths(sampled_image_paths, image_dims):
+    """ Given a list of paths to images, and the image dimensions
         to which they belong, load all images into a list.
     """
+    height, width = image_dims
     images = []
     for image_path in sampled_image_paths:
         image = tf.io.read_file(image_path)
@@ -291,7 +385,7 @@ def get_images_from_paths(sampled_image_paths, dataset):
         image = tf.image.convert_image_dtype(image, tf.float32)
         # NOTE: Really not sure why the height and the width need to be
         #       this way around here but above they are reversed
-        image = tf.image.resize(image, [dataset.height, dataset.width])
+        image = tf.image.resize(image, [height, width])
         images.append(tf.expand_dims(image, axis=0))
     return images
 
