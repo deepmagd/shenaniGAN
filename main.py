@@ -14,7 +14,7 @@ RESULTS_ROOT = 'results'
 
 
 def parse_arguments(args_to_parse):
-
+    """ Parse CLI arguments """
     default_settings = get_default_settings(SETTINGS_FILE)
 
     descr = 'Tensorflow 2 implementation of StackGAN for generating x-ray images'
@@ -74,6 +74,7 @@ def parse_arguments(args_to_parse):
     args = parser.parse_args(args_to_parse)
     args.kernel_size = (args.kernel_size, args.kernel_size)
     return args
+
 
 def main(args):
     # Save options:

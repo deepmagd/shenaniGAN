@@ -2,6 +2,7 @@ import glob
 from google_drive_downloader import GoogleDriveDownloader as gdd
 import json
 from matplotlib import pyplot as plt
+import math
 import numpy as np
 import os
 import pathlib
@@ -54,7 +55,7 @@ class StackedGANDataset(object):
         # Convert the compressed string to a 3D uint8 tensor
         img = tf.image.decode_jpeg(img, channels=NUM_COLOUR_CHANNELS)
         # Convert to floats in the [0,1] range
-        img = tf.image.convert_image_dtype(img, tf.float32)
+        img = tf.image.convert_image_dtype(img, data_type=tf.float32)
         # Resize the image to the desired size
         return tf.image.resize(img, [self.width, self.height])
 
@@ -72,7 +73,7 @@ class BirdsDataset(StackedGANDataset):
         self.height = 364
         self.num_channels = 3
         self.get_image_label_pairs()
-    
+
     def get_dims(self):
         return (self.num_channels, self.height, self.width)
 
@@ -95,7 +96,7 @@ class BirdsWithWordsDataset(StackedGANDataset):
             download_dataset(dataset='birds-with-text')
             create_tfrecords(
                 tfrecords_dir=os.path.join(self.directory, 'records'),
-                image_source_dir=os.path.join(self.directory, 'images'),
+                image_source_dir=os.path.join(self.directory, 'images', 'CUB_200_2011', 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
                 image_dims=(self.height, self.width),
                 samples_per_shard=10
@@ -140,6 +141,7 @@ def download_cub(include_text=False):
     else:
         images_save_location = 'data/CUB_200_2011'
     tar.extractall(images_save_location)
+    tar.close()
     os.remove(cub_download_location)
 
     if include_text:
@@ -174,10 +176,20 @@ def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dim
     """
     for subset in ['train', 'test']:
         file_names, class_info, text_embeddings = read_text_subset(subset, text_source_dir)
-        file_names = [os.path.join(image_source_dir, '{}.jpg'.format(file_name)).encode('utf-8') for file_name in file_names]
-        images = get_images_from_paths(file_names, image_dims)
-        shard_iterator = arrange_into_shards(file_names, class_info, text_embeddings, images, samples_per_shard)
+        file_names = [format_file_name(image_source_dir, file_name) for file_name in file_names]
+        text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
+        str_images = get_string_images(file_names)
+        shard_iterator = arrange_into_shards(file_names, class_info, text_embeddings, str_images, samples_per_shard)
         write_shards_to_file(shard_iterator, subset, tfrecords_dir)
+
+def format_file_name(image_source_dir, file_name):
+    """ Format the file name (to make it compatible with windows) and uses
+        utf-8 encoding.
+    """
+    if os.name == 'nt':
+        # Check to see if running in Windows
+        file_name = format_for_windows(file_name)
+    return os.path.join(image_source_dir, '{}.jpg'.format(file_name)).encode('utf-8')
 
 def read_text_subset(subset, source_dir='data/CUB_200_2011_with_text/text'):
     """ Read the pretrained embedding caption text for the birds and flowers datasets
@@ -201,31 +213,31 @@ def read_pickle(path_to_pickle):
         content = pickle.load(pickle_file, encoding='latin1')
     return content
 
-def arrange_into_shards(file_names, class_info_list, text_embeddings, images, samples_per_shard):
+def arrange_into_shards(file_names, class_info_list, text_embeddings, str_images, samples_per_shard):
     """ Convert the listed variables: file_names, class_info_list, text_embeddings, and images
         into chunks to be stored into shards for separate storage as TFRecords.
         Arguments:
             file_names: List
             class_info_list: List
             text_embeddings: List
-            images: List
+            str_images: List
             samples_per_shard: int
         Returns:
             iterator
     """
-    assert len(class_info) == num_samples and len(text_embeddings) == num_samples and len(images) == num_samples, \
-        'Expected length of {}'.format(num_samples)
-
     num_samples = len(file_names)
     num_chunks = math.floor(num_samples / samples_per_shard)
     end_point = num_chunks * num_samples
 
+    assert len(class_info_list) == num_samples and len(text_embeddings) == num_samples and len(file_names) == num_samples, \
+        'Expected length of {}'.format(num_samples)
+
     chunked_file_names = chunk_list(file_names, num_chunks, end_point)
     chunked_class_info_list = chunk_list(class_info_list, num_chunks, end_point)
     chunked_text_embeddings = chunk_list(text_embeddings, num_chunks, end_point)
-    chunked_images = chunk_list(images, num_chunks, end_point)
+    chunked_str_images = chunk_list(str_images, num_chunks, end_point)
 
-    return zip(chunked_file_names, chunked_class_info_list, chunked_text_embeddings, chunked_images)
+    return zip(chunked_file_names, chunked_class_info_list, chunked_text_embeddings, chunked_str_images)
 
 def chunk_list(unchuncked_list, num_chunks, end_point):
     """ Split a list up into evenly sized chunks / shards.
@@ -256,13 +268,13 @@ def write_shards_to_file(shard_iterable, subset_name, tfrecords_dir):
             tfrecords_dir: str
                 Directory in which the save the TFRecords
     """
-    for i, (file_names, classes, text_embeddings, images) in enumerate(shard_iterable):
+    for i, (file_names, classes, text_embeddings, str_images) in enumerate(shard_iterable):
         example = tf.train.Example(
             features=tf.train.Features(
                 feature={
-                    'images': tf.train.Feature(float_list=tf.train.FloatList(value=images)),
+                    'image_raw': _bytes_feature(str_images),
                     'names': tf.train.Feature(bytes_list=tf.train.BytesList(value=file_names)),
-                    'text': tf.train.Feature(float_list=tf.train.FloatList(value=text_embeddings)),
+                    'text': _bytes_feature(text_embeddings),
                     'classes': tf.train.Feature(float_list=tf.train.FloatList(value=classes))
                 }
             )
@@ -270,6 +282,20 @@ def write_shards_to_file(shard_iterable, subset_name, tfrecords_dir):
         # Write a separate file to disk for each shard
         with tf.io.TFRecordWriter(os.path.join(tfrecords_dir, subset_name, 'shard-{}.tfrecord'.format(i))) as writer:
             writer.write(example.SerializeToString())
+
+def _int64_feature(value):
+    """Returns an int64_list from a bool / enum / int / uint."""
+    if not isinstance(value, list):
+        value = [value]
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+def _bytes_feature(value):
+    """Returns a bytes_list from a string / byte."""
+    if isinstance(value, type(tf.constant(0))):
+        value = value.numpy()  # BytesList won't unpack a string from an EagerTensor.
+    if not isinstance(value, list):
+        value = [value]
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
 def download_flowers():
     """ Download the flowers dataset """
@@ -280,6 +306,7 @@ def download_flowers():
     urllib.request.urlretrieve(FLOWERS_DATASET_URL, flowers_download_loc)
     tar = tarfile.open(flowers_download_loc, "r:gz")
     tar.extractall("data/flowers/images")
+    tar.close()
     os.remove(flowers_download_loc)
 
     DATA_SPLITS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
@@ -344,6 +371,7 @@ def save_options(options, save_dir):
     for option in vars(options):
         opt_dict[option] = getattr(options, option)
 
+    mkdir(save_dir)
     opts_file_path = os.path.join(save_dir, 'opts.json')
     with open(opts_file_path, 'w') as opt_file:
         json.dump(opt_dict, opt_file)
@@ -373,6 +401,14 @@ def sample_image_paths(data_dir, num_paths):
         sampled_image_paths.append(image_paths[sample_idx])
     return sampled_image_paths
 
+def get_string_images(image_paths):
+    """ Generate a list of string representations of each image """
+    str_images_list = []
+    for image_path in image_paths:
+        image_string = open(image_path, 'rb').read()
+        str_images_list.append(image_string)
+    return str_images_list
+
 def get_images_from_paths(sampled_image_paths, image_dims):
     """ Given a list of paths to images, and the image dimensions
         to which they belong, load all images into a list.
@@ -398,3 +434,7 @@ def show_image_list(image_tensor_list, save_dir, name='fake-images.png'):
         plt.imshow(tf.squeeze(image_tensor, axis=0))
         plt.axis('off')
     plt.savefig(os.path.join(save_dir, name))
+
+def format_for_windows(path_string):
+    """ Convert to windows path by replacing `/` with `\` """
+    return str(str(path_string).replace('/', '\\'))
