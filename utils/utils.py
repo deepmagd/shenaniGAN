@@ -280,6 +280,7 @@ def write_shards_to_file(shard_iterable, subset_name, tfrecords_dir):
             )
         )
         # Write a separate file to disk for each shard
+        mkdir(os.path.join(tfrecords_dir, subset_name))
         with tf.io.TFRecordWriter(os.path.join(tfrecords_dir, subset_name, 'shard-{}.tfrecord'.format(i))) as writer:
             writer.write(example.SerializeToString())
 
@@ -359,7 +360,7 @@ def mkdir(directory):
     try:
         os.makedirs(directory)
     except OSError:
-        print("Directory {} already exists.".format(directory))
+        pass
 
 def save_options(options, save_dir):
     """ Save all options to JSON file.
