@@ -6,7 +6,9 @@ from models.trainer import Trainer
 import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings, save_options, sample_real_images, show_image_list
+from utils.data_helpers import sample_real_images, show_image_list
+from utils.datasets import DATASETS
+from utils.utils import get_default_settings, save_options
 
 
 SETTINGS_FILE = 'settings.yaml'

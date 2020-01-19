@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import tensorflow as tf
-from utils.utils import get_dataset
+from utils.datasets import get_dataset
 
 
 def create_dataloaders(args):
