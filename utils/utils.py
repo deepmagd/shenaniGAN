@@ -33,6 +33,10 @@ class StackedGANDataset(object):
         self.classes = None
         self.width = None
         self.height = None
+        self.num_channels = None
+
+    def get_dims(self):
+        return (self.num_channels, self.height, self.width)
 
     def get_image_label_pairs(self):
         image_paths = tf.data.Dataset.list_files(str(self.directory/'*/*'))
@@ -74,8 +78,6 @@ class BirdsDataset(StackedGANDataset):
         self.num_channels = 3
         self.get_image_label_pairs()
 
-    def get_dims(self):
-        return (self.num_channels, self.height, self.width)
 
 class BirdsWithWordsDataset(StackedGANDataset):
     """ Container for the birds dataset which includes word captions """
@@ -101,8 +103,45 @@ class BirdsWithWordsDataset(StackedGANDataset):
                 image_dims=(self.height, self.width),
                 samples_per_shard=10
             )
+
+        records_dir = os.path.join(self.directory, 'records')
+        if os.path.isdir(records_dir):
+            self.directory = records_dir
+
         self.classes = None
-        self.get_image_text_label_tuple()
+        self.dataset_description = {
+            'image_raw': tf.io.FixedLenFeature([], tf.string),
+            'names': tf.io.FixedLenFeature([], tf.string),
+            'text': tf.io.FixedLenFeature([], tf.string),
+            'classes': tf.io.FixedLenFeature([], tf.float32)
+        }
+
+        self.train_set, self.test_set = self.parse_dataset()
+
+    def parse_dataset(self):
+        """ """
+        parsed_subsets = []
+        for subset in ['train', 'test']:
+            subset_paths = get_record_paths(os.path.join(self.directory, subset))
+            raw_subset = tf.data.TFRecordDataset(subset_paths)
+            parsed_subset = raw_subset.map(self._parse_example)
+            parsed_subsets.append(parsed_subset)
+        return parsed_subsets[0], parsed_subsets[1]
+
+    def _parse_example(self, example_proto):
+        # Parse the input tf.Example proto using self.dataset_description
+        return tf.io.parse_single_example(example_proto, self.dataset_description)
+
+def get_record_paths(root_dir):
+    """ """
+    record_path_names = []
+    for root, dirs, record_names in os.walk(root_dir):
+        for record_name in record_names:
+            if record_name.endswith('.tfrecord'):
+                record_path_name = os.path.join(root, record_name)
+                record_path_names.append(record_path_name)
+    return record_path_names
+
 
 class FlowersDataset(StackedGANDataset):
     """ TODO: Container for the birds dataset properties """
@@ -281,7 +320,8 @@ def write_shards_to_file(shard_iterable, subset_name, tfrecords_dir):
         )
         # Write a separate file to disk for each shard
         mkdir(os.path.join(tfrecords_dir, subset_name))
-        with tf.io.TFRecordWriter(os.path.join(tfrecords_dir, subset_name, 'shard-{}.tfrecord'.format(i))) as writer:
+        record_path_name = os.path.join(tfrecords_dir, subset_name, 'shard-{}.tfrecord'.format(i))
+        with tf.io.TFRecordWriter(record_path_name) as writer:
             writer.write(example.SerializeToString())
 
 def _int64_feature(value):
