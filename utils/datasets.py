@@ -29,6 +29,7 @@ def get_dataset(dataset_name):
 class StackedGANDataset(object):
     """ Base class for all datasets """
     def __init__(self):
+        self.type = None
         self.directory = None
         self.image_label_pairs = None
         self.classes = None
@@ -68,6 +69,7 @@ class BirdsDataset(StackedGANDataset):
     """ Container for the birds dataset properties. """
     def __init__(self):
         super().__init__()
+        self.type = 'images'
         self.directory = pathlib.Path(os.path.join('data/CUB_200_2011/CUB_200_2011/images'))
         if not os.path.isdir(self.directory):
             download_dataset(dataset='birds')
@@ -87,10 +89,18 @@ class BirdsWithWordsDataset(StackedGANDataset):
         """
         super().__init__()
         # The directory to the TFRecords
-        # os.path.join('data/CUB_200_2011_with_text/CUB_200_2011/images')
+        self.type = 'images-with-captions'
         self.width = 500
         self.height = 364
         self.num_channels = 3
+
+        # self.classes = None
+        self.feature_description = {
+            'image_raw': tf.io.FixedLenFeature([], tf.string),
+            'name': tf.io.FixedLenFeature([], tf.string),
+            'text': tf.io.FixedLenFeature([], tf.string),
+            'label': tf.io.FixedLenFeature([], tf.int64),
+        }
 
         self.directory = pathlib.Path(
             os.path.join('data/CUB_200_2011_with_text/')
@@ -101,39 +111,32 @@ class BirdsWithWordsDataset(StackedGANDataset):
                 tfrecords_dir=os.path.join(self.directory, 'records'),
                 image_source_dir=os.path.join(self.directory, 'images', 'CUB_200_2011', 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
-                image_dims=(self.height, self.width),
-                samples_per_shard=10
+                image_dims=(self.height, self.width)
             )
 
         records_dir = os.path.join(self.directory, 'records')
         if os.path.isdir(records_dir):
             self.directory = records_dir
 
-        self.classes = None
-        self.dataset_description = {
-            'image_raw': tf.io.FixedLenFeature([], tf.string),
-            'names': tf.io.FixedLenFeature([], tf.string),
-            'text': tf.io.FixedLenFeature([], tf.string),
-            'classes': tf.io.FixedLenFeature([], tf.float32)
-        }
+    # def __len__(self):
+    #     return num_tfrecords_in_dir(os.path.join(self.directory, 'train'))
 
-        self.train_set, self.test_set = self.parse_dataset()
-
-    def parse_dataset(self):
+    def parse_dataset(self, subset='train'):
         """ Parse the raw data from the TFRecords and arrange into a readable form
             for the trainer object.
         """
-        parsed_subsets = []
-        for subset in ['train', 'test']:
-            subset_paths = get_record_paths(os.path.join(self.directory, subset))
-            raw_subset = tf.data.TFRecordDataset(subset_paths)
-            parsed_subset = raw_subset.map(self._parse_example)
-            parsed_subsets.append(parsed_subset)
-        return parsed_subsets[0], parsed_subsets[1]
+        if not subset in ['train', 'test']:
+            raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
+
+        subset_paths = get_record_paths(os.path.join(self.directory, subset))
+        subset_obj = tf.data.TFRecordDataset(subset_paths)
+        mapped_subset_obj = subset_obj.map(self._parse_example)
+        return mapped_subset_obj
 
     def _parse_example(self, example_proto):
-        # Parse the input tf.Example proto using self.dataset_description
-        return tf.io.parse_single_example(example_proto, self.dataset_description)
+        # Parse the input tf.Example proto using self.feature_description
+        return tf.io.parse_single_example(example_proto, self.feature_description)
+
 
 class FlowersDataset(StackedGANDataset):
     """ TODO: Container for the birds dataset properties """
