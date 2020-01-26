@@ -20,17 +20,17 @@ def read_pickle(path_to_pickle):
         content = pickle.load(pickle_file, encoding='latin1')
     return content
 
-def chunk_list(unchuncked_list, num_chunks, end_point):
+def chunk_list(unchuncked_list, samples_per_shard, end_point):
     """ Split a list up into evenly sized chunks / shards.
         Arguments:
             unchuncked_list: List
                 A one-dimensional list
-            num_chunks: int
-                The number of chunks to create
+            samples_per_shard: int
+                The number of samples to save in a shard
             end_point: int
                 The last index that can be equally chunked
     """
-    chunked_list = list(chunks(unchuncked_list[:end_point], num_chunks))
+    chunked_list = list(chunks(unchuncked_list[:end_point], samples_per_shard))
     chunked_list[-1].extend(unchuncked_list[end_point:])
     return chunked_list
 
@@ -90,3 +90,6 @@ def save_options(options, save_dir):
 def format_for_windows(path_string):
     """ Convert to windows path by replacing `/` with `\` """
     return str(str(path_string).replace('/', '\\'))
+
+def num_tfrecords_in_dir(directory):
+    return len([name for name in os.listdir(directory) if os.path.isfile(name) and name.endswith('.tfrecord')])

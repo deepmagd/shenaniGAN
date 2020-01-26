@@ -1,7 +1,9 @@
 import glob
 from google_drive_downloader import GoogleDriveDownloader as gdd
+import io
 import math
 from matplotlib import pyplot as plt
+import numpy as np
 import os
 import pathlib
 from random import randint
@@ -17,7 +19,7 @@ def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
     if not isinstance(value, list):
         value = [value]
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
@@ -27,33 +29,28 @@ def _bytes_feature(value):
         value = [value]
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
-def arrange_into_shards(file_names, class_info_list, text_embeddings, str_images, samples_per_shard):
+def _float_feature(value):
+    """Returns a float_list from a float / double."""
+    return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
+
+def zip_to_quadruple(file_names, class_info_list, text_embeddings, str_images):
     """ Convert the listed variables: file_names, class_info_list, text_embeddings, and images
-        into chunks to be stored into shards for separate storage as TFRecords.
+        into an interable tuple of size 4.
         Arguments:
             file_names: List
             class_info_list: List
             text_embeddings: List
             str_images: List
-            samples_per_shard: int
         Returns:
             iterator
     """
     num_samples = len(file_names)
-    num_chunks = math.floor(num_samples / samples_per_shard)
-    end_point = num_chunks * num_samples
-
     assert len(class_info_list) == num_samples and len(text_embeddings) == num_samples and len(file_names) == num_samples, \
         'Expected length of {}'.format(num_samples)
 
-    chunked_file_names = chunk_list(file_names, num_chunks, end_point)
-    chunked_class_info_list = chunk_list(class_info_list, num_chunks, end_point)
-    chunked_text_embeddings = chunk_list(text_embeddings, num_chunks, end_point)
-    chunked_str_images = chunk_list(str_images, num_chunks, end_point)
+    return zip(file_names, class_info_list, text_embeddings, str_images)
 
-    return zip(chunked_file_names, chunked_class_info_list, chunked_text_embeddings, chunked_str_images)
-
-def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims, samples_per_shard):
+def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset
         Arguments:
             tfrecords_dir: str
@@ -64,16 +61,17 @@ def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dim
                 Root source directory from which to read the text
             image_dims: tuple
                 (height (int), width (int))
-            samples_per_shard: int
-                Number of samples to include in each TFRecord shard
     """
     for subset in ['train', 'test']:
+        # Read from file and format
         file_names, class_info, text_embeddings = read_text_subset(subset, text_source_dir)
         file_names = [format_file_name(image_source_dir, file_name) for file_name in file_names]
+        # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
         str_images = get_string_images(file_names)
-        shard_iterator = arrange_into_shards(file_names, class_info, text_embeddings, str_images, samples_per_shard)
-        write_shards_to_file(shard_iterator, subset, tfrecords_dir)
+        # Arrange and write to file
+        shard_iterator = zip_to_quadruple(file_names, class_info, text_embeddings, str_images)
+        write_records_to_file(shard_iterator, subset, tfrecords_dir)
 
 def download_dataset(dataset):
     if dataset == 'birds':
@@ -198,6 +196,7 @@ def sample_real_images(num_images, dataset_name):
             data_dir: str
                 The directory where the images are saved to disk
     """
+    # TODO: Pass in the dataset rather than infer it in the function
     dataset = get_dataset(dataset_name)
     sampled_image_paths = sample_image_paths(dataset.directory, num_images)
     sampled_images = get_images_from_paths(sampled_image_paths, (dataset.height, dataset.width))
@@ -224,29 +223,31 @@ def show_image_list(image_tensor_list, save_dir, name='fake-images.png'):
         plt.axis('off')
     plt.savefig(os.path.join(save_dir, name))
 
-def write_shards_to_file(shard_iterable, subset_name, tfrecords_dir):
-    """ Save the TFRecord dataset into separate `shards`.
+def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
+    """ Save the TFRecord dataset with each example in its own TFRecord file.
         Arguments:
-            shard_iterable: zip object (iterable)
+            example_iterable: zip object (iterable)
                 Each iteration yields a tuple of 4 objects
             subset_name: str
                 Name of the subset (train/test)
             tfrecords_dir: str
                 Directory in which the save the TFRecords
     """
-    for i, (file_names, classes, text_embeddings, str_images) in enumerate(shard_iterable):
+    for i, (file_name, label, text_embedding, str_image) in enumerate(example_iterable):
         example = tf.train.Example(
             features=tf.train.Features(
                 feature={
-                    'image_raw': _bytes_feature(str_images),
-                    'names': tf.train.Feature(bytes_list=tf.train.BytesList(value=file_names)),
-                    'text': _bytes_feature(text_embeddings),
-                    'classes': tf.train.Feature(float_list=tf.train.FloatList(value=classes))
+                    'image_raw': _bytes_feature(str_image),
+                    'name': _bytes_feature(file_name),
+                    'text': _bytes_feature(text_embedding),
+                    'label': _int64_feature(label)
                 }
             )
         )
-        # Write a separate file to disk for each shard
+
+        # Write a separate file to disk for each example
         mkdir(os.path.join(tfrecords_dir, subset_name))
-        record_path_name = os.path.join(tfrecords_dir, subset_name, 'shard-{}.tfrecord'.format(i))
+        record_path_name = os.path.join(tfrecords_dir, subset_name, 'example-{}.tfrecord'.format(i))
         with tf.io.TFRecordWriter(record_path_name) as writer:
-            writer.write(example.SerializeToString())
+            serialised_example = example.SerializeToString()
+            writer.write(serialised_example)

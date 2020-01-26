@@ -1,3 +1,6 @@
+import io
+import numpy as np
+from PIL import Image
 import tensorflow as tf
 from tqdm import trange
 
@@ -36,7 +39,18 @@ class Trainer():
                       leave=False,
                       disable=not self.show_progress_bar
         )
+
         with trange(len(train_loader), **kwargs) as t:
+            for sample in train_loader.parsed_subset:
+                image_tensor = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy())))
+                print(image_tensor)
+                text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
+                print(text_tensor)
+                name = sample['name'].numpy().decode("utf-8")
+                print(name)
+                label = sample['label'].numpy()
+                print(label)
+
             for real_images, one_hot_labels in train_loader:
                 # Assuming that batch is the first dimension
                 # and that we use a normal distribution for noise
