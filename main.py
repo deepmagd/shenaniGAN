@@ -2,12 +2,12 @@ import argparse
 from dataloaders.dataloaders import create_dataloaders
 from math import floor
 from models.conditional_gans import StackGAN1
-from models.trainer import Trainer
+from trainers.trainers import get_trainer
 import os
 import sys
 import tensorflow as tf
 from utils.data_helpers import sample_real_images, show_image_list
-from utils.datasets import DATASETS
+from utils.datasets import DATASETS, get_dataset
 from utils.utils import get_default_settings, save_options
 
 
@@ -98,7 +98,8 @@ def main(args):
             reshape_dims=[91, 125, args.num_filters]
         )
 
-        trainer = Trainer(
+        trainer_class = get_trainer(args.dataset_name)
+        trainer = trainer_class(
             model=model,
             save_location=results_dir
         )
@@ -115,7 +116,8 @@ def main(args):
         num_fakes_to_generate = floor(num_images_to_classify / 2)
         num_real_images = num_images_to_classify - num_fakes_to_generate
 
-        real_images = sample_real_images(num_images=num_real_images, dataset_name=args.dataset_name)
+        dataset_object = get_dataset(args.dataset_name)
+        real_images = sample_real_images(num_images=num_real_images, dataset_object=dataset_object)
         fake_images = model.generate_images(num_images=num_fakes_to_generate)
 
         images = real_images + fake_images

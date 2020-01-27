@@ -187,19 +187,17 @@ def read_text_subset(subset, source_dir='data/CUB_200_2011_with_text/text'):
 
     return file_names, class_info, char_CNN_RNN_embeddings
 
-def sample_real_images(num_images, dataset_name):
+def sample_real_images(num_images, dataset_object):
     """ Randomly sample images (with replacement) from all
         available images in the data directory.
         Arguments:
             num_images: int
                 The number of images to sample from the dataset
-            data_dir: str
-                The directory where the images are saved to disk
+            dataset_object:
+                The dataset class
     """
-    # TODO: Pass in the dataset rather than infer it in the function
-    dataset = get_dataset(dataset_name)
-    sampled_image_paths = sample_image_paths(dataset.directory, num_images)
-    sampled_images = get_images_from_paths(sampled_image_paths, (dataset.height, dataset.width))
+    sampled_image_paths = sample_image_paths(dataset_object.directory, num_images)
+    sampled_images = get_images_from_paths(sampled_image_paths, (dataset_object.height, dataset_object.width))
     return sampled_images
 
 def sample_image_paths(data_dir, num_paths):

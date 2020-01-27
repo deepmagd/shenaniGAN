@@ -61,7 +61,7 @@ class StackedGANDataset(object):
         # Convert the compressed string to a 3D uint8 tensor
         img = tf.image.decode_jpeg(img, channels=NUM_COLOUR_CHANNELS)
         # Convert to floats in the [0,1] range
-        img = tf.image.convert_image_dtype(img, data_type=tf.float32)
+        img = tf.image.convert_image_dtype(img, dtype=tf.float32)
         # Resize the image to the desired size
         return tf.image.resize(img, [self.width, self.height])
 
