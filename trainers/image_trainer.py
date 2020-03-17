@@ -1,11 +1,13 @@
 import tensorflow as tf
 from tqdm import trange
+from trainers.base_trainer import Trainer
 
 
-class Trainer():
+class ImageTrainer(Trainer):
+    """ A image-to-image GAN training class """
     def __init__(self, model, save_location,
                  show_progress_bar=True):
-        """ Initialise the model trainer
+        """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
                 The model to train
@@ -13,21 +15,7 @@ class Trainer():
                 The directory in which to save all
                 results from training the model.
         """
-        self.show_progress_bar = show_progress_bar
-        self.model = model
-        self.save_dir = save_location
-
-    def __call__(self, data_loader, num_epochs):
-        """ Trains the model.
-            Arguments:
-            data_loader: DirectoryIterator
-                Yields tuples (x, y)
-            num_epochs: int
-                Number of epochs to train the model for.
-        """
-        for epoch_num in range(num_epochs):
-            self.train_epoch(data_loader, epoch_num)
-            self.save_model()
+        super().__init__(model, save_location, show_progress_bar)
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -36,6 +24,7 @@ class Trainer():
                       leave=False,
                       disable=not self.show_progress_bar
         )
+
         with trange(len(train_loader), **kwargs) as t:
             for real_images, one_hot_labels in train_loader:
                 # Assuming that batch is the first dimension
@@ -74,7 +63,3 @@ class Trainer():
                 # Update tqdm
                 t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
                 t.update()
-
-
-    def save_model(self):
-        tf.saved_model.save(self.model, self.save_dir)

@@ -2,11 +2,13 @@ import argparse
 from dataloaders.dataloaders import create_dataloaders
 from math import floor
 from models.conditional_gans import StackGAN1
-from models.trainer import Trainer
+from trainers.trainers import get_trainer
 import os
 import sys
 import tensorflow as tf
-from utils.utils import DATASETS, get_default_settings, save_options, sample_real_images, show_image_list
+from utils.data_helpers import sample_real_images, show_image_list
+from utils.datasets import DATASETS, get_dataset
+from utils.utils import get_default_settings, save_options
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -14,7 +16,7 @@ RESULTS_ROOT = 'results'
 
 
 def parse_arguments(args_to_parse):
-
+    """ Parse CLI arguments """
     default_settings = get_default_settings(SETTINGS_FILE)
 
     descr = 'Tensorflow 2 implementation of StackGAN for generating x-ray images'
@@ -27,6 +29,12 @@ def parse_arguments(args_to_parse):
     general.add_argument(
         '-d', '--dataset-name', help="Name of the dataset to use during training.",
         default=default_settings['dataset'], choices=DATASETS
+    )
+
+    data = parser.add_argument_group('Data settings')
+    data.add_argument(
+        '--samples-per-shard', type=int, default=default_settings['samples_per_shard'],
+        help="The number of samples to save in each TFRecord shard."
     )
 
     training = parser.add_argument_group('Training settings')
@@ -51,6 +59,7 @@ def parse_arguments(args_to_parse):
         '-f', '--num-filters', type=int, default=default_settings['num_filters'],
         help='The number of filters to stack.'
     )
+
     visualisation = parser.add_argument_group('Visualisation settings')
     visualisation.add_argument(
         '--visualise', action='store_true', default=False,
@@ -67,6 +76,7 @@ def parse_arguments(args_to_parse):
     args = parser.parse_args(args_to_parse)
     args.kernel_size = (args.kernel_size, args.kernel_size)
     return args
+
 
 def main(args):
     # Save options:
@@ -88,7 +98,8 @@ def main(args):
             reshape_dims=[91, 125, args.num_filters]
         )
 
-        trainer = Trainer(
+        trainer_class = get_trainer(args.dataset_name)
+        trainer = trainer_class(
             model=model,
             save_location=results_dir
         )
@@ -105,7 +116,8 @@ def main(args):
         num_fakes_to_generate = floor(num_images_to_classify / 2)
         num_real_images = num_images_to_classify - num_fakes_to_generate
 
-        real_images = sample_real_images(num_images=num_real_images, dataset_name=args.dataset_name)
+        dataset_object = get_dataset(args.dataset_name)
+        real_images = sample_real_images(num_images=num_real_images, dataset_object=dataset_object)
         fake_images = model.generate_images(num_images=num_fakes_to_generate)
 
         images = real_images + fake_images
