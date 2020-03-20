@@ -1,5 +1,7 @@
+from itertools import repeat
 import json
 import os
+import pandas as pd
 import pickle
 import tensorflow as tf
 import yaml
@@ -93,3 +95,31 @@ def format_for_windows(path_string):
 
 def num_tfrecords_in_dir(directory):
     return len([name for name in os.listdir(directory) if os.path.isfile(name) and name.endswith('.tfrecord')])
+
+def load_tabular_data(tabular_xray_path='data/CheXpert-v1.0-small/train.csv'):
+    tab_xray_df = pd.read_csv(tabular_xray_path).fillna('nan')
+    return tab_xray_df
+
+def build_encoding_map(column):
+    encoding_map = {}
+    unique_value_list = column.unique().tolist()
+    for idx, unique_value in enumerate(unique_value_list):
+        encoding_map[unique_value] = idx
+    return encoding_map
+
+def encode_tabular_data(tab_xray_df):
+    encoded_df = pd.DataFrame()
+    for column in tab_xray_df:
+        if column != 'Path':
+            encoding_map = build_encoding_map(tab_xray_df[column])
+            if not column in tab_xray_df:
+                print(f'{elem} is not in {encoding_map}')
+            encoded_column =  list(map(
+                lambda elem, encoding_map: encoding_map[elem],
+                tab_xray_df[column],
+                repeat(encoding_map)
+            ))
+            encoded_df[column] = encoded_column
+        else:
+            encoded_df[column] = tab_xray_df[column]
+    return encoded_df
