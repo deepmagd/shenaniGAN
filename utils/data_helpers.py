@@ -249,3 +249,51 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
         with tf.io.TFRecordWriter(record_path_name) as writer:
             serialised_example = example.SerializeToString()
             writer.write(serialised_example)
+
+def load_tabular_data(tabular_xray_path='data/CheXpert-v1.0-small/train.csv'):
+    """ Load tabular data and fill all NaN's with a string nan """
+    tab_xray_df = pd.read_csv(tabular_xray_path).fillna('nan')
+    return tab_xray_df
+
+def build_encoding_map(column):
+    """ Build a dictionary which maps each unique item to a categorical integer
+        Arguments:
+            column: pd.DataFrame
+                A column from a Pandas dataframe containing the information
+                relating to a single input feature.
+    """
+    encoding_map = {}
+    unique_value_list = column.unique().tolist()
+    for idx, unique_value in enumerate(unique_value_list):
+        encoding_map[unique_value] = idx
+    return encoding_map
+
+def encode_tabular_data(tab_xray_df):
+    """ Encode the tabular data so that it is represented by unique integer
+        categorical identifiers
+    """
+    encoded_df = pd.DataFrame()
+    for column in tab_xray_df:
+        if column != 'Path':
+            encoding_map = build_encoding_map(tab_xray_df[column])
+            if not column in tab_xray_df:
+                print(f'{elem} is not in {encoding_map}')
+            encoded_column =  list(map(
+                lambda elem, encoding_map: encoding_map[elem],
+                tab_xray_df[column],
+                repeat(encoding_map)
+            ))
+            encoded_df[column] = encoded_column
+        else:
+            encoded_df[column] = tab_xray_df[column]
+    return encoded_df
+
+def concat_columns_into_vector(encoded_tabular_df):
+    """ Concatenate the values for all features to form an array.
+        We then pair each array / vector with the corresponding image i
+        a dictionary for easy look up.
+    """
+    image_embedding_dict = {}
+    for _, row in encoded_tabular_df.iterrows():
+        image_embedding_dict[row['Path']] = row[row.columns != 'Path'].values
+    return image_embedding_dict
