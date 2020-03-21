@@ -1,10 +1,12 @@
 import glob
 from google_drive_downloader import GoogleDriveDownloader as gdd
 import io
+from itertools import repeat
 import math
 from matplotlib import pyplot as plt
 import numpy as np
 import os
+import pandas as pd
 import pathlib
 from random import randint
 import tarfile
@@ -295,5 +297,5 @@ def concat_columns_into_vector(encoded_tabular_df):
     """
     image_embedding_dict = {}
     for _, row in encoded_tabular_df.iterrows():
-        image_embedding_dict[row['Path']] = row[row.columns != 'Path'].values
+        image_embedding_dict[row['Path']] = row[encoded_tabular_df.columns != 'Path'].values
     return image_embedding_dict
