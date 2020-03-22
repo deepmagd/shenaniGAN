@@ -12,7 +12,7 @@ from random import randint
 import tarfile
 import tensorflow as tf
 import urllib.request
-from utils.utils import chunk_list, format_file_name, read_pickle, mkdir
+from utils.utils import chunk_list, format_file_name, read_pickle, mkdir, normalise
 
 NUM_COLOUR_CHANNELS = 3
 
@@ -271,28 +271,30 @@ def build_encoding_map(column):
     return encoding_map
 
 def encode_tabular_data(tab_xray_df):
-    """ Encode the tabular data so that it is represented by unique integer
-        categorical identifiers
+    """ Encode the tabular data so that it is represented in one-hot
+        encoding for categorical variables, and normalised for continious
+        variables
     """
-    encoded_df = pd.DataFrame()
+    ignores = ['Path']
+    normalises = ['Age']
+    encoded_df = pd.DataFrame({'Path': tab_xray_df['Path'].values})
+
     for column in tab_xray_df:
-        if column != 'Path':
-            encoding_map = build_encoding_map(tab_xray_df[column])
-            if not column in tab_xray_df:
-                print(f'{elem} is not in {encoding_map}')
-            encoded_column =  list(map(
-                lambda elem, encoding_map: encoding_map[elem],
-                tab_xray_df[column],
-                repeat(encoding_map)
-            ))
-            encoded_df[column] = encoded_column
-        else:
-            encoded_df[column] = tab_xray_df[column]
+        if column not in ignores and column not in normalises:
+            # One-hot encode the categorical data
+            one_hot_subset_df = pd.get_dummies(tab_xray_df[column])
+            one_hot_subset_df = one_hot_subset_df.add_prefix(f'{column}_')
+            encoded_df = encoded_df.join(one_hot_subset_df)
+        if column in normalises and column not in ignores:
+            # Continious variable, simply normalise
+            norm_values = normalise(tab_xray_df[column].values)
+            encoded_df = encoded_df.join(pd.DataFrame({column: norm_values}))
+
     return encoded_df
 
 def concat_columns_into_vector(encoded_tabular_df):
     """ Concatenate the values for all features to form an array.
-        We then pair each array / vector with the corresponding image i
+        We then pair each array / vector with the corresponding image in
         a dictionary for easy look up.
     """
     image_embedding_dict = {}

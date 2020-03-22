@@ -93,3 +93,9 @@ def format_for_windows(path_string):
 
 def num_tfrecords_in_dir(directory):
     return len([name for name in os.listdir(directory) if os.path.isfile(name) and name.endswith('.tfrecord')])
+
+def normalise(num_list):
+    """ Simple normalisation into [0,1] """
+    max_x = max(num_list)
+    min_x = min(num_list)
+    return [(x - min_x) / (max_x - min_x) for x in num_list]
