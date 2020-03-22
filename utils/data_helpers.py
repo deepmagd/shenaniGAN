@@ -1,16 +1,18 @@
 import glob
 from google_drive_downloader import GoogleDriveDownloader as gdd
 import io
+from itertools import repeat
 import math
 from matplotlib import pyplot as plt
 import numpy as np
 import os
+import pandas as pd
 import pathlib
 from random import randint
 import tarfile
 import tensorflow as tf
 import urllib.request
-from utils.utils import chunk_list, format_file_name, read_pickle, mkdir
+from utils.utils import chunk_list, format_file_name, read_pickle, mkdir, normalise
 
 NUM_COLOUR_CHANNELS = 3
 
@@ -249,3 +251,53 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
         with tf.io.TFRecordWriter(record_path_name) as writer:
             serialised_example = example.SerializeToString()
             writer.write(serialised_example)
+
+def load_tabular_data(tabular_xray_path='data/CheXpert-v1.0-small/train.csv'):
+    """ Load tabular data and fill all NaN's with a string nan """
+    tab_xray_df = pd.read_csv(tabular_xray_path).fillna('nan')
+    return tab_xray_df
+
+def build_encoding_map(column):
+    """ Build a dictionary which maps each unique item to a categorical integer
+        Arguments:
+            column: pd.DataFrame
+                A column from a Pandas dataframe containing the information
+                relating to a single input feature.
+    """
+    encoding_map = {}
+    unique_value_list = column.unique().tolist()
+    for idx, unique_value in enumerate(unique_value_list):
+        encoding_map[unique_value] = idx
+    return encoding_map
+
+def encode_tabular_data(tab_xray_df):
+    """ Encode the tabular data so that it is represented in one-hot
+        encoding for categorical variables, and normalised for continious
+        variables
+    """
+    ignores = ['Path']
+    normalises = ['Age']
+    encoded_df = pd.DataFrame({'Path': tab_xray_df['Path'].values})
+
+    for column in tab_xray_df:
+        if column not in ignores and column not in normalises:
+            # One-hot encode the categorical data
+            one_hot_subset_df = pd.get_dummies(tab_xray_df[column])
+            one_hot_subset_df = one_hot_subset_df.add_prefix(f'{column}_')
+            encoded_df = encoded_df.join(one_hot_subset_df)
+        if column in normalises and column not in ignores:
+            # Continious variable, simply normalise
+            norm_values = normalise(tab_xray_df[column].values)
+            encoded_df = encoded_df.join(pd.DataFrame({column: norm_values}))
+
+    return encoded_df
+
+def concat_columns_into_vector(encoded_tabular_df):
+    """ Concatenate the values for all features to form an array.
+        We then pair each array / vector with the corresponding image in
+        a dictionary for easy look up.
+    """
+    image_embedding_dict = {}
+    for _, row in encoded_tabular_df.iterrows():
+        image_embedding_dict[row['Path']] = row[encoded_tabular_df.columns != 'Path'].values
+    return image_embedding_dict
