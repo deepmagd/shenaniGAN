@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import pathlib
 from random import randint
+import shutil
 import tarfile
 import tensorflow as tf
 import urllib.request
@@ -52,8 +53,29 @@ def zip_to_quadruple(file_names, class_info_list, text_embeddings, str_images):
 
     return zip(file_names, class_info_list, text_embeddings, str_images)
 
-def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset
+        Arguments:
+            dataset_type: str
+                The dataset type which dictates how we create the records
+            tfrecords_dir: str
+                Root save location for the TFRecrods
+            image_source_dir: str
+                Root source directory from which to read the images
+            text_source_dir: str
+                Root source directory from which to read the text
+            image_dims: tuple
+                (height (int), width (int))
+    """
+    if dataset_type == 'images-with-captions':
+        create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
+    elif dataset_type == 'images-with-tabular':
+        create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
+    else:
+        raise Exception(f'{dataset_type} is not a recognised dataset type')
+
+def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+    """ Create the TFRecords dataset for image-caption pairs
         Arguments:
             tfrecords_dir: str
                 Root save location for the TFRecrods
@@ -75,6 +97,10 @@ def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dim
         shard_iterator = zip_to_quadruple(file_names, class_info, text_embeddings, str_images)
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
 
+def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+    """ reate the TFRecords dataset for image-tabular pairs """
+    pass
+
 def download_dataset(dataset):
     if dataset == 'birds':
         download_cub()
@@ -83,7 +109,10 @@ def download_dataset(dataset):
     elif dataset == 'flowers':
         download_flowers()
     elif dataset == 'xrays':
-        raise NotImplementedError
+        """ TODO / NOTE: Since this is a really large download, (and requires the authors' permission)
+            we are going to assume that the user will manually download the CheXpert dataset
+        """
+        check_for_xrays()
     else:
         raise NotImplementedError
 
@@ -138,6 +167,12 @@ def download_flowers():
     IMAGE_LABELS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
     image_labels_download_loc = pathlib.Path('data/flowers/imagelabels.mat')
     urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
+
+def check_for_xrays():
+    if not os.path.isdir('data/CheXpert-v1.0-small/train') or \
+        not os.path.isdir('data/CheXpert-v1.0-small/valid'):
+        raise Exception('Please first download the CheXpert dataset')
+    shutil.move('data/CheXpert-v1.0-small/', 'data/CheXpert-v1.0-small/raw/')
 
 def get_string_images(image_paths):
     """ Generate a list of string representations of each image """
@@ -282,8 +317,8 @@ def encode_tabular_data(tab_xray_df):
     for column in tab_xray_df:
         if column not in ignores and column not in normalises:
             # One-hot encode the categorical data
-            one_hot_subset_df = pd.get_dummies(tab_xray_df[column])
-            one_hot_subset_df = one_hot_subset_df.add_prefix(f'{column}_')
+            one_hot_subset_df = pd.get_dummies(tab_xray_df[column], prefix=column)
+            # one_hot_subset_df = one_hot_subset_df.add_prefix(f'{column}_')
             encoded_df = encoded_df.join(one_hot_subset_df)
         if column in normalises and column not in ignores:
             # Continious variable, simply normalise
@@ -291,6 +326,14 @@ def encode_tabular_data(tab_xray_df):
             encoded_df = encoded_df.join(pd.DataFrame({column: norm_values}))
 
     return encoded_df
+
+def encode_row(x_df):
+    ignores = ['Path']
+    normalises = ['Age']
+    encoded_df = pd.DataFrame({'Path': x_df['Path'].values})
+
+    x_df[encoded_tabular_df.columns != 'Path']
+
 
 def concat_columns_into_vector(encoded_tabular_df):
     """ Concatenate the values for all features to form an array.

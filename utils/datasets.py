@@ -145,7 +145,37 @@ class FlowersDataset(StackedGANDataset):
         raise NotImplementedError
 
 class XRaysDataset(StackedGANDataset):
-    """ TODO: Container for the x-rays dataset properties """
+    """ XXX: Container for the x-rays dataset properties """
     def __init__(self):
         super().__init__()
-        raise NotImplementedError
+        self.type = 'images-with-tabular'
+        # NOTE: width and height are for the small dataset for now
+        self.width = 390
+        self.height = 320
+        self.num_channels = 1
+
+        self.feature_description = {
+            'image_raw': tf.io.FixedLenFeature([], tf.string),
+            'name': tf.io.FixedLenFeature([], tf.string),
+            'tabular': tf.io.FixedLenFeature([], tf.string),
+            'label': tf.io.FixedLenFeature([], tf.int64),
+        }
+
+        self.directory = pathlib.Path(
+            os.path.join('data/CheXpert-v1.0-small/')
+        )
+        if not os.path.isdir(self.directory):
+            download_dataset(dataset='xrays')
+        records_dir = os.path.join(self.directory, 'records')
+
+        if os.path.isdir(records_dir):
+            self.directory = records_dir
+        else:
+            create_tfrecords(
+                dataset_type=self.type
+                tfrecords_dir=os.path.join(self.directory, 'records'),
+                image_source_dir=os.path.join(self.directory, 'raw'),
+                text_source_dir=os.path.join(self.directory, 'raw'),
+                image_dims=(self.height, self.width)
+            )
+            self.directory = records_dir
