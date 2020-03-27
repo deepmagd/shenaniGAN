@@ -99,7 +99,18 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
 
 def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ reate the TFRecords dataset for image-tabular pairs """
-    pass
+    for subset in ['train', 'valid']:
+        # Tabular encoding
+        tabular_df = load_tabular_data(os.path.join(image_source_dir, f'{subset}.csv'))
+        encoded_tabular_df = encode_tabular_data(tabular_df)
+        encoded_tabular_df = update_paths(encoded_tabular_df, subset)
+        embedding_dict = concat_columns_into_vector(encoded_df)
+        # Image paths
+        pass
+        # Convert to bytes
+        pass
+        # Arrange and write to file
+        pass
 
 def download_dataset(dataset):
     if dataset == 'birds':
@@ -327,13 +338,17 @@ def encode_tabular_data(tab_xray_df):
 
     return encoded_df
 
-def encode_row(x_df):
-    ignores = ['Path']
-    normalises = ['Age']
-    encoded_df = pd.DataFrame({'Path': x_df['Path'].values})
-
-    x_df[encoded_tabular_df.columns != 'Path']
-
+def update_paths(encoded_tabular_df, subset):
+    """ Ammend the image file ppath to include the 'raw' subdirectory
+        which we added after downoading.
+        TODO: Check this updates the DF
+    """
+    for idx, row in encoded_tabular_df.iterrows():
+        old_path = row['Path']
+        insert_idx = old_path.index(f'/{subset}/')
+        updated_path = os.path.join(old_path[:insert_idx] ,'raw', old_path[insert_idx:])
+        encoded_tabular_df[idx, 'Path'] = updated_path
+    return encoded_tabular_df
 
 def concat_columns_into_vector(encoded_tabular_df):
     """ Concatenate the values for all features to form an array.
@@ -342,5 +357,5 @@ def concat_columns_into_vector(encoded_tabular_df):
     """
     image_embedding_dict = {}
     for _, row in encoded_tabular_df.iterrows():
-        image_embedding_dict[row['Path']] = row[encoded_tabular_df.columns != 'Path'].values
+        image_embedding_dict[updated_path] = row[encoded_tabular_df.columns != 'Path'].values
     return image_embedding_dict
