@@ -36,23 +36,6 @@ def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-# def zip_to_kuple(list_of_lists):
-#     """ Convert the listed variables: file_names, class_info_list, text_embeddings, and images
-#         into an interable tuple of size 4.
-#         Arguments:
-#             file_names: List
-#             class_info_list: List
-#             text_embeddings: List
-#             str_images: List
-#         Returns:
-#             iterator
-#     """
-    # num_samples = len(file_names)
-    # assert len(class_info_list) == num_samples and len(text_embeddings) == num_samples and len(file_names) == num_samples, \
-    #     'Expected length of {}'.format(num_samples)
-
-    # return zip(file_names, class_info_list, text_embeddings, str_images)
-
 def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset
         Arguments:
@@ -206,8 +189,6 @@ def get_byte_images(image_paths):
     """ Generate a list of byte representations of each image """
     byte_images_list = []
     for image_path in image_paths:
-        # if prefix is not None:
-        #     image_path = os.path.join(prefix, image_path)
         byte_image = open(image_path, 'rb').read()
         byte_images_list.append(byte_image)
     return byte_images_list
