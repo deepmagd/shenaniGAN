@@ -2,7 +2,7 @@ import numpy as np
 import os
 import pathlib
 import tensorflow as tf
-from utils.data_helpers import download_dataset, create_tfrecords, get_record_paths
+from utils.data_helpers import download_dataset, check_for_xrays, create_tfrecords, get_record_paths
 from utils.data_helpers import NUM_COLOUR_CHANNELS
 
 DATASETS_DICT = {
@@ -85,8 +85,6 @@ class BirdsDataset(StackedGANDataset):
 class BirdsWithWordsDataset(StackedGANDataset):
     """ Container for the birds dataset which includes word captions """
     def __init__(self):
-        """ TODO: Not yet implemented
-        """
         super().__init__()
         # The directory to the TFRecords
         self.type = 'images-with-captions'
@@ -157,25 +155,36 @@ class XRaysDataset(StackedGANDataset):
         self.feature_description = {
             'image_raw': tf.io.FixedLenFeature([], tf.string),
             'name': tf.io.FixedLenFeature([], tf.string),
-            'tabular': tf.io.FixedLenFeature([], tf.string),
+            'text': tf.io.FixedLenFeature([], tf.string),
             'label': tf.io.FixedLenFeature([], tf.int64),
         }
 
-        self.directory = pathlib.Path(
-            os.path.join('data/CheXpert-v1.0-small/')
-        )
-        if not os.path.isdir(self.directory):
-            download_dataset(dataset='xrays')
-        records_dir = os.path.join(self.directory, 'records')
+        base_directory = 'data/CheXpert-v1.0-small'
+        if not os.path.isdir(os.path.join(base_directory, 'raw')):
+            check_for_xrays(directory='data/CheXpert-v1.0-small')
 
-        if os.path.isdir(records_dir):
-            self.directory = records_dir
-        else:
+        self.directory = os.path.join(base_directory, 'records')
+        if not os.path.isdir(self.directory):
             create_tfrecords(
-                dataset_type=self.type
-                tfrecords_dir=os.path.join(self.directory, 'records'),
-                image_source_dir=os.path.join(self.directory, 'raw'),
-                text_source_dir=os.path.join(self.directory, 'raw'),
+                dataset_type=self.type,
+                tfrecords_dir=self.directory,
+                image_source_dir=os.path.join(base_directory, 'raw'),
+                text_source_dir=os.path.join(base_directory, 'raw'),
                 image_dims=(self.height, self.width)
             )
-            self.directory = records_dir
+
+    def parse_dataset(self, subset='train'):
+        """ Parse the raw data from the TFRecords and arrange into a readable form
+            for the trainer object.
+        """
+        if not subset in ['train', 'valid']:
+            raise Exception('Invalid subset type: {}, expected train or valid'.format(subset))
+
+        subset_paths = get_record_paths(os.path.join(self.directory, subset))
+        subset_obj = tf.data.TFRecordDataset(subset_paths)
+        mapped_subset_obj = subset_obj.map(self._parse_example)
+        return mapped_subset_obj
+
+    def _parse_example(self, example_proto):
+        # Parse the input tf.Example proto using self.feature_description
+        return tf.io.parse_single_example(example_proto, self.feature_description)

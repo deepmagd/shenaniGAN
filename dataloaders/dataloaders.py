@@ -21,15 +21,15 @@ def image_with_tabular(dataset):
     """ Read, prepare, and present the TFRecord data for images
         alongside the corresponding tabular data
     """
-    train_loader = ImageTabularDataLoader(
+    train_loader = ImageTextDataLoader(
         dataset_object=dataset,
         subset='train'
     )
-    test_loader = ImageTabularDataLoader(
+    test_loader = ImageTextDataLoader(
         dataset_object=dataset,
-        subset='test'
+        subset='valid'
     )
-    return train_loader, test_loader, None
+    return train_loader, test_loader, dataset.get_dims()
 
 def image_with_captions_loaders(dataset):
     """ Read, prepare, and present the TFRecord data """
