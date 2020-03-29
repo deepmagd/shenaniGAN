@@ -15,6 +15,8 @@ import tensorflow as tf
 import urllib.request
 from utils.utils import chunk_list, format_file_name, read_pickle, mkdir, normalise
 
+from PIL import Image
+
 NUM_COLOUR_CHANNELS = 3
 
 
@@ -93,7 +95,7 @@ def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_
             prefix=os.path.join('data', 'CheXpert-v1.0-small', 'raw', subset)
         )
         # Convert to bytes
-        byte_images = get_byte_images(image_paths=image_paths)
+        byte_images = get_byte_images(image_paths=image_paths, image_dims=image_dims)
         # Arrange and write to file
         print('Writing to TFRecords')
         dummy_list = [0] * len(image_paths)
@@ -185,11 +187,15 @@ def check_for_xrays(directory):
     shutil.move(f'{train_location}.csv', raw_location)
     shutil.move(f'{valid_location}.csv', raw_location)
 
-def get_byte_images(image_paths):
+def get_byte_images(image_paths, image_dims):
     """ Generate a list of byte representations of each image """
     byte_images_list = []
     for image_path in image_paths:
-        byte_image = open(image_path, 'rb').read()
+        image = Image.open(image_path, 'r')
+        image = image.resize(image_dims)
+        img_buffer = io.BytesIO()
+        image.save(img_buffer, format='PNG')
+        byte_image = img_buffer.getvalue()
         byte_images_list.append(byte_image)
     return byte_images_list
 
