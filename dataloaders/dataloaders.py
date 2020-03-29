@@ -11,10 +11,25 @@ def create_dataloaders(args):
     if dataset.type == 'images':
         return image_loaders(dataset, args.batch_size)
     elif dataset.type == 'images-with-captions':
-        print("HEREH HERH HERE")
         return image_with_captions_loaders(dataset)
+    elif dataset.type == 'images-with-tabular':
+        return image_with_tabular(dataset)
     else:
         raise Exception('Unexpected dataset type: {}'.format(dataset.type))
+
+def image_with_tabular(dataset):
+    """ Read, prepare, and present the TFRecord data for images
+        alongside the corresponding tabular data
+    """
+    train_loader = ImageTextDataLoader(
+        dataset_object=dataset,
+        subset='train'
+    )
+    test_loader = ImageTextDataLoader(
+        dataset_object=dataset,
+        subset='valid'
+    )
+    return train_loader, test_loader, dataset.get_dims()
 
 def image_with_captions_loaders(dataset):
     """ Read, prepare, and present the TFRecord data """

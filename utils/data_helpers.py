@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import pathlib
 from random import randint
+import shutil
 import tarfile
 import tensorflow as tf
 import urllib.request
@@ -35,25 +36,29 @@ def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-def zip_to_quadruple(file_names, class_info_list, text_embeddings, str_images):
-    """ Convert the listed variables: file_names, class_info_list, text_embeddings, and images
-        into an interable tuple of size 4.
-        Arguments:
-            file_names: List
-            class_info_list: List
-            text_embeddings: List
-            str_images: List
-        Returns:
-            iterator
-    """
-    num_samples = len(file_names)
-    assert len(class_info_list) == num_samples and len(text_embeddings) == num_samples and len(file_names) == num_samples, \
-        'Expected length of {}'.format(num_samples)
-
-    return zip(file_names, class_info_list, text_embeddings, str_images)
-
-def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset
+        Arguments:
+            dataset_type: str
+                The dataset type which dictates how we create the records
+            tfrecords_dir: str
+                Root save location for the TFRecrods
+            image_source_dir: str
+                Root source directory from which to read the images
+            text_source_dir: str
+                Root source directory from which to read the text
+            image_dims: tuple
+                (height (int), width (int))
+    """
+    if dataset_type == 'images-with-captions':
+        create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
+    elif dataset_type == 'images-with-tabular':
+        create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
+    else:
+        raise Exception(f'{dataset_type} is not a recognised dataset type')
+
+def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+    """ Create the TFRecords dataset for image-caption pairs
         Arguments:
             tfrecords_dir: str
                 Root save location for the TFRecrods
@@ -70,10 +75,31 @@ def create_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dim
         file_names = [format_file_name(image_source_dir, file_name) for file_name in file_names]
         # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
-        str_images = get_string_images(file_names)
+        byte_images = get_byte_images(file_names)
         # Arrange and write to file
-        shard_iterator = zip_to_quadruple(file_names, class_info, text_embeddings, str_images)
+        shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_image])
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
+
+def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+    """ Create the TFRecords dataset for image-tabular pairs """
+    for subset in ['train', 'valid']:
+        image_prefix = f'CheXpert-v1.0-small/{subset}/'
+        # Tabular encoding
+        print('Creating tabular encoding')
+        tabular_df = load_tabular_data(os.path.join(image_source_dir, f'{subset}.csv'))
+        encoded_tabular_df = encode_tabular_data(tabular_df, image_prefix)
+        encoded_tabular_data, image_paths = extract_tabular_as_bytes_lists(
+            encoded_tabular_df,
+            prefix=os.path.join('data', 'CheXpert-v1.0-small', 'raw', subset)
+        )
+        # Convert to bytes
+        byte_images = get_byte_images(image_paths=image_paths)
+        # Arrange and write to file
+        print('Writing to TFRecords')
+        dummy_list = [0] * len(image_paths)
+        shard_iterator = zip(*[image_paths, dummy_list, encoded_tabular_data, byte_images])
+        write_records_to_file(shard_iterator, subset, tfrecords_dir)
+        print('Complete')
 
 def download_dataset(dataset):
     if dataset == 'birds':
@@ -83,7 +109,10 @@ def download_dataset(dataset):
     elif dataset == 'flowers':
         download_flowers()
     elif dataset == 'xrays':
-        raise NotImplementedError
+        """ TODO / NOTE: Since this is a really large download, (and requires the authors' permission)
+            we are going to assume that the user will manually download the CheXpert dataset
+        """
+        raise Exception('Please first download the CheXpert dataset')
     else:
         raise NotImplementedError
 
@@ -139,13 +168,30 @@ def download_flowers():
     image_labels_download_loc = pathlib.Path('data/flowers/imagelabels.mat')
     urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
 
-def get_string_images(image_paths):
-    """ Generate a list of string representations of each image """
-    str_images_list = []
+def check_for_xrays(directory):
+    """ Check to see if the xray dataset has been downloaded at all.
+        Raise an exception if it hasn't. If it has, move it to raw.
+    """
+    train_location = os.path.join(directory, 'train')
+    valid_location = os.path.join(directory, 'valid')
+    raw_location = os.path.join(directory, 'raw')
+
+    if not os.path.isdir(train_location) or not os.path.isdir(valid_location):
+        raise Exception('Please first download the CheXpert dataset')
+
+    mkdir(raw_location)
+    shutil.move(train_location, raw_location)
+    shutil.move(valid_location, raw_location)
+    shutil.move(f'{train_location}.csv', raw_location)
+    shutil.move(f'{valid_location}.csv', raw_location)
+
+def get_byte_images(image_paths):
+    """ Generate a list of byte representations of each image """
+    byte_images_list = []
     for image_path in image_paths:
-        image_string = open(image_path, 'rb').read()
-        str_images_list.append(image_string)
-    return str_images_list
+        byte_image = open(image_path, 'rb').read()
+        byte_images_list.append(byte_image)
+    return byte_images_list
 
 def get_images_from_paths(sampled_image_paths, image_dims):
     """ Given a list of paths to images, and the image dimensions
@@ -252,7 +298,7 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
             serialised_example = example.SerializeToString()
             writer.write(serialised_example)
 
-def load_tabular_data(tabular_xray_path='data/CheXpert-v1.0-small/train.csv'):
+def load_tabular_data(tabular_xray_path):
     """ Load tabular data and fill all NaN's with a string nan """
     tab_xray_df = pd.read_csv(tabular_xray_path).fillna('nan')
     return tab_xray_df
@@ -270,7 +316,7 @@ def build_encoding_map(column):
         encoding_map[unique_value] = idx
     return encoding_map
 
-def encode_tabular_data(tab_xray_df):
+def encode_tabular_data(tab_xray_df, image_path_prefix:str):
     """ Encode the tabular data so that it is represented in one-hot
         encoding for categorical variables, and normalised for continious
         variables
@@ -282,22 +328,24 @@ def encode_tabular_data(tab_xray_df):
     for column in tab_xray_df:
         if column not in ignores and column not in normalises:
             # One-hot encode the categorical data
-            one_hot_subset_df = pd.get_dummies(tab_xray_df[column])
-            one_hot_subset_df = one_hot_subset_df.add_prefix(f'{column}_')
+            one_hot_subset_df = pd.get_dummies(tab_xray_df[column], prefix=column)
             encoded_df = encoded_df.join(one_hot_subset_df)
         if column in normalises and column not in ignores:
             # Continious variable, simply normalise
             norm_values = normalise(tab_xray_df[column].values)
             encoded_df = encoded_df.join(pd.DataFrame({column: norm_values}))
-
+    encoded_df['Path'] = encoded_df['Path'].apply(lambda x: remove_prefix(x, prefix=image_path_prefix))
     return encoded_df
 
-def concat_columns_into_vector(encoded_tabular_df):
-    """ Concatenate the values for all features to form an array.
-        We then pair each array / vector with the corresponding image in
-        a dictionary for easy look up.
+def remove_prefix(name, prefix):
+    return name[len(prefix):]
+
+def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
+    """ Extract the image paths and feature data from the DataFrame.
+        These are converted to bytes and returned as separate lists.
     """
-    image_embedding_dict = {}
-    for _, row in encoded_tabular_df.iterrows():
-        image_embedding_dict[row['Path']] = row[encoded_tabular_df.columns != 'Path'].values
-    return image_embedding_dict
+    image_paths = encoded_tabular_df['Path'].values
+    image_paths = [os.path.join(prefix, image_path).encode('utf-8') for image_path in image_paths]
+    encoded_tabular_lists = encoded_tabular_df.loc[:, encoded_tabular_df.columns != 'Path'].values
+    encoded_tabular_lists = [sample.tobytes() for sample in encoded_tabular_lists]
+    return encoded_tabular_lists, image_paths

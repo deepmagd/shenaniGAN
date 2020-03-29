@@ -28,12 +28,11 @@ class TextToImageTrainer(Trainer):
         )
 
         with trange(len(train_loader), **kwargs) as t:
-            for sample in train_loader.parsed_subset:
+            for counter, sample in enumerate(train_loader.parsed_subset):
                 image_tensor = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy())))
-                print(image_tensor)
-                text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
-                print(text_tensor)
+                print(counter, image_tensor.shape)
+                # For tabular: text_tensor = np.frombuffer(sample['text'].numpy())
+                # For Caption: text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
+                # print(text_tensor)
                 name = sample['name'].numpy().decode("utf-8")
-                print(name)
                 label = sample['label'].numpy()
-                print(label)
