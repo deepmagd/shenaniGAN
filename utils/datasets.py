@@ -76,8 +76,8 @@ class BirdsDataset(StackedGANDataset):
         self.classes = np.array(
             [item.name for item in self.directory.glob('*') if os.path.isdir(item.name)]
         )
-        self.width = 500
-        self.height = 364
+        self.width = 64
+        self.height = 64
         self.num_channels = 3
         self.get_image_label_pairs()
 
@@ -88,8 +88,8 @@ class BirdsWithWordsDataset(StackedGANDataset):
         super().__init__()
         # The directory to the TFRecords
         self.type = 'images-with-captions'
-        self.width = 500
-        self.height = 364
+        self.width = 64
+        self.height = 64
         self.num_channels = 3
 
         # self.classes = None
