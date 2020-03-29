@@ -81,25 +81,25 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
 
 def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
-    """ reate the TFRecords dataset for image-tabular pairs """
+    """ Create the TFRecords dataset for image-tabular pairs """
     for subset in ['train', 'valid']:
         image_prefix = f'CheXpert-v1.0-small/{subset}/'
         # Tabular encoding
         print('Creating tabular encoding')
         tabular_df = load_tabular_data(os.path.join(image_source_dir, f'{subset}.csv'))
         encoded_tabular_df = encode_tabular_data(tabular_df, image_prefix)
-        encoded_tabular_data, image_paths = listify(
+        encoded_tabular_data, image_paths = extract_tabular_as_bytes_lists(
             encoded_tabular_df,
             prefix=os.path.join('data', 'CheXpert-v1.0-small', 'raw', subset)
         )
         # Convert to bytes
-        print('get_byte_images')
         byte_images = get_byte_images(image_paths=image_paths)
         # Arrange and write to file
         print('Writing to TFRecords')
         dummy_list = [0] * len(image_paths)
         shard_iterator = zip(*[image_paths, dummy_list, encoded_tabular_data, byte_images])
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
+        print('Complete')
 
 def download_dataset(dataset):
     if dataset == 'birds':
@@ -298,7 +298,7 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
             serialised_example = example.SerializeToString()
             writer.write(serialised_example)
 
-def load_tabular_data(tabular_xray_path='data/CheXpert-v1.0-small/train.csv'):
+def load_tabular_data(tabular_xray_path):
     """ Load tabular data and fill all NaN's with a string nan """
     tab_xray_df = pd.read_csv(tabular_xray_path).fillna('nan')
     return tab_xray_df
@@ -329,7 +329,6 @@ def encode_tabular_data(tab_xray_df, image_path_prefix:str):
         if column not in ignores and column not in normalises:
             # One-hot encode the categorical data
             one_hot_subset_df = pd.get_dummies(tab_xray_df[column], prefix=column)
-            # one_hot_subset_df = one_hot_subset_df.add_prefix(f'{column}_')
             encoded_df = encoded_df.join(one_hot_subset_df)
         if column in normalises and column not in ignores:
             # Continious variable, simply normalise
@@ -338,12 +337,12 @@ def encode_tabular_data(tab_xray_df, image_path_prefix:str):
     encoded_df['Path'] = encoded_df['Path'].apply(lambda x: remove_prefix(x, prefix=image_path_prefix))
     return encoded_df
 
-def remove_prefix(name, prefix: str):
+def remove_prefix(name, prefix):
     return name[len(prefix):]
 
-def listify(encoded_tabular_df, prefix):
-    """ Listify the encoded DataFrame by extracting a list of the image names
-        and a list of the encoded tabular data where each row is a list.
+def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
+    """ Extract the image paths and feature data from the DataFrame.
+        These are converted to bytes and returned as separate lists.
     """
     image_paths = encoded_tabular_df['Path'].values
     image_paths = [os.path.join(prefix, image_path).encode('utf-8') for image_path in image_paths]
