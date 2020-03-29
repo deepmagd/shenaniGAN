@@ -1,21 +1,20 @@
 import glob
-from google_drive_downloader import GoogleDriveDownloader as gdd
 import io
-from itertools import repeat
 import math
-from matplotlib import pyplot as plt
-import numpy as np
 import os
-import pandas as pd
 import pathlib
-from random import randint
 import shutil
 import tarfile
-import tensorflow as tf
 import urllib.request
-from utils.utils import chunk_list, format_file_name, read_pickle, mkdir, normalise
+from itertools import repeat
 
+import numpy as np
+import pandas as pd
+from google_drive_downloader import GoogleDriveDownloader as gdd
+from matplotlib import pyplot as plt
 from PIL import Image
+
+from utils.utils import chunk_list, format_file_name, mkdir, read_pickle
 
 NUM_COLOUR_CHANNELS = 3
 
@@ -192,7 +191,13 @@ def get_byte_images(image_paths, image_dims):
     byte_images_list = []
     for image_path in image_paths:
         image = Image.open(image_path, 'r')
-        image = image.resize(image_dims)
+        old_size = image.size[:2]
+        ratio = max(image_dims)/max(old_size)
+        new_size = tuple([int(x*ratio) for x in old_size])
+        image = image.resize(new_size, Image.ANTIALIAS)
+        new_img = Image.new('RGB', image_dims)
+        new_img.paste(image, ((image_dims[0]-new_size[0])//2,
+                              (image_dims[1]-new_size[1])//2))
         img_buffer = io.BytesIO()
         image.save(img_buffer, format='PNG')
         byte_image = img_buffer.getvalue()

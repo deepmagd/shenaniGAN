@@ -82,8 +82,7 @@ def save_options(options, save_dir):
     for option in vars(options):
         opt_dict[option] = getattr(options, option)
 
-    if not os.path.exists(save_dir):
-        mkdir(save_dir)
+    mkdir(save_dir)
     opts_file_path = os.path.join(save_dir, 'opts.json')
     with open(opts_file_path, 'w') as opt_file:
         json.dump(opt_dict, opt_file)
