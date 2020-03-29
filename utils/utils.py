@@ -53,7 +53,7 @@ def sample_normal(mean, log_var):
             latent_dim)
     """
     std = tf.math.exp(0.5 * log_var)
-    epsilon = tf.random.normal(std)
+    epsilon = tf.random.normal(tf.shape(std)) # TODO is shape the correct thing to use here?
     return mean + std * epsilon
 
 def product_list(num_list):
@@ -83,7 +83,7 @@ def save_options(options, save_dir):
         opt_dict[option] = getattr(options, option)
 
     if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
+        mkdir(save_dir)
     opts_file_path = os.path.join(save_dir, 'opts.json')
     with open(opts_file_path, 'w') as opt_file:
         json.dump(opt_dict, opt_file)
