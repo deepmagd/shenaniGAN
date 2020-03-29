@@ -7,4 +7,4 @@ num_filters: 32
 num_images_to_generate: 4
 num_images_to_classify: 4
 samples_per_shard: 10
-target_size: 256
+target_size: 64

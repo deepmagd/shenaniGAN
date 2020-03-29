@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Conv2D, Dense, Flatten, LeakyReLU
+from tensorflow.keras.layers import (BatchNormalization, Conv1D, Conv2D, Dense,
+                                     Flatten, LeakyReLU)
 
 
 class Discriminator(Model):
@@ -21,19 +22,22 @@ class Discriminator(Model):
         self.optimiser = tf.keras.optimizers.Adam(1e-4)
         # TODO: Add the correct layers as per the paper
         self.leaky_relu_1 = LeakyReLU()
-        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, activation='relu', padding='same')
+        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, padding='same')
         self.leaky_relu_2 = LeakyReLU()
-        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu', padding="same")
+        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, padding="same")
+        self.bn1 = BatchNormalization()
+        self.conv3 = Conv1D(filters=num_filters, kernel_size=1, padding="same")
         self.flatten = Flatten()
         self.dense1 = Dense(units=32, activation='relu')
         self.dense2 = Dense(units=1, activation='sigmoid')
 
     @tf.function
-    def call(self, images):
-        x = self.leaky_relu_1(images)
-        x = self.conv1(x)
-        x = self.leaky_relu_2(x)
+    def call(self, images, embedding):
+        x = self.conv1(images)
+        x = self.leaky_relu_1(x)
         x = self.conv2(x)
+        x = self.bn1(x)
+        x = self.leaky_relu_2(x)
         x = self.flatten(x)
         x = self.dense1(x)
         x = self.dense2(x)
@@ -49,3 +53,97 @@ class Discriminator(Model):
         fake_loss = self.xent_loss_fn(tf.zeros_like(predictions_on_fake), predictions_on_fake)
         total_loss = real_loss + fake_loss
         return total_loss
+
+class DiscriminatorStage1(Model):
+    """ The definition for a network which
+        classifies inputs as fake or genuine.
+    """
+    def __init__(self, img_size, kernel_size, num_filters):
+        """ Initialise a Generator instance.
+            TODO: Deal with this parameters and make it more logical
+                Arguments:
+                img_size : tuple of ints
+                    Size of images. E.g. (1, 32, 32) or (3, 64, 64).
+        """
+        super().__init__()
+        self.img_size = img_size
+        num_channels = self.img_size[0]
+        self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+        self.optimiser = tf.keras.optimizers.Adam(1e-4)
+        # TODO: Add the correct layers as per the paper
+        self.leaky_relu_1 = LeakyReLU()
+        self.conv1 = Conv2D(filters=128, kernel_size=(4, 4), strides=2, padding="valid")
+        self.leaky_relu_2 = LeakyReLU()
+        self.conv2 = Conv2D(filters=256, kernel_size=(4, 4), strides=2, padding="valid")
+        self.bn1 = BatchNormalization()
+        self.conv4 = Conv2D(filters=256, kernel_size=(4, 4), strides=2, padding="valid")
+        self.bn2 = BatchNormalization()
+        self.leaky_relu_3 = LeakyReLU()
+        self.conv5 = Conv2D(filters=512, kernel_size=(3, 3), strides=1, padding="valid")
+        self.bn3 = BatchNormalization()
+        self.leaky_relu_4 = LeakyReLU()
+        self.conv3 = Conv1D(filters=512, kernel_size=4, strides=4, padding="valid")
+        self.flatten = Flatten()
+        self.dense1 = Dense(units=32, activation='relu')
+        self.dense2 = Dense(units=1, activation='sigmoid')
+
+        self.conv6 = Conv2D(filters=512, kernel_size=1, strides=1, padding="valid")
+
+        self.dense_embed = Dense(units=128, activation='relu')
+
+    @tf.function
+    def call(self, images, embedding):
+
+        print("*** ", images.shape, " ", embedding.shape)
+        x = self.conv1(images)
+        x = self.leaky_relu_1(x)
+        x = self.conv2(x)
+        x = self.bn1(x)
+        x = self.leaky_relu_2(x)
+        x = self.conv4(x)
+        x = self.bn2(x)
+        x = self.leaky_relu_3(x)
+        x = self.conv5(x)
+        x = self.bn3(x)
+        x = self.leaky_relu_4(x)
+
+        reduced_embedding = self.dense_embed(self.flatten(embedding))
+        reduced_embedding = tf.expand_dims(tf.expand_dims(reduced_embedding, 1), 1)
+        reduced_embedding = tf.tile(reduced_embedding, [1, 4, 4, 1])
+
+        x = tf.concat([x, reduced_embedding], 3)
+        x = self.dense2(self.flatten(x))
+
+        return x
+
+    def loss(self, predictions_on_real, predictions_on_fake):
+        """ Calculate the loss for the predictions made on real and fake images.
+                Arguments:
+                predictions_on_real : Tensor
+                predictions_on_fake : Tensor
+        """
+        real_loss = self.xent_loss_fn(tf.ones_like(predictions_on_real), predictions_on_real)
+        fake_loss = self.xent_loss_fn(tf.zeros_like(predictions_on_fake), predictions_on_fake)
+        total_loss = real_loss + fake_loss
+        return total_loss
+
+class DiscriminatorStage2(Model):
+    """ The definition for a network which
+        classifies inputs as fake or genuine.
+    """
+    def __init__(self, img_size, kernel_size, num_filters):
+        """ Initialise a Generator instance.
+            TODO: Deal with this parameters and make it more logical
+                Arguments:
+                img_size : tuple of ints
+                    Size of images. E.g. (1, 32, 32) or (3, 64, 64).
+        """
+        super().__init__()
+        pass
+
+    @tf.function
+    def call(self, images, embedding):
+        pass
+
+    def loss(self, predictions_on_real, predictions_on_fake):
+        pass
