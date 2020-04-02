@@ -53,7 +53,7 @@ def sample_normal(mean, log_var):
             latent_dim)
     """
     std = tf.math.exp(0.5 * log_var)
-    epsilon = tf.random.normal(tf.shape(std)) # TODO is shape the correct thing to use here?
+    epsilon = tf.random.normal(tf.shape(mean)) # TODO is shape the correct thing to use here?
     return mean + std * epsilon
 
 def product_list(num_list):
