@@ -2,18 +2,21 @@ import tensorflow as tf
 
 
 class Trainer(object):
-    def __init__(self, model, save_location,
+    def __init__(self, model, batch_size, save_location,
                  show_progress_bar=True):
         """ Initialise the model trainer
             Arguments:
             model: models.ConditionalGAN
                 The model to train
+            batch_size: int
+                The number of samples per mini-batch
             save_location: str
                 The directory in which to save all
                 results from training the model.
         """
         self.show_progress_bar = show_progress_bar
         self.model = model
+        self.batch_size = batch_size
         self.save_dir = save_location
 
     def __call__(self, data_loader, num_epochs):

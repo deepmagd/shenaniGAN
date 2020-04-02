@@ -101,6 +101,7 @@ def main(args):
         trainer_class = get_trainer(args.dataset_name)
         trainer = trainer_class(
             model=model,
+            batch_size=args.batch_size,
             save_location=results_dir
         )
         trainer(train_loader, num_epochs=args.num_epochs)

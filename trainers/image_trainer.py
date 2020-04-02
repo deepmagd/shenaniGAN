@@ -5,17 +5,19 @@ from trainers.base_trainer import Trainer
 
 class ImageTrainer(Trainer):
     """ A image-to-image GAN training class """
-    def __init__(self, model, save_location,
+    def __init__(self, model, batch_size, save_location,
                  show_progress_bar=True):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
                 The model to train
+            batch_size: int
+                The number of samples per mini-batch
             save_location: str
                 The directory in which to save all
                 results from training the model.
         """
-        super().__init__(model, save_location, show_progress_bar)
+        super().__init__(model, batch_size, save_location, show_progress_bar)
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """

@@ -119,17 +119,16 @@ class BirdsWithWordsDataset(StackedGANDataset):
     # def __len__(self):
     #     return num_tfrecords_in_dir(os.path.join(self.directory, 'train'))
 
-    def parse_dataset(self, subset='train'):
+    def parse_dataset(self, subset='train', batch_size=1):
         """ Parse the raw data from the TFRecords and arrange into a readable form
             for the trainer object.
         """
         if not subset in ['train', 'test']:
             raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
-
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
         mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj
+        return mapped_subset_obj.batch(batch_size)
 
     def _parse_example(self, example_proto):
         # Parse the input tf.Example proto using self.feature_description
@@ -173,7 +172,7 @@ class XRaysDataset(StackedGANDataset):
                 image_dims=(self.height, self.width)
             )
 
-    def parse_dataset(self, subset='train'):
+    def parse_dataset(self, subset='train', batch_size=1):
         """ Parse the raw data from the TFRecords and arrange into a readable form
             for the trainer object.
         """
@@ -183,7 +182,7 @@ class XRaysDataset(StackedGANDataset):
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
         mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj
+        return mapped_subset_obj.batch(batch_size)
 
     def _parse_example(self, example_proto):
         # Parse the input tf.Example proto using self.feature_description
