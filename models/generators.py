@@ -1,7 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Dense, Reshape, UpSampling2D)
+                                     Dense, Reshape, UpSampling2D, Conv2DTranspose,
+                                     ReLU)
+from tensorflow.keras.activations import tanh
 
 from utils.utils import product_list
 
@@ -79,23 +81,50 @@ class GeneratorStage1(Model):
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimiser = tf.keras.optimizers.Adam(1e-4)
         # TODO: Add correct layers as given by the paper
-        self.dense1 = Dense(units=16*16*32, activation='relu') # NOTE make dynamic
-        self.reshape_layer = Reshape([16, 16, 32])
-        self.upsample1 = UpSampling2D()
-        self.conv1 = Conv2D(filters=num_filters, kernel_size=kernel_size, activation='relu', padding='same')
+        self.dense1 = Dense(units=128*8*4*4, activation=None) # NOTE make dynamic
         self.bn1 = BatchNormalization()
-        self.upsample2 = UpSampling2D()
-        self.conv2 = Conv2D(filters=num_output_channels, kernel_size=kernel_size, activation='tanh', padding='same')
+        self.relu1 = ReLU()
+        self.reshape_layer = Reshape([4, 4, 128*8])
+
+        self.deconv2d1 = Conv2DTranspose(128*4, kernel_size=(4, 4), strides=(2, 2))
+        self.conv1 = Conv2D(filters=128*4, kernel_size=(3, 3), strides=(1, 1))
+        self.bn2 = BatchNormalization()
+        self.relu2 = ReLU()
+
+        self.deconv2d2 = Conv2DTranspose(128*2, kernel_size=(4, 4), strides=(2, 2))
+        self.conv2 = Conv2D(filters=128*2, kernel_size=(3, 3), strides=(1, 1))
+        self.bn3 = BatchNormalization()
+        self.relu3 = ReLU()
+
+        self.deconv2d3 = Conv2DTranspose(128, kernel_size=(4, 4), strides=(2, 2))
+        self.conv3 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1))
+        self.bn4 = BatchNormalization()
+        self.relu4 = ReLU()
+
+        self.deconv2d4 = Conv2DTranspose(3, kernel_size=(4, 4), strides=(2, 2)) # 3=image channels
+        self.conv4 = Conv2D(filters=3, kernel_size=(3, 3), strides=(1, 1))
 
     @tf.function
     def call(self, noise):
         x = self.dense1(noise)
-        x = self.reshape_layer(x)
-        x = self.upsample1(x)
-        x = self.conv1(x)
         x = self.bn1(x)
-        x = self.upsample2(x)
+        x = self.relu1(x)
+        x = self.reshape_layer(x)
+        x = self.deconv2d1(x)
+        x = self.conv1(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
+        x = self.deconv2d2(x)
         x = self.conv2(x)
+        x = self.bn3(x)
+        x = self.relu3(x)
+        x = self.deconv2d3(x)
+        x = self.conv3(x)
+        x = self.bn4(x)
+        x = self.relu4(x)
+        x = self.deconv2d4(x)
+        x = self.conv4(x)
+        x = tanh(x)
         return x
 
     def loss(self, predictions_on_fake):
