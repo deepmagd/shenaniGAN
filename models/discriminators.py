@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import (BatchNormalization, Conv1D, Conv2D, Dense,
                                      Flatten, LeakyReLU)
-
+from tensorflow.keras.activations import sigmoid
 
 class Discriminator(Model):
     """ The definition for a network which
@@ -71,48 +71,61 @@ class DiscriminatorStage1(Model):
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimiser = tf.keras.optimizers.Adam(1e-4)
         # TODO: Add the correct layers as per the paper
+        self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2))
         self.leaky_relu_1 = LeakyReLU()
-        self.conv1 = Conv2D(filters=128, kernel_size=(4, 4), strides=2, padding="valid")
-        self.leaky_relu_2 = LeakyReLU()
-        self.conv2 = Conv2D(filters=256, kernel_size=(4, 4), strides=2, padding="valid")
+
+        self.conv2 = Conv2D(filters=64*2, kernel_size=(4, 4), strides=(2, 2))
         self.bn1 = BatchNormalization()
-        self.conv4 = Conv2D(filters=256, kernel_size=(4, 4), strides=2, padding="valid")
+        self.leaky_relu_2 = LeakyReLU()
+
+        self.conv3 = Conv2D(filters=64*4, kernel_size=(4, 4), strides=(1, 1))
         self.bn2 = BatchNormalization()
         self.leaky_relu_3 = LeakyReLU()
-        self.conv5 = Conv2D(filters=512, kernel_size=(3, 3), strides=1, padding="valid")
+
+        self.conv4 = Conv2D(filters=64*8, kernel_size=(4, 4), strides=(2, 2))
         self.bn3 = BatchNormalization()
         self.leaky_relu_4 = LeakyReLU()
-        self.conv3 = Conv1D(filters=512, kernel_size=4, strides=4, padding="valid")
+
         self.flatten = Flatten()
-        self.dense1 = Dense(units=32, activation='relu')
-        self.dense2 = Dense(units=1, activation='sigmoid')
+        self.dense_embed = Dense(units=128)
+        self.leaky_relu_5 = LeakyReLU()
 
-        self.conv6 = Conv2D(filters=512, kernel_size=1, strides=1, padding="valid")
+        self.conv5 = Conv2D(filters=64*8, kernel_size=(1, 1), strides=(1, 1), padding="valid")
+        self.bn4 = BatchNormalization()
 
-        self.dense_embed = Dense(units=128, activation='relu')
+        # (4, 4) == 64/16
+        self.conv6 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid")
 
     @tf.function
     def call(self, images, embedding):
 
-        print("*** ", images.shape, " ", embedding.shape)
+        print(images.shape)
         x = self.conv1(images)
         x = self.leaky_relu_1(x)
+
         x = self.conv2(x)
         x = self.bn1(x)
         x = self.leaky_relu_2(x)
-        x = self.conv4(x)
+
+        x = self.conv3(x)
         x = self.bn2(x)
         x = self.leaky_relu_3(x)
-        x = self.conv5(x)
+
+        x = self.conv4(x)
         x = self.bn3(x)
         x = self.leaky_relu_4(x)
 
         reduced_embedding = self.dense_embed(self.flatten(embedding))
+        reduced_embedding = self.leaky_relu_5(reduced_embedding)
         reduced_embedding = tf.expand_dims(tf.expand_dims(reduced_embedding, 1), 1)
         reduced_embedding = tf.tile(reduced_embedding, [1, 4, 4, 1])
-
         x = tf.concat([x, reduced_embedding], 3)
-        x = self.dense2(self.flatten(x))
+
+        x = self.conv5(x)
+        x = self.bn4(x)
+        x = self.conv6(x)
+
+        x = sigmoid(x)
 
         return x
 
