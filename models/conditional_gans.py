@@ -127,7 +127,7 @@ class StackGAN1(ConditionalGAN):
         """
         mean, sigma = self.generate_conditionals(embedding)
         smoothed_embedding = sample_normal(mean, sigma)
-        return smoothed_embedding
+        return smoothed_embedding, mean, sigma
 
 
 class StackGAN2(ConditionalGAN):

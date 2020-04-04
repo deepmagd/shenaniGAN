@@ -52,7 +52,7 @@ def sample_normal(mean, log_var):
             Diagonal log variance of the normal distribution. Shape (batch_size,
             latent_dim)
     """
-    std = tf.math.exp(0.5 * log_var)
+    std = tf.math.exp(log_var)
     epsilon = tf.random.normal(tf.shape(mean)) # TODO is shape the correct thing to use here?
     return mean + std * epsilon
 

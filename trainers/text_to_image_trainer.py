@@ -46,11 +46,11 @@ class TextToImageTrainer(Trainer):
                 # print(text_tensor)
                 # name = sample['name'].numpy().decode("utf-8")
                 # label = sample['label'].numpy()
-                print(counter, image_tensor.shape)
                 batch_size = 1 # TODO account for batch size in TFRecords
                 image_tensor = np.expand_dims(np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy())), dtype=np.float32), axis=0)
                 text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(batch_size, 10, 1024) # TODO make dynamic
                 label = sample['label'].numpy()
+                print(counter, image_tensor.shape)
                 # name = sample['name'].numpy().decode("utf-8")
                 # For tabular: text_tensor = np.frombuffer(sample['text'].numpy())
                 # For Caption: text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
@@ -58,7 +58,7 @@ class TextToImageTrainer(Trainer):
                 noise_z = tf.random.normal([batch_size, 100]) # TODO make 100 dynamic
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
-                    smoothed_embedding = self.model.conditional_augmentation(text_tensor)
+                    smoothed_embedding, mean, log_sigma = self.model.conditional_augmentation(text_tensor)
                     embedding_z = tf.concat([smoothed_embedding, noise_z], 1)
                     fake_images = self.model.generator(embedding_z)
 
@@ -75,7 +75,7 @@ class TextToImageTrainer(Trainer):
                             real_predictions.shape, fake_predictions.shape
                         )
 
-                    generator_loss = self.model.generator.loss(fake_predictions)
+                    generator_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
 
                 # Update gradients
