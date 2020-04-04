@@ -106,6 +106,7 @@ class BirdsWithWordsDataset(StackedGANDataset):
         if not os.path.isdir(self.directory):
             download_dataset(dataset='birds-with-text')
             create_tfrecords(
+                dataset_type=self.type,
                 tfrecords_dir=os.path.join(self.directory, 'records'),
                 image_source_dir=os.path.join(self.directory, 'images', 'CUB_200_2011', 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),

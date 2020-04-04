@@ -33,29 +33,21 @@ class TextToImageTrainer(Trainer):
         )
 
         with trange(len(train_loader), **kwargs) as t:
-            for counter, sample in enumerate(train_loader.parsed_subset):
-                # For loop simply to demonstrate the number of images in the batch
-                # for i in range(self.batch_size):
-                #     image_tensor = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])))
-                #     print(counter, image_tensor.shape)
-
-                # image_tensor = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy())))
-                # print(counter, image_tensor.shape)
+            for _, sample in enumerate(train_loader.parsed_subset):
+                image_tensor = []
+                text_tensor = []
+                for i in range(self.batch_size):
+                    img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
+                    image_tensor.append(img)
+                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(10, 1024) # TODO make dynamic
+                    text_tensor.append(txt)
+                image_tensor = np.asarray(image_tensor)
+                text_tensor = np.asarray(text_tensor)
                 # For tabular: text_tensor = np.frombuffer(sample['text'].numpy())
                 # For Caption: text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
-                # print(text_tensor)
-                # name = sample['name'].numpy().decode("utf-8")
                 # label = sample['label'].numpy()
-                batch_size = 1 # TODO account for batch size in TFRecords
-                image_tensor = np.expand_dims(np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy())), dtype=np.float32), axis=0)
-                text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(batch_size, 10, 1024) # TODO make dynamic
-                label = sample['label'].numpy()
-                print(counter, image_tensor.shape)
-                # name = sample['name'].numpy().decode("utf-8")
-                # For tabular: text_tensor = np.frombuffer(sample['text'].numpy())
-                # For Caption: text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
 
-                noise_z = tf.random.normal([batch_size, 100]) # TODO make 100 dynamic
+                noise_z = tf.random.normal([self.batch_size, 100])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     smoothed_embedding, mean, log_sigma = self.model.conditional_augmentation(text_tensor)
