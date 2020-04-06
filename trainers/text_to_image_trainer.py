@@ -36,7 +36,8 @@ class TextToImageTrainer(Trainer):
             for _, sample in enumerate(train_loader.parsed_subset):
                 image_tensor = []
                 text_tensor = []
-                for i in range(self.batch_size):
+                batch_size = len(sample['text'].numpy())
+                for i in range(batch_size):
                     img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
                     image_tensor.append(img)
                     txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(10, 1024) # TODO make dynamic
@@ -47,7 +48,7 @@ class TextToImageTrainer(Trainer):
                 # For Caption: text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
                 # label = sample['label'].numpy()
 
-                noise_z = tf.random.normal([self.batch_size, 100])
+                noise_z = tf.random.normal([batch_size, 100])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     smoothed_embedding, mean, log_sigma = self.model.conditional_augmentation(text_tensor)
