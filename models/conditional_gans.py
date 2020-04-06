@@ -163,3 +163,4 @@ class StackGAN2(ConditionalGAN):
     def call(self, embedding, z):
         """
         """
+        raise NotImplementedError
