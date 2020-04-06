@@ -110,7 +110,10 @@ class StackGAN1(ConditionalGAN):
                 learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
 
         """
-        x = self.flatten(embedding)
+        # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
+        # flatten all features or average across embeddings
+        x = tf.reduce_mean(embedding, 1)
+        # x = self.flatten(x)
         mean = self.dense_mean(x)
         sigma = self.dense_sigma(x)
         return mean, sigma
