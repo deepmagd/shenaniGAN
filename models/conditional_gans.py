@@ -1,25 +1,28 @@
-from models.discriminators import Discriminator
-from models.generators import Generator
-from tensorflow.keras import Model
 import tensorflow as tf
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Dense, Flatten
+
+from models.discriminators import (Discriminator, DiscriminatorStage1,
+                                   DiscriminatorStage2)
+from models.generators import Generator, GeneratorStage1, GeneratorStage2
+from utils.utils import product_list, sample_normal
 
 
 class ConditionalGAN(Model):
     """ Definition for a generalisable conditional GAN """
-    def __init__(self, img_size, num_latent_dims, kernel_size,
-                 num_filters, reshape_dims):
+    def __init__(self, generator=None, discriminator=None, **kwargs):
         super().__init__()
-        self.generator = Generator(
-            img_size=img_size,
-            num_latent_dims=num_latent_dims,
-            kernel_size=kernel_size,
-            num_filters=num_filters,
-            reshape_dims=reshape_dims
+        self.generator = generator if generator is not None else Generator(
+            img_size=kwargs.get("img_size"),
+            num_latent_dims=kwargs.get("num_latent_dims"),
+            kernel_size=kwargs.get("kernel_size"),
+            num_filters=kwargs.get("num_filters"),
+            reshape_dims=kwargs.get("reshape_dims")
         )
-        self.discriminator = Discriminator(
-            img_size=img_size,
-            kernel_size=kernel_size,
-            num_filters=num_filters
+        self.discriminator = discriminator if discriminator is not None else Discriminator(
+            img_size=kwargs.get("img_size"),
+            kernel_size=kwargs.get("kernel_size"),
+            num_filters=kwargs.get("num_filters")
         )
 
     def generate_images(self, num_images):
@@ -30,7 +33,7 @@ class ConditionalGAN(Model):
                     Number of fake images to return
         """
         image_list = []
-        for image_idx in range(num_images):
+        for _ in range(num_images):
             image = self.generate_image()
             image_list.append(image)
         return image_list
@@ -65,13 +68,99 @@ class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
     def __init__(self, img_size, num_latent_dims, kernel_size,
                  num_filters, reshape_dims):
-        super().__init__(img_size, num_latent_dims, kernel_size,
-                         num_filters, reshape_dims)
+
+        generator = GeneratorStage1(
+            img_size=img_size,
+            num_latent_dims=num_latent_dims,
+            kernel_size=kernel_size,
+            num_filters=num_filters,
+            reshape_dims=reshape_dims
+        )
+
+        discriminator = DiscriminatorStage1(
+            img_size=img_size,
+            kernel_size=kernel_size,
+            num_filters=num_filters
+        )
+
+        super().__init__(
+            generator=generator,
+            discriminator=discriminator,
+            img_size=img_size,
+            num_latent_dims=num_latent_dims,
+            kernel_size=kernel_size,
+            num_filters=num_filters,
+            reshape_dims=reshape_dims
+        )
+
+        self.flatten = Flatten()
+        self.dense_mean = Dense(units=128, activation='relu') # NOTE change units value to variable
+        self.dense_sigma = Dense(units=128, activation='relu') # NOTE change units value to variable
+
+    def generate_conditionals(self, embedding):
+        """ Generate distribution for text embedding.
+            Arguments
+            embedding : Tensor
+                text embedding. Shape (batch_size, feature_size, embedding_size)
+
+            Returns
+            Tensor
+                learnt mean of embedding distribution. Shape (batch_size, reshape_dims/2)
+            Tensor
+                learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
+
+        """
+        x = self.flatten(embedding)
+        mean = self.dense_mean(x)
+        sigma = self.dense_sigma(x)
+        return mean, sigma
+
+    def conditional_augmentation(self, embedding):
+        """ Perform conditional augmentation by sampling embedding.
+            Arguments
+            embedding : Tensor
+                text embedding. Shape (batch_size, feature_size, embedding_size)
+
+            Returns
+            Tensor
+                sampled embedding. Shape (batch_size, reshape_dims/2)
+        """
+        mean, sigma = self.generate_conditionals(embedding)
+        smoothed_embedding = sample_normal(mean, sigma)
+        return smoothed_embedding, mean, sigma
 
 
 class StackGAN2(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
     def __init__(self, img_size, num_latent_dims, kernel_size,
                  num_filters, reshape_dims):
-        super().__init__(img_size, num_latent_dims, kernel_size,
-                         num_filters, reshape_dims)
+
+        generator = GeneratorStage2(
+            img_size=img_size,
+            num_latent_dims=num_latent_dims,
+            kernel_size=kernel_size,
+            num_filters=num_filters,
+            reshape_dims=reshape_dims
+        )
+
+        discriminator = DiscriminatorStage2(
+            img_size=img_size,
+            kernel_size=kernel_size,
+            num_filters=num_filters
+        )
+
+        super().__init__(
+            generator=generator,
+            discriminator=discriminator,
+            img_size=img_size,
+            num_latent_dims=num_latent_dims,
+            kernel_size=kernel_size,
+            num_filters=num_filters,
+            reshape_dims=reshape_dims
+        )
+
+    @tf.function
+    def call(self, embedding, z):
+        """
+        """
+        raise NotImplementedError
