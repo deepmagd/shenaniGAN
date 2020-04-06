@@ -101,8 +101,7 @@ def main(args):
             num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
-            reshape_dims=[args.target_size//4, args.target_size//4, args.num_filters] # NOTE divide by 4 based on 2 upsample layers in generator, will need to adjust this number
-                                                                                      # based on the number of layers
+            reshape_dims=[args.target_size, args.target_size, args.num_filters]
         )
 
         trainer_class = get_trainer(args.dataset_name)
