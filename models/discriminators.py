@@ -99,7 +99,6 @@ class DiscriminatorStage1(Model):
     @tf.function
     def call(self, images, embedding):
 
-        print(images.shape)
         x = self.conv1(images)
         x = self.leaky_relu_1(x)
 
