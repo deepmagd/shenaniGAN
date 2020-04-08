@@ -61,7 +61,7 @@ class GeneratorStage1(Model):
         fabricates images from a noisy distribution.
     """
     def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
-                 reshape_dims):
+                 reshape_dims, lr):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -73,13 +73,14 @@ class GeneratorStage1(Model):
                     (height, width)
                 reshape_dims : tuple or list
                     [91, 125, 128]
+                lr : float
         """
         super().__init__()
         self.img_size = img_size
         num_output_channels = self.img_size[0]
         self.num_latent_dims = num_latent_dims
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-        self.optimiser = tf.keras.optimizers.Adam(1e-4)
+        self.optimiser = tf.keras.optimizers.Adam(lr)
         # TODO: Add correct layers as given by the paper
         self.dense1 = Dense(units=128*8*4*4, activation=None) # NOTE make dynamic
         self.bn1 = BatchNormalization()

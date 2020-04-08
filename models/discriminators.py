@@ -58,18 +58,19 @@ class DiscriminatorStage1(Model):
     """ The definition for a network which
         classifies inputs as fake or genuine.
     """
-    def __init__(self, img_size, kernel_size, num_filters):
+    def __init__(self, img_size, kernel_size, num_filters, lr):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
                 img_size : tuple of ints
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
+                lr : float
         """
         super().__init__()
         self.img_size = img_size
         num_channels = self.img_size[0]
         self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-        self.optimiser = tf.keras.optimizers.Adam(1e-4)
+        self.optimiser = tf.keras.optimizers.Adam(lr)
         # TODO: Add the correct layers as per the paper
         self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2))
         self.leaky_relu_1 = LeakyReLU()

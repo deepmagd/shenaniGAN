@@ -67,20 +67,22 @@ class ConditionalGAN(Model):
 class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
     def __init__(self, img_size, num_latent_dims, kernel_size,
-                 num_filters, reshape_dims):
+                 num_filters, reshape_dims, lr_g, lr_d):
 
         generator = GeneratorStage1(
             img_size=img_size,
             num_latent_dims=num_latent_dims,
             kernel_size=kernel_size,
             num_filters=num_filters,
-            reshape_dims=reshape_dims
+            reshape_dims=reshape_dims,
+            lr=lr_g
         )
 
         discriminator = DiscriminatorStage1(
             img_size=img_size,
             kernel_size=kernel_size,
-            num_filters=num_filters
+            num_filters=num_filters,
+            lr=lr_d
         )
 
         super().__init__(
