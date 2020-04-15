@@ -73,26 +73,27 @@ class DiscriminatorStage1(Model):
         self.optimiser = tf.keras.optimizers.Adam(lr)
         # TODO: Add the correct layers as per the paper
         self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2))
-        self.leaky_relu_1 = LeakyReLU()
+        self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
         self.conv2 = Conv2D(filters=64*2, kernel_size=(4, 4), strides=(2, 2))
         self.bn1 = BatchNormalization()
-        self.leaky_relu_2 = LeakyReLU()
+        self.leaky_relu_2 = LeakyReLU(alpha=0.2)
 
         self.conv3 = Conv2D(filters=64*4, kernel_size=(4, 4), strides=(1, 1))
         self.bn2 = BatchNormalization()
-        self.leaky_relu_3 = LeakyReLU()
+        self.leaky_relu_3 = LeakyReLU(alpha=0.2)
 
         self.conv4 = Conv2D(filters=64*8, kernel_size=(4, 4), strides=(2, 2))
         self.bn3 = BatchNormalization()
-        self.leaky_relu_4 = LeakyReLU()
+        self.leaky_relu_4 = LeakyReLU(alpha=0.2)
 
         self.flatten = Flatten()
         self.dense_embed = Dense(units=128)
-        self.leaky_relu_5 = LeakyReLU()
+        self.leaky_relu_5 = LeakyReLU(alpha=0.2)
 
         self.conv5 = Conv2D(filters=64*8, kernel_size=(1, 1), strides=(1, 1), padding="valid")
         self.bn4 = BatchNormalization()
+        self.leaky_relu_6 = LeakyReLU(alpha=0.2)
 
         # (4, 4) == 64/16
         self.conv6 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid")
@@ -115,6 +116,7 @@ class DiscriminatorStage1(Model):
         x = self.bn3(x)
         x = self.leaky_relu_4(x)
 
+        embedding = embedding[:, 0, :] # NOTE select first option
         reduced_embedding = self.dense_embed(self.flatten(embedding))
         reduced_embedding = self.leaky_relu_5(reduced_embedding)
         reduced_embedding = tf.expand_dims(tf.expand_dims(reduced_embedding, 1), 1)
@@ -123,6 +125,7 @@ class DiscriminatorStage1(Model):
 
         x = self.conv5(x)
         x = self.bn4(x)
+        x = self.leaky_relu_4(x)
         x = self.conv6(x)
 
         x = sigmoid(x)
