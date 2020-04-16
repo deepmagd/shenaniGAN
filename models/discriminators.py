@@ -69,7 +69,7 @@ class DiscriminatorStage1(Model):
         super().__init__()
         self.img_size = img_size
         num_channels = self.img_size[0]
-        self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+        # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.optimiser = tf.keras.optimizers.Adam(lr)
         # TODO: Add the correct layers as per the paper
         self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2))
@@ -138,8 +138,12 @@ class DiscriminatorStage1(Model):
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = self.xent_loss_fn(tf.ones_like(predictions_on_real), predictions_on_real)
-        fake_loss = self.xent_loss_fn(tf.zeros_like(predictions_on_fake), predictions_on_fake)
+        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(predictions_on_real, tf.ones_like(predictions_on_real))
+        real_loss = tf.reduce_mean(real_loss)
+        fake_loss = tf.nn.sigmoid_cross_entropy_with_logits(predictions_on_fake, tf.ones_like(predictions_on_fake))
+        fake_loss = tf.reduce_mean(fake_loss)
+        # real_loss = self.xent_loss_fn(tf.ones_like(predictions_on_real), predictions_on_real)
+        # fake_loss = self.xent_loss_fn(tf.zeros_like(predictions_on_fake), predictions_on_fake)
         total_loss = real_loss + fake_loss
         return total_loss
 
