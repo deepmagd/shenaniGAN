@@ -8,6 +8,7 @@ import sys
 import tensorflow as tf
 from utils.data_helpers import sample_real_images, show_image_list
 from utils.datasets import DATASETS, get_dataset
+from utils.logger import LogPlotter
 from utils.utils import get_default_settings, save_options
 
 
@@ -121,6 +122,10 @@ def main(args):
             save_location=results_dir
         )
         trainer(train_loader, num_epochs=args.num_epochs)
+
+    # Plot metrics
+    plotter = LogPlotter(results_dir)
+    plotter.learning_curve()
 
     if args.visualise:
         # TODO: Check if the model is in eval mode
