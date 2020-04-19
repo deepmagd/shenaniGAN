@@ -28,9 +28,10 @@ class TextToImageTrainer(Trainer):
         """ Training operations for a single epoch """
         acc_generator_loss = 0
         acc_discriminator_loss = 0
-        kwargs = dict(desc="Epoch {}".format(epoch_num + 1),
-                      leave=False,
-                      disable=not self.show_progress_bar
+        kwargs = dict(
+            desc="Epoch {}".format(epoch_num + 1),
+            leave=False,
+            disable=not self.show_progress_bar
         )
 
         with trange(len(train_loader), **kwargs) as t:

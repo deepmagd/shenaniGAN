@@ -20,7 +20,7 @@ class Trainer(object):
         self.model = model
         self.batch_size = batch_size
         self.save_dir = save_location
-        self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.log'))
+        self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.csv'))
 
     def __call__(self, data_loader, num_epochs):
         """ Trains the model.
@@ -32,9 +32,11 @@ class Trainer(object):
         """
         for epoch_num in range(num_epochs):
             metrics = self.train_epoch(data_loader, epoch_num)
+            metrics['epoch'] = epoch_num
             print(f'Metrics: {metrics}')
             self.train_logger(metrics)
             self.save_model(epoch_num)
+        self.train_logger.close()
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
