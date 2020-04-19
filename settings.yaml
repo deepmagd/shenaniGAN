@@ -10,3 +10,4 @@ samples_per_shard: 10
 target_size: 64
 learning_rate_g: 0.0001
 learning_rate_d: 0.0001
+epoch_num: -1

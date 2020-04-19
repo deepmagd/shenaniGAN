@@ -9,7 +9,7 @@ import tensorflow as tf
 from utils.data_helpers import sample_real_images, show_image_list
 from utils.datasets import DATASETS, get_dataset
 from utils.logger import LogPlotter
-from utils.utils import get_default_settings, save_options
+from utils.utils import get_default_settings, save_options, extract_epoch_num
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -40,10 +40,6 @@ def parse_arguments(args_to_parse):
 
     training = parser.add_argument_group('Training settings')
     training.add_argument(
-        '--use-pretrained', action='store_true', default=False,
-        help='Load a pretrained model for inference'
-    )
-    training.add_argument(
         '-e', '--num-epochs', type=int, default=default_settings['num_epochs'],
         help='Maximum number of epochs to run for.'
     )
@@ -67,6 +63,16 @@ def parse_arguments(args_to_parse):
     training.add_argument(
         '--lr_d', type=float, default=default_settings['learning_rate_d'],
         help='Discriminator learning rate.'
+    )
+
+    evaluation = parser.add_argument_group('Evaluation settings')
+    evaluation.add_argument(
+        '--use-pretrained', action='store_true', default=False,
+        help='Load a pretrained model for inference'
+    )
+    evaluation.add_argument(
+        '--epoch-num', type=int, default=default_settings['epoch_num'],
+        help='Which checkpointed epoch number to load into memory. If set to -1, then load the most recent.'
     )
 
     visualisation = parser.add_argument_group('Visualisation settings')
@@ -103,7 +109,11 @@ def main(args):
     # Create the model
     # TODO: Check and see how many latent dims should be used and insert CLI argument
     if args.use_pretrained:
-        model = tf.saved_model.load(results_dir)
+        if args.epoch_num == -1:
+            # Find last checkpoint
+            args.epoch_num = extract_epoch_num(results_dir)
+        pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
+        model = tf.saved_model.load(pretrained_dir)
     else:
         model = StackGAN1(
             img_size=dataset_dims,
