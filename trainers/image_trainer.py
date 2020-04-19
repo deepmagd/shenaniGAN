@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from tqdm import trange
 from trainers.base_trainer import Trainer
@@ -23,13 +24,14 @@ class ImageTrainer(Trainer):
         """ Training operations for a single epoch """
         acc_generator_loss = 0
         acc_discriminator_loss = 0
-        kwargs = dict(desc="Epoch {}".format(epoch_num + 1),
-                      leave=False,
-                      disable=not self.show_progress_bar
+        kwargs = dict(
+            desc="Epoch {}".format(epoch_num + 1),
+            leave=False,
+            disable=not self.show_progress_bar
         )
 
         with trange(len(train_loader), **kwargs) as t:
-            for real_images, one_hot_labels in train_loader:
+            for batch_idx, (real_images, one_hot_labels) in enumerate(train_loader):
                 # Assuming that batch is the first dimension
                 # and that we use a normal distribution for noise
                 batch_size = real_images.shape[0]
@@ -54,8 +56,12 @@ class ImageTrainer(Trainer):
                     discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
 
                 # Update gradients
-                generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
-                discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.discriminator.trainable_variables)
+                generator_gradients = generator_tape.gradient(
+                    generator_loss, self.model.generator.trainable_variables
+                )
+                discriminator_gradients = discriminator_tape.gradient(
+                    discriminator_loss, self.model.discriminator.trainable_variables
+                )
 
                 self.model.generator.optimiser.apply_gradients(
                     zip(generator_gradients, self.model.generator.trainable_variables)
