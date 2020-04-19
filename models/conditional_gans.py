@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.layers import Dense, Flatten, LeakyReLU
 
 from models.discriminators import (Discriminator, DiscriminatorStage1,
                                    DiscriminatorStage2)
@@ -67,20 +67,22 @@ class ConditionalGAN(Model):
 class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
     def __init__(self, img_size, num_latent_dims, kernel_size,
-                 num_filters, reshape_dims):
+                 num_filters, reshape_dims, lr_g, lr_d):
 
         generator = GeneratorStage1(
             img_size=img_size,
             num_latent_dims=num_latent_dims,
             kernel_size=kernel_size,
             num_filters=num_filters,
-            reshape_dims=reshape_dims
+            reshape_dims=reshape_dims,
+            lr=lr_g
         )
 
         discriminator = DiscriminatorStage1(
             img_size=img_size,
             kernel_size=kernel_size,
-            num_filters=num_filters
+            num_filters=num_filters,
+            lr=lr_d
         )
 
         super().__init__(
@@ -95,7 +97,9 @@ class StackGAN1(ConditionalGAN):
 
         self.flatten = Flatten()
         self.dense_mean = Dense(units=128, activation='relu') # NOTE change units value to variable
+        self.lrelu1 = LeakyReLU(alpha=0.2)
         self.dense_sigma = Dense(units=128, activation='relu') # NOTE change units value to variable
+        self.lrelu2 = LeakyReLU(alpha=0.2)
 
     def generate_conditionals(self, embedding):
         """ Generate distribution for text embedding.
@@ -112,10 +116,9 @@ class StackGAN1(ConditionalGAN):
         """
         # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
         # flatten all features or average across embeddings
-        x = tf.reduce_mean(embedding, 1)
-        # x = self.flatten(x)
-        mean = self.dense_mean(x)
-        sigma = self.dense_sigma(x)
+        x = embedding[:, 0, :] # rather just select one of the embeddings
+        mean = self.lrelu1(self.dense_mean(x))
+        sigma = self.lrelu2(self.dense_sigma(x))
         return mean, sigma
 
     def conditional_augmentation(self, embedding):

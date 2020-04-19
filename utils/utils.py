@@ -72,6 +72,12 @@ def mkdir(directory):
     except OSError:
         pass
 
+def remove_file(file_name):
+    try:
+        os.remove(file_name)
+    except OSError:
+        pass
+
 def save_options(options, save_dir):
     """ Save all options to JSON file.
         Arguments:

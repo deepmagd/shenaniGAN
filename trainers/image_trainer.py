@@ -21,7 +21,8 @@ class ImageTrainer(Trainer):
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
-        # epoch_loss = 0.
+        acc_generator_loss = 0
+        acc_discriminator_loss = 0
         kwargs = dict(desc="Epoch {}".format(epoch_num + 1),
                       leave=False,
                       disable=not self.show_progress_bar
@@ -65,3 +66,11 @@ class ImageTrainer(Trainer):
                 # Update tqdm
                 t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
                 t.update()
+
+                # Accumulate losses
+                acc_generator_loss += generator_loss
+                acc_discriminator_loss += discriminator_loss
+        return {
+            'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
+            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
+        }

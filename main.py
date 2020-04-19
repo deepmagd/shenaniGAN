@@ -8,6 +8,7 @@ import sys
 import tensorflow as tf
 from utils.data_helpers import sample_real_images, show_image_list
 from utils.datasets import DATASETS, get_dataset
+from utils.logger import LogPlotter
 from utils.utils import get_default_settings, save_options
 
 
@@ -59,6 +60,14 @@ def parse_arguments(args_to_parse):
         '-f', '--num-filters', type=int, default=default_settings['num_filters'],
         help='The number of filters to stack.'
     )
+    training.add_argument(
+        '--lr_g', type=float, default=default_settings['learning_rate_g'],
+        help='Generator learning rate.'
+    )
+    training.add_argument(
+        '--lr_d', type=float, default=default_settings['learning_rate_d'],
+        help='Discriminator learning rate.'
+    )
 
     visualisation = parser.add_argument_group('Visualisation settings')
     visualisation.add_argument(
@@ -101,7 +110,9 @@ def main(args):
             num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
-            reshape_dims=[args.target_size, args.target_size, args.num_filters]
+            reshape_dims=[args.target_size, args.target_size, args.num_filters],
+            lr_g=args.lr_g,
+            lr_d=args.lr_d
         )
 
         trainer_class = get_trainer(args.dataset_name)
@@ -111,6 +122,10 @@ def main(args):
             save_location=results_dir
         )
         trainer(train_loader, num_epochs=args.num_epochs)
+
+    # Plot metrics
+    plotter = LogPlotter(results_dir)
+    plotter.learning_curve()
 
     if args.visualise:
         # TODO: Check if the model is in eval mode
