@@ -6,6 +6,7 @@ from PIL import Image
 from tqdm import trange
 
 from trainers.base_trainer import Trainer
+from random import randint
 
 
 class TextToImageTrainer(Trainer):
@@ -39,10 +40,11 @@ class TextToImageTrainer(Trainer):
                 image_tensor = []
                 text_tensor = []
                 batch_size = len(sample['text'].numpy())
+                num_embeddings = 10
                 for i in range(batch_size):
                     img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
                     image_tensor.append(img)
-                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(10, 1024) # TODO make dynamic
+                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(num_embeddings, 1024)[randint(0, num_embeddings-1), :] # TODO make dynamic
                     text_tensor.append(txt)
                 image_tensor = np.asarray(image_tensor)
                 text_tensor = np.asarray(text_tensor)

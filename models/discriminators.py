@@ -116,7 +116,6 @@ class DiscriminatorStage1(Model):
         x = self.bn3(x)
         x = self.leaky_relu_4(x)
 
-        embedding = embedding[:, 0, :] # NOTE select first option
         reduced_embedding = self.dense_embed(self.flatten(embedding))
         reduced_embedding = self.leaky_relu_5(reduced_embedding)
         reduced_embedding = tf.expand_dims(tf.expand_dims(reduced_embedding, 1), 1)
