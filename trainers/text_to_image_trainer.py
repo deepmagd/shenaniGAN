@@ -12,6 +12,7 @@ from random import randint
 class TextToImageTrainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
     def __init__(self, model, batch_size, save_location,
+                 num_embeddings, num_samples,
                  show_progress_bar=True):
         """ Initialise a model trainer for iamge data.
             Arguments:
@@ -24,6 +25,8 @@ class TextToImageTrainer(Trainer):
                 results from training the model.
         """
         super().__init__(model, batch_size, save_location, show_progress_bar)
+        self.num_embeddings = num_embeddings
+        self.num_samples = num_samples
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -40,16 +43,15 @@ class TextToImageTrainer(Trainer):
                 image_tensor = []
                 text_tensor = []
                 batch_size = len(sample['text'].numpy())
-                num_embeddings = 10
                 for i in range(batch_size):
                     img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
                     image_tensor.append(img)
-                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(num_embeddings, 1024)[randint(0, num_embeddings-1), :] # TODO make dynamic
+                    idxs = np.random.choice(self.num_embeddings, self.num_samples, replace=False)
+                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(self.num_embeddings, 1024)[idxs, :] # TODO make dynamic
+                    txt = np.mean(txt, axis=0)
                     text_tensor.append(txt)
                 image_tensor = np.asarray(image_tensor)
                 text_tensor = np.asarray(text_tensor)
-                # For tabular: text_tensor = np.frombuffer(sample['text'].numpy())
-                # For Caption: text_tensor = np.frombuffer(sample['text'].numpy(), dtype=np.float32).reshape(10, 1024)
                 # label = sample['label'].numpy()
 
                 noise_z = tf.random.normal([batch_size, 100])
