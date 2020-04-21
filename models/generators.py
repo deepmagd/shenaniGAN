@@ -81,7 +81,7 @@ class GeneratorStage1(Model):
         num_output_channels = self.img_size[0]
         self.num_latent_dims = num_latent_dims
         # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.optimiser = tf.keras.optimizers.Adam(lr)
+        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         # TODO: Add correct layers as given by the paper
         self.dense1 = Dense(units=128*8*4*4, activation=None) # NOTE make dynamic
         self.bn1 = BatchNormalization()
