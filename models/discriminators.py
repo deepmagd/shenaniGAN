@@ -67,36 +67,40 @@ class DiscriminatorStage1(Model):
                 lr : float
         """
         super().__init__()
+
+        self.w_init = tf.random_normal_initializer(stddev=0.02)
+        self.bn_init = tf.random_normal_initializer(1., 0.02)
+
         self.img_size = img_size
         num_channels = self.img_size[0]
         # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         # TODO: Add the correct layers as per the paper
-        self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same')
+        self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
-        self.conv2 = Conv2D(filters=64*2, kernel_size=(4, 4), strides=(2, 2), padding='same')
-        self.bn1 = BatchNormalization()
+        self.conv2 = Conv2D(filters=64*2, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.bn1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.leaky_relu_2 = LeakyReLU(alpha=0.2)
 
-        self.conv3 = Conv2D(filters=64*4, kernel_size=(4, 4), strides=(2, 2), padding='same')
-        self.bn2 = BatchNormalization()
+        self.conv3 = Conv2D(filters=64*4, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.bn2 = BatchNormalization(gamma_initializer=self.bn_init)
         self.leaky_relu_3 = LeakyReLU(alpha=0.2)
 
-        self.conv4 = Conv2D(filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding='same')
-        self.bn3 = BatchNormalization()
+        self.conv4 = Conv2D(filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.bn3 = BatchNormalization(gamma_initializer=self.bn_init)
         self.leaky_relu_4 = LeakyReLU(alpha=0.2)
 
         self.flatten = Flatten()
         self.dense_embed = Dense(units=128)
         self.leaky_relu_5 = LeakyReLU(alpha=0.2)
 
-        self.conv5 = Conv2D(filters=64*8, kernel_size=(1, 1), strides=(1, 1), padding="valid")
-        self.bn4 = BatchNormalization()
+        self.conv5 = Conv2D(filters=64*8, kernel_size=(1, 1), strides=(1, 1), padding="valid", kernel_initializer=self.w_init)
+        self.bn4 = BatchNormalization(gamma_initializer=self.bn_init)
         self.leaky_relu_6 = LeakyReLU(alpha=0.2)
 
         # (4, 4) == 64/16
-        self.conv6 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid")
+        self.conv6 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid", kernel_initializer=self.w_init)
 
     @tf.function
     def call(self, images, embedding):
