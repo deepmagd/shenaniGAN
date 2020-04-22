@@ -127,8 +127,6 @@ class DiscriminatorStage1(Model):
         x = self.leaky_relu_4(x)
         x = self.conv6(x)
 
-        x = sigmoid(x)
-
         return x
 
     def loss(self, predictions_on_real, predictions_on_fake):
