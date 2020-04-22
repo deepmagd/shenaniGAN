@@ -83,50 +83,56 @@ class GeneratorStage1(Model):
         # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         # TODO: Add correct layers as given by the paper
-        self.dense1 = Dense(units=128*8*4*4, activation=None) # NOTE make dynamic
+        self.dense1 = Dense(units=128*8*4*4)
         self.bn1 = BatchNormalization()
-        self.relu1 = ReLU()
         self.reshape_layer = Reshape([4, 4, 128*8])
+        self.relu1 = ReLU()
 
-        self.deconv2d1 = Conv2DTranspose(128*4, kernel_size=(4, 4), strides=(2, 2))
-        self.conv1 = Conv2D(filters=128*4, kernel_size=(3, 3), strides=(1, 1))
+        self.deconv2d1 = Conv2DTranspose(128*4, kernel_size=(4, 4), strides=(2, 2), padding='same')
+        self.conv1 = Conv2D(filters=128*4, kernel_size=(3, 3), strides=(1, 1), padding='same')
         self.bn2 = BatchNormalization()
         self.relu2 = ReLU()
 
-        self.deconv2d2 = Conv2DTranspose(128*2, kernel_size=(4, 4), strides=(2, 2))
-        self.conv2 = Conv2D(filters=128*2, kernel_size=(3, 3), strides=(1, 1))
+        self.deconv2d2 = Conv2DTranspose(128*2, kernel_size=(4, 4), strides=(2, 2), padding='same')
+        self.conv2 = Conv2D(filters=128*2, kernel_size=(3, 3), strides=(1, 1), padding='same')
         self.bn3 = BatchNormalization()
         self.relu3 = ReLU()
 
-        self.deconv2d3 = Conv2DTranspose(128, kernel_size=(4, 4), strides=(2, 2))
-        self.conv3 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1))
+        self.deconv2d3 = Conv2DTranspose(128, kernel_size=(4, 4), strides=(2, 2), padding='same')
+        self.conv3 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding='same')
         self.bn4 = BatchNormalization()
         self.relu4 = ReLU()
 
-        self.deconv2d4 = Conv2DTranspose(3, kernel_size=(4, 4), strides=(2, 2)) # 3=image channels
-        self.conv4 = Conv2D(filters=3, kernel_size=(3, 3), strides=(1, 1))
+        self.deconv2d4 = Conv2DTranspose(3, kernel_size=(4, 4), strides=(2, 2), padding='same') # 3=image channels
+        self.conv4 = Conv2D(filters=3, kernel_size=(3, 3), strides=(1, 1), padding='same')
 
     @tf.function
     def call(self, noise):
         x = self.dense1(noise)
         x = self.bn1(x)
-        x = self.relu1(x)
         x = self.reshape_layer(x)
+        x = self.relu1(x)
+
         x = self.deconv2d1(x)
         x = self.conv1(x)
         x = self.bn2(x)
         x = self.relu2(x)
+
         x = self.deconv2d2(x)
         x = self.conv2(x)
         x = self.bn3(x)
         x = self.relu3(x)
+
         x = self.deconv2d3(x)
         x = self.conv3(x)
         x = self.bn4(x)
         x = self.relu4(x)
+
         x = self.deconv2d4(x)
         x = self.conv4(x)
+
         x = tanh(x)
+
         return x
 
     def loss(self, predictions_on_fake, mean, log_sigma):

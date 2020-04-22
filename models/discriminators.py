@@ -72,18 +72,18 @@ class DiscriminatorStage1(Model):
         # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         # TODO: Add the correct layers as per the paper
-        self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2))
+        self.conv1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same')
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
-        self.conv2 = Conv2D(filters=64*2, kernel_size=(4, 4), strides=(2, 2))
+        self.conv2 = Conv2D(filters=64*2, kernel_size=(4, 4), strides=(2, 2), padding='same')
         self.bn1 = BatchNormalization()
         self.leaky_relu_2 = LeakyReLU(alpha=0.2)
 
-        self.conv3 = Conv2D(filters=64*4, kernel_size=(4, 4), strides=(1, 1))
+        self.conv3 = Conv2D(filters=64*4, kernel_size=(4, 4), strides=(2, 2), padding='same')
         self.bn2 = BatchNormalization()
         self.leaky_relu_3 = LeakyReLU(alpha=0.2)
 
-        self.conv4 = Conv2D(filters=64*8, kernel_size=(4, 4), strides=(2, 2))
+        self.conv4 = Conv2D(filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding='same')
         self.bn3 = BatchNormalization()
         self.leaky_relu_4 = LeakyReLU(alpha=0.2)
 
