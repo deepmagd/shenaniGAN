@@ -233,6 +233,8 @@ def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
     byte_images_list = []
     for image_path in image_paths:
         image = Image.open(image_path, 'r')
+        if len(image.size) == 2:
+            image = image.convert("RGB")
         if preprocessing == 'pad':
             old_size = image.size[:2]
             ratio = max(image_dims)/max(old_size)
