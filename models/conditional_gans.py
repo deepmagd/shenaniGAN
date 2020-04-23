@@ -96,9 +96,9 @@ class StackGAN1(ConditionalGAN):
         )
 
         self.flatten = Flatten()
-        self.dense_mean = Dense(units=128, activation='relu') # NOTE change units value to variable
+        self.dense_mean = Dense(units=128, activation='relu')  # NOTE change units value to variable
         self.lrelu1 = LeakyReLU(alpha=0.2)
-        self.dense_sigma = Dense(units=128, activation='relu') # NOTE change units value to variable
+        self.dense_sigma = Dense(units=128, activation='relu')  # NOTE change units value to variable
         self.lrelu2 = LeakyReLU(alpha=0.2)
 
     def generate_conditionals(self, embedding):

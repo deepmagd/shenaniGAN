@@ -6,6 +6,7 @@ from trainers.trainers import get_trainer
 import os
 import sys
 import tensorflow as tf
+from tensorflow import keras
 from utils.data_helpers import sample_real_images, show_image_list
 from utils.datasets import DATASETS, get_dataset
 from utils.logger import LogPlotter
@@ -112,8 +113,19 @@ def main(args):
         if args.epoch_num == -1:
             # Find last checkpoint
             args.epoch_num = extract_epoch_num(results_dir)
+
+        model = StackGAN1(
+            img_size=dataset_dims,
+            num_latent_dims=100,
+            kernel_size=args.kernel_size,
+            num_filters=args.num_filters,
+            reshape_dims=[args.target_size, args.target_size, args.num_filters],
+            lr_g=args.lr_g,
+            lr_d=args.lr_d
+        )
         pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
-        model = tf.saved_model.load(pretrained_dir)
+        model.generator.load_weights(os.path.join(pretrained_dir, 'generator', 'generator.index'))
+        model.discriminator.load_weights(os.path.join(pretrained_dir, 'discriminator', 'discriminator.index'))
     else:
         model = StackGAN1(
             img_size=dataset_dims,

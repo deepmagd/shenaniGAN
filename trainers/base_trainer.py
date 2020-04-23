@@ -43,4 +43,12 @@ class Trainer(object):
         pass
 
     def save_model(self, epoch_num):
-        tf.saved_model.save(self.model, os.path.join(self.save_dir, f'model_{epoch_num}'))
+        # tf.saved_model.save(self.model, os.path.join(self.save_dir, f'model_{epoch_num}'))
+        self.model.generator.save_weights(
+            os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator'),
+            save_format='tf'
+        )
+        self.model.discriminator.save_weights(
+            os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator'),
+            save_format='tf'
+        )

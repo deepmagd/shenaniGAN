@@ -109,6 +109,6 @@ def normalise(num_list):
     return [(x - min_x) / (max_x - min_x) for x in num_list]
 
 def extract_epoch_num(results_dir):
-    return max(
-        [int(re.search(r'\d+', directory)[0]) for directory in glob(f'{results_dir}/*/') if 'model' in directory]
-    )
+    candidate_dirs = [directory for directory in glob(f'{results_dir}/*/') if 'model' in directory]
+    only_checkpoint_dirs = [int(re.search(r'\d+', candidate_dir.split('/')[-2])[0]) for candidate_dir in candidate_dirs]
+    return max(only_checkpoint_dirs)
