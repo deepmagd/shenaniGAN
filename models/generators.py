@@ -11,14 +11,12 @@ class Generator(Model):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
-    def __init__(self, img_size, num_latent_dims, lr, conditional_emb_size, w_init, bn_init):
+    def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:'
                 img_size : tuple of ints
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
-                num_latent_dims : int
-                    Dimensionality of latent input.
                 lr: float
                     Learning rate
                 conditional_emb_size: Tensor
@@ -26,7 +24,6 @@ class Generator(Model):
         """
         super().__init__()
         self.img_size = img_size
-        self.num_latent_dims = num_latent_dims
 
         # Optimiser
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
@@ -84,22 +81,20 @@ class GeneratorStage1(Generator):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
-    def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
+    def __init__(self, img_size, kernel_size, num_filters,
                  reshape_dims, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
                 img_size : tuple of ints
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
-                num_latent_dims : int
-                    Dimensionality of latent input.
                 kernel_size : tuple
                     (height, width)
                 reshape_dims : tuple or list TODO: actually use
                     [91, 125, 128]
                 lr : float
         """
-        super().__init__(img_size, num_latent_dims, lr, conditional_emb_size, w_init, bn_init)
+        super().__init__(img_size, lr, conditional_emb_size, w_init, bn_init)
         num_output_channels = self.img_size[0]
         assert num_output_channels == 3 or num_output_channels == 1, \
             f'The number of output channels must be 2 or 1. Found {num_output_channels}'

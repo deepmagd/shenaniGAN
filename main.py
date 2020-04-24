@@ -122,7 +122,6 @@ def main(args):
 
         model = StackGAN1(
             img_size=dataset_dims,
-            num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
@@ -138,7 +137,6 @@ def main(args):
     else:
         model = StackGAN1(
             img_size=dataset_dims,
-            num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
