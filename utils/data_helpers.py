@@ -58,9 +58,9 @@ def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_
         raise Exception(f'{dataset_type} is not a recognised dataset type')
 
 def extract_image_bounding_boxes(image_filenames, base_path='data/CUB_200_2011_with_text/images/CUB_200_2011'):
-    '''
+    """
     Returns a map of filename to bounding box in format [x-top, y-top, w, h]
-    '''
+    """
     bb_df = pd.read_csv(os.path.join(base_path, 'bounding_boxes.txt'), names=['idx', 'x', 'y', 'w', 'h'], sep=" ").astype(int)
     imgs_df = pd.read_csv(os.path.join(base_path, 'images.txt'), names=['idx', 'filename'], sep=" ")
     combined_df = imgs_df.merge(bb_df, how='left', on='idx')
