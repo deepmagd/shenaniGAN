@@ -5,7 +5,6 @@ from tensorflow.keras.layers import Dense, Flatten, LeakyReLU
 from models.discriminators import (Discriminator, DiscriminatorStage1,
                                    DiscriminatorStage2)
 from models.generators import Generator, GeneratorStage1, GeneratorStage2
-from utils.utils import product_list, sample_normal
 
 
 class ConditionalGAN(Model):
@@ -15,9 +14,8 @@ class ConditionalGAN(Model):
         self.generator = generator if generator is not None else Generator(
             img_size=kwargs.get("img_size"),
             num_latent_dims=kwargs.get("num_latent_dims"),
-            kernel_size=kwargs.get("kernel_size"),
-            num_filters=kwargs.get("num_filters"),
-            reshape_dims=kwargs.get("reshape_dims")
+            lr=kwargs.get("lr"),
+            conditional_emb_size=kwargs.get("conditional_emb_size")
         )
         self.discriminator = discriminator if discriminator is not None else Discriminator(
             img_size=kwargs.get("img_size"),
@@ -67,7 +65,7 @@ class ConditionalGAN(Model):
 class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
     def __init__(self, img_size, num_latent_dims, kernel_size,
-                 num_filters, reshape_dims, lr_g, lr_d):
+                 num_filters, reshape_dims, lr_g, lr_d, conditional_emb_size):
 
         generator = GeneratorStage1(
             img_size=img_size,
@@ -75,7 +73,8 @@ class StackGAN1(ConditionalGAN):
             kernel_size=kernel_size,
             num_filters=num_filters,
             reshape_dims=reshape_dims,
-            lr=lr_g
+            lr=lr_g,
+            conditional_emb_size=conditional_emb_size
         )
 
         discriminator = DiscriminatorStage1(
@@ -94,46 +93,6 @@ class StackGAN1(ConditionalGAN):
             num_filters=num_filters,
             reshape_dims=reshape_dims
         )
-
-        self.flatten = Flatten()
-        self.dense_mean = Dense(units=128, activation='relu')  # NOTE change units value to variable
-        self.lrelu1 = LeakyReLU(alpha=0.2)
-        self.dense_sigma = Dense(units=128, activation='relu')  # NOTE change units value to variable
-        self.lrelu2 = LeakyReLU(alpha=0.2)
-
-    def generate_conditionals(self, embedding):
-        """ Generate distribution for text embedding.
-            Arguments
-            embedding : Tensor
-                text embedding. Shape (batch_size, feature_size, embedding_size)
-
-            Returns
-            Tensor
-                learnt mean of embedding distribution. Shape (batch_size, reshape_dims/2)
-            Tensor
-                learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
-
-        """
-        # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
-        # flatten all features or average across embeddings
-        mean = self.lrelu1(self.dense_mean(embedding))
-        sigma = self.lrelu2(self.dense_sigma(embedding))
-        return mean, sigma
-
-    def conditional_augmentation(self, embedding):
-        """ Perform conditional augmentation by sampling normal distribution generated
-            from the embedding.
-            Arguments
-            embedding : Tensor
-                text embedding. Shape (batch_size, feature_size, embedding_size)
-
-            Returns
-            Tensor
-                sampled embedding. Shape (batch_size, reshape_dims/2)
-        """
-        mean, sigma = self.generate_conditionals(embedding)
-        smoothed_embedding = sample_normal(mean, sigma)
-        return smoothed_embedding, mean, sigma
 
 
 class StackGAN2(ConditionalGAN):

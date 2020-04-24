@@ -65,6 +65,10 @@ def parse_arguments(args_to_parse):
         '--lr_d', type=float, default=default_settings['learning_rate_d'],
         help='Discriminator learning rate.'
     )
+    training.add_argument(
+        '--conditional-emb-size', type=int, help='The number of elements in the conditiona embedding',
+        default=default_settings['conditional_emb_size']
+    )
 
     evaluation = parser.add_argument_group('Evaluation settings')
     evaluation.add_argument(
@@ -123,7 +127,8 @@ def main(args):
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
             lr_g=args.lr_g,
-            lr_d=args.lr_d
+            lr_d=args.lr_d,
+            conditional_emb_size=args.conditional_emb_size
         )
         pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
         model.generator.load_weights(os.path.join(pretrained_dir, 'generator', 'generator.index'))
@@ -136,7 +141,8 @@ def main(args):
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
             lr_g=args.lr_g,
-            lr_d=args.lr_d
+            lr_d=args.lr_d,
+            conditional_emb_size=args.conditional_emb_size
         )
 
         trainer_class = get_trainer(args.dataset_name)

@@ -57,9 +57,7 @@ class TextToImageTrainer(Trainer):
                 noise_z = tf.random.normal([batch_size, 100])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
-                    smoothed_embedding, mean, log_sigma = self.model.conditional_augmentation(text_tensor)
-                    embedding_z = tf.concat([smoothed_embedding, noise_z], 1)
-                    fake_images = self.model.generator(embedding_z)
+                    fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
 
                     assert fake_images.shape == image_tensor.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -94,6 +92,9 @@ class TextToImageTrainer(Trainer):
                 # Accumulate losses
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
+
+                # if batch_idx == 20:
+                #     break
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
