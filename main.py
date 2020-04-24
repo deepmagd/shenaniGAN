@@ -69,6 +69,10 @@ def parse_arguments(args_to_parse):
         '--conditional-emb-size', type=int, help='The number of elements in the conditiona embedding',
         default=default_settings['conditional_emb_size']
     )
+    training.add_argument(
+        '--aug', type=bool, help='Flag if augmentation must be applied to training data',
+        default=default_settings['augment']
+    )
 
     evaluation = parser.add_argument_group('Evaluation settings')
     evaluation.add_argument(
@@ -155,7 +159,8 @@ def main(args):
             batch_size=args.batch_size,
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
-            num_samples=default_settings['num_samples']
+            num_samples=default_settings['num_samples'],
+            augment=default_settings['augment']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 

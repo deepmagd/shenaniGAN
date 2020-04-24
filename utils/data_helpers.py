@@ -413,3 +413,10 @@ def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
     encoded_tabular_lists = encoded_tabular_df.loc[:, encoded_tabular_df.columns != 'Path'].values
     encoded_tabular_lists = [sample.tobytes() for sample in encoded_tabular_lists]
     return encoded_tabular_lists, image_paths
+
+def transform_image(img):
+    """
+    apply a sequence of tranforms to an image
+    """
+    img = img * (2/255) - 1 # normalise
+    return img
