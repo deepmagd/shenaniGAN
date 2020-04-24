@@ -1,6 +1,8 @@
+from glob import glob
 import json
 import os
 import pickle
+import re
 import tensorflow as tf
 import yaml
 
@@ -94,7 +96,7 @@ def save_options(options, save_dir):
         json.dump(opt_dict, opt_file)
 
 def format_for_windows(path_string):
-    """ Convert to windows path by replacing `/` with `\` """
+    r""" Convert to windows path by replacing `/` with `\` """
     return str(str(path_string).replace('/', '\\'))
 
 def num_tfrecords_in_dir(directory):
@@ -105,3 +107,8 @@ def normalise(num_list):
     max_x = max(num_list)
     min_x = min(num_list)
     return [(x - min_x) / (max_x - min_x) for x in num_list]
+
+def extract_epoch_num(results_dir):
+    candidate_dirs = [directory for directory in glob(f'{results_dir}/*/') if 'model' in directory]
+    only_checkpoint_dirs = [int(re.search(r'\d+', candidate_dir.split('/')[-2])[0]) for candidate_dir in candidate_dirs]
+    return max(only_checkpoint_dirs)

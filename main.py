@@ -6,10 +6,11 @@ from trainers.trainers import get_trainer
 import os
 import sys
 import tensorflow as tf
+from tensorflow import keras
 from utils.data_helpers import sample_real_images, show_image_list
 from utils.datasets import DATASETS, get_dataset
 from utils.logger import LogPlotter
-from utils.utils import get_default_settings, save_options
+from utils.utils import get_default_settings, save_options, extract_epoch_num
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -40,10 +41,6 @@ def parse_arguments(args_to_parse):
 
     training = parser.add_argument_group('Training settings')
     training.add_argument(
-        '--use-pretrained', action='store_true', default=False,
-        help='Load a pretrained model for inference'
-    )
-    training.add_argument(
         '-e', '--num-epochs', type=int, default=default_settings['num_epochs'],
         help='Maximum number of epochs to run for.'
     )
@@ -67,6 +64,20 @@ def parse_arguments(args_to_parse):
     training.add_argument(
         '--lr_d', type=float, default=default_settings['learning_rate_d'],
         help='Discriminator learning rate.'
+    )
+    training.add_argument(
+        '--conditional-emb-size', type=int, help='The number of elements in the conditiona embedding',
+        default=default_settings['conditional_emb_size']
+    )
+
+    evaluation = parser.add_argument_group('Evaluation settings')
+    evaluation.add_argument(
+        '--use-pretrained', action='store_true', default=False,
+        help='Load a pretrained model for inference'
+    )
+    evaluation.add_argument(
+        '--epoch-num', type=int, default=default_settings['epoch_num'],
+        help='Which checkpointed epoch number to load into memory. If set to -1, then load the most recent.'
     )
 
     visualisation = parser.add_argument_group('Visualisation settings')
@@ -105,7 +116,25 @@ def main(args):
     # Create the model
     # TODO: Check and see how many latent dims should be used and insert CLI argument
     if args.use_pretrained:
-        model = tf.saved_model.load(results_dir)
+        if args.epoch_num == -1:
+            # Find last checkpoint
+            args.epoch_num = extract_epoch_num(results_dir)
+
+        model = StackGAN1(
+            img_size=dataset_dims,
+            num_latent_dims=100,
+            kernel_size=args.kernel_size,
+            num_filters=args.num_filters,
+            reshape_dims=[args.target_size, args.target_size, args.num_filters],
+            lr_g=args.lr_g,
+            lr_d=args.lr_d,
+            conditional_emb_size=args.conditional_emb_size,
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+        pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
+        model.generator.load_weights(os.path.join(pretrained_dir, 'generator', 'generator.index'))
+        model.discriminator.load_weights(os.path.join(pretrained_dir, 'discriminator', 'discriminator.index'))
     else:
         model = StackGAN1(
             img_size=dataset_dims,
@@ -114,7 +143,10 @@ def main(args):
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
             lr_g=args.lr_g,
-            lr_d=args.lr_d
+            lr_d=args.lr_d,
+            conditional_emb_size=args.conditional_emb_size,
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
         )
 
         trainer_class = get_trainer(args.dataset_name)
@@ -127,9 +159,9 @@ def main(args):
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 
-    # Plot metrics
-    plotter = LogPlotter(results_dir)
-    plotter.learning_curve()
+        # Plot metrics
+        plotter = LogPlotter(results_dir)
+        plotter.learning_curve()
 
     if args.visualise:
         # TODO: Check if the model is in eval mode
