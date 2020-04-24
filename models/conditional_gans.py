@@ -116,13 +116,14 @@ class StackGAN1(ConditionalGAN):
         """
         # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
         # flatten all features or average across embeddings
-        x = embedding[:, 0, :] # rather just select one of the embeddings
+        x = embedding[:, 0, :]  # rather just select one of the embeddings
         mean = self.lrelu1(self.dense_mean(x))
         sigma = self.lrelu2(self.dense_sigma(x))
         return mean, sigma
 
     def conditional_augmentation(self, embedding):
-        """ Perform conditional augmentation by sampling embedding.
+        """ Perform conditional augmentation by sampling normal distribution generated
+            from the embedding.
             Arguments
             embedding : Tensor
                 text embedding. Shape (batch_size, feature_size, embedding_size)

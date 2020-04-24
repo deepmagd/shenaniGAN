@@ -145,9 +145,9 @@ def main(args):
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 
-    # Plot metrics
-    plotter = LogPlotter(results_dir)
-    plotter.learning_curve()
+        # Plot metrics
+        plotter = LogPlotter(results_dir)
+        plotter.learning_curve()
 
     if args.visualise:
         # TODO: Check if the model is in eval mode
