@@ -101,6 +101,8 @@ class GeneratorStage1(Generator):
         """
         super().__init__(img_size, num_latent_dims, lr, conditional_emb_size, w_init, bn_init)
         num_output_channels = self.img_size[0]
+        assert num_output_channels == 3 or num_output_channels == 1, \
+            f'The number of output channels must be 2 or 1. Found {num_output_channels}'
 
         self.dense1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
         self.bn1 = BatchNormalization(gamma_initializer=self.bn_init)
