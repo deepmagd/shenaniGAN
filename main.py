@@ -105,6 +105,8 @@ def main(args):
     results_dir = os.path.join(RESULTS_ROOT, args.name)
     save_options(options=args, save_dir=results_dir)
 
+    default_settings = get_default_settings(SETTINGS_FILE)
+
     train_loader, val_generator, dataset_dims = create_dataloaders(args)
 
     # Create the model
@@ -141,7 +143,9 @@ def main(args):
         trainer = trainer_class(
             model=model,
             batch_size=args.batch_size,
-            save_location=results_dir
+            save_location=results_dir,
+            num_embeddings=default_settings['num_embeddings'],
+            num_samples=default_settings['num_samples']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 

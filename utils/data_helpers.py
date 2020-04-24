@@ -4,8 +4,10 @@ import pathlib
 import shutil
 import tarfile
 import urllib.request
+import zipfile
 from random import randint
 
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from google_drive_downloader import GoogleDriveDownloader as gdd
@@ -15,7 +17,6 @@ from PIL import Image
 from utils.utils import format_file_name, mkdir, normalise, read_pickle
 
 NUM_COLOUR_CHANNELS = 3
-
 
 def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
@@ -56,6 +57,18 @@ def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_
     else:
         raise Exception(f'{dataset_type} is not a recognised dataset type')
 
+def extract_image_bounding_boxes(image_filenames, base_path='data/CUB_200_2011_with_text/images/CUB_200_2011'):
+    '''
+    Returns a map of filename to bounding box in format [x-top, y-top, w, h]
+    '''
+    bb_df = pd.read_csv(os.path.join(base_path, 'bounding_boxes.txt'), names=['idx', 'x', 'y', 'w', 'h'], sep=" ").astype(int)
+    imgs_df = pd.read_csv(os.path.join(base_path, 'images.txt'), names=['idx', 'filename'], sep=" ")
+    combined_df = imgs_df.merge(bb_df, how='left', on='idx')
+    bb_map = {}
+    for idx, fn in enumerate(image_filenames):
+        bb_map[fn] = combined_df[combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])].iloc[:, 2:].values.squeeze().astype(int).tolist()
+    return bb_map
+
 def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset for image-caption pairs
         Arguments:
@@ -72,9 +85,10 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
         # Read from file and format
         file_names, class_info, text_embeddings = read_text_subset(subset, text_source_dir)
         file_names = [format_file_name(image_source_dir, file_name) for file_name in file_names]
+        bb_map = extract_image_bounding_boxes(image_filenames=file_names)
         # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
-        byte_images = get_byte_images(image_paths=file_names, image_dims=image_dims)
+        byte_images = get_byte_images(image_paths=file_names, image_dims=image_dims, bounding_boxes=bb_map, preprocessing='crop')
         # Arrange and write to file
         shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images])
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
@@ -118,9 +132,19 @@ def download_dataset(dataset):
 def download_cub(include_text=False):
     """ Download the birds dataset (CUB-200-2011) """
     BIRDS_DATASET_URL = "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
-    print('Downloading CUB dataset from: {}'.format(BIRDS_DATASET_URL))
-    cub_download_location = pathlib.Path('data/CUB_200_2011.tgz')
-    urllib.request.urlretrieve(BIRDS_DATASET_URL, cub_download_location)
+
+    cub_download_location = 'data/CUB_200_2011.tgz'
+    cub_backup_location = 'data/backup/CUB_200_2011.tgz'
+
+    if os.path.exists(cub_backup_location):
+        print('Retrieving CUB dataset from: {}'.format(cub_backup_location))
+        shutil.copy(cub_backup_location, cub_download_location)
+    else:
+        print('Downloading CUB dataset from: {}'.format(BIRDS_DATASET_URL))
+        cub_download_location = pathlib.Path('data/CUB_200_2011.tgz')
+        urllib.request.urlretrieve(BIRDS_DATASET_URL, cub_download_location)
+        mkdir('data/backup')
+        shutil.copy(cub_download_location, cub_backup_location)
     # Extract image data
     tar = tarfile.open(cub_download_location, "r:gz")
     if include_text:
@@ -134,15 +158,27 @@ def download_cub(include_text=False):
     if include_text:
         # Download the image captions
         BIRDS_TEXT_GDRIVE_ID = '0B3y_msrWZaXLT1BZdVdycDY5TEE'
-        print('Downloading CUB text from Google Drive ID: {}'.format(BIRDS_TEXT_GDRIVE_ID))
+
         cub_text_download_location = "data/birds.zip"
-        gdd.download_file_from_google_drive(file_id=BIRDS_TEXT_GDRIVE_ID,
-                                            dest_path=cub_text_download_location,
-                                            unzip=True)
-        # Move and clean up data
+        cub_text_backup_location = 'data/backup/birds.zip'
         extracted_text_dir = cub_text_download_location[:-4]
+
+        if os.path.exists(cub_text_backup_location):
+            print('Retrieving CUB dataset from: {}'.format(cub_text_backup_location))
+            shutil.copy(cub_text_backup_location, cub_text_download_location)
+            with zipfile.ZipFile(cub_text_backup_location, 'r') as zipfd:
+                zipfd.extractall('data/')
+        else:
+            print('Downloading CUB text from Google Drive ID: {}'.format(BIRDS_TEXT_GDRIVE_ID))
+            gdd.download_file_from_google_drive(file_id=BIRDS_TEXT_GDRIVE_ID,
+                                                dest_path=cub_text_download_location,
+                                                unzip=True)
+            mkdir('data/backup')
+            shutil.copy(cub_text_download_location, cub_text_backup_location)
+
+        # Move and clean up data
         if os.path.isdir(extracted_text_dir):
-            os.rename(extracted_text_dir, 'data/CUB_200_2011_with_text/text/')
+            os.rename(extracted_text_dir, 'data/CUB_200_2011_with_text/text')
         else:
             raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
         os.remove(cub_text_download_location)
@@ -184,20 +220,39 @@ def check_for_xrays(directory):
     shutil.move(f'{train_location}.csv', raw_location)
     shutil.move(f'{valid_location}.csv', raw_location)
 
-def get_byte_images(image_paths, image_dims):
-    """ Generate a list of byte representations of each image """
+def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
+    """ Generate a list of byte representations of each image
+
+    if preprocessing == 'crop'
+        Required: Dict[string, list] - bounding_boxes
+    """
+    bounding_boxes = kwargs.get('bounding_boxes')
+    if bounding_boxes is None and preprocessing == 'crop':
+        raise Exception("bounding boxes required for preprocessing type 'crop'")
+
     byte_images_list = []
     for image_path in image_paths:
         image = Image.open(image_path, 'r')
-        old_size = image.size[:2]
-        ratio = max(image_dims)/max(old_size)
-        new_size = tuple([int(x*ratio) for x in old_size])
-        image = image.resize(new_size, Image.ANTIALIAS)
-        new_img = Image.new('RGB', image_dims)
-        new_img.paste(image, ((image_dims[0]-new_size[0])//2,
-                              (image_dims[1]-new_size[1])//2))
+        if len(image.size) == 2:
+            image = image.convert("RGB")
+        if preprocessing == 'pad':
+            old_size = image.size[:2]
+            ratio = max(image_dims)/max(old_size)
+            new_size = tuple([int(x*ratio) for x in old_size])
+            image = image.resize(new_size, Image.ANTIALIAS)
+            img = Image.new('RGB', image_dims)
+            img.paste(image, ((image_dims[0]-new_size[0])//2,
+                                (image_dims[1]-new_size[1])//2))
+        elif preprocessing == 'crop':
+            img = np.array(image)
+            bb = bounding_boxes[image_path]
+            img = img[bb[1]:bb[1]+bb[3], bb[0]:bb[0]+bb[2], :].astype('uint8')
+            img = np.array(Image.fromarray(img).resize(image_dims, Image.ANTIALIAS)).astype('uint8')
+            img = Image.fromarray(img)
+        else:
+            raise Exception(f"No method available for preprpcessing flag '{preprocessing}' when loading byte images")
         img_buffer = io.BytesIO()
-        new_img.save(img_buffer, format='PNG')
+        img.save(img_buffer, format='PNG')
         byte_image = img_buffer.getvalue()
         byte_images_list.append(byte_image)
     return byte_images_list

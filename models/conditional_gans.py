@@ -116,9 +116,8 @@ class StackGAN1(ConditionalGAN):
         """
         # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
         # flatten all features or average across embeddings
-        x = embedding[:, 0, :]  # rather just select one of the embeddings
-        mean = self.lrelu1(self.dense_mean(x))
-        sigma = self.lrelu2(self.dense_sigma(x))
+        mean = self.lrelu1(self.dense_mean(embedding))
+        sigma = self.lrelu2(self.dense_sigma(embedding))
         return mean, sigma
 
     def conditional_augmentation(self, embedding):

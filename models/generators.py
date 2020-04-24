@@ -74,57 +74,78 @@ class GeneratorStage1(Model):
                 lr : float
         """
         super().__init__()
+
+        self.w_init = tf.random_normal_initializer(stddev=0.02)
+        self.bn_init = tf.random_normal_initializer(1., 0.02)
+
         self.img_size = img_size
 
         num_output_channels = self.img_size[0]
         self.num_latent_dims = num_latent_dims
         # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.optimiser = tf.keras.optimizers.Adam(lr)
+        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         # TODO: Add correct layers as given by the paper
+<<<<<<< HEAD
         self.dense1 = Dense(units=128*8*4*4, activation=None)  # NOTE make dynamic
         self.bn1 = BatchNormalization()
         self.relu1 = ReLU()
+=======
+        self.dense1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
+        self.bn1 = BatchNormalization(gamma_initializer=self.bn_init)
+>>>>>>> master
         self.reshape_layer = Reshape([4, 4, 128*8])
+        self.relu1 = ReLU()
 
-        self.deconv2d1 = Conv2DTranspose(128*4, kernel_size=(4, 4), strides=(2, 2))
-        self.conv1 = Conv2D(filters=128*4, kernel_size=(3, 3), strides=(1, 1))
-        self.bn2 = BatchNormalization()
+        self.deconv2d1 = Conv2DTranspose(128*4, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.conv1 = Conv2D(filters=128*4, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
+        self.bn2 = BatchNormalization(gamma_initializer=self.bn_init)
         self.relu2 = ReLU()
 
-        self.deconv2d2 = Conv2DTranspose(128*2, kernel_size=(4, 4), strides=(2, 2))
-        self.conv2 = Conv2D(filters=128*2, kernel_size=(3, 3), strides=(1, 1))
-        self.bn3 = BatchNormalization()
+        self.deconv2d2 = Conv2DTranspose(128*2, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.conv2 = Conv2D(filters=128*2, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
+        self.bn3 = BatchNormalization(gamma_initializer=self.bn_init)
         self.relu3 = ReLU()
 
-        self.deconv2d3 = Conv2DTranspose(128, kernel_size=(4, 4), strides=(2, 2))
-        self.conv3 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1))
-        self.bn4 = BatchNormalization()
+        self.deconv2d3 = Conv2DTranspose(128, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.conv3 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
+        self.bn4 = BatchNormalization(gamma_initializer=self.bn_init)
         self.relu4 = ReLU()
 
+<<<<<<< HEAD
         self.deconv2d4 = Conv2DTranspose(num_output_channels, kernel_size=(4, 4), strides=(2, 2))
         self.conv4 = Conv2D(filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1))
+=======
+        self.deconv2d4 = Conv2DTranspose(3, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init) # 3=image channels
+        self.conv4 = Conv2D(filters=3, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
+>>>>>>> master
 
     @tf.function
     def call(self, noise):
         x = self.dense1(noise)
         x = self.bn1(x)
-        x = self.relu1(x)
         x = self.reshape_layer(x)
+        x = self.relu1(x)
+
         x = self.deconv2d1(x)
         x = self.conv1(x)
         x = self.bn2(x)
         x = self.relu2(x)
+
         x = self.deconv2d2(x)
         x = self.conv2(x)
         x = self.bn3(x)
         x = self.relu3(x)
+
         x = self.deconv2d3(x)
         x = self.conv3(x)
         x = self.bn4(x)
         x = self.relu4(x)
+
         x = self.deconv2d4(x)
         x = self.conv4(x)
+
         x = tanh(x)
+
         return x
 
     def loss(self, predictions_on_fake, mean, log_sigma):
