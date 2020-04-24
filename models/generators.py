@@ -11,7 +11,7 @@ class Generator(Model):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
-    def __init__(self, img_size, num_latent_dims, lr, conditional_emb_size):
+    def __init__(self, img_size, num_latent_dims, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:'
@@ -32,8 +32,8 @@ class Generator(Model):
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
         # Weight Initialisation Parameters
-        self.w_init = tf.random_normal_initializer(stddev=0.02)
-        self.bn_init = tf.random_normal_initializer(1., 0.02)
+        self.w_init = w_init
+        self.bn_init = bn_init
 
         # Conditional Layers
         self.flatten = Flatten()
@@ -85,7 +85,7 @@ class GeneratorStage1(Generator):
         fabricates images from a noisy distribution.
     """
     def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
-                 reshape_dims, lr, conditional_emb_size):
+                 reshape_dims, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -99,7 +99,7 @@ class GeneratorStage1(Generator):
                     [91, 125, 128]
                 lr : float
         """
-        super().__init__(img_size, num_latent_dims, lr, conditional_emb_size)
+        super().__init__(img_size, num_latent_dims, lr, conditional_emb_size, w_init, bn_init)
         num_output_channels = self.img_size[0]
 
         self.dense1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)

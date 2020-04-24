@@ -64,8 +64,8 @@ class ConditionalGAN(Model):
 
 class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
-    def __init__(self, img_size, num_latent_dims, kernel_size,
-                 num_filters, reshape_dims, lr_g, lr_d, conditional_emb_size):
+    def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
+                 reshape_dims, lr_g, lr_d, conditional_emb_size, w_init, bn_init):
 
         generator = GeneratorStage1(
             img_size=img_size,
@@ -74,7 +74,9 @@ class StackGAN1(ConditionalGAN):
             num_filters=num_filters,
             reshape_dims=reshape_dims,
             lr=lr_g,
-            conditional_emb_size=conditional_emb_size
+            conditional_emb_size=conditional_emb_size,
+            w_init=w_init,
+            bn_init=bn_init
         )
 
         discriminator = DiscriminatorStage1(

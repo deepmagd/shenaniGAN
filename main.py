@@ -128,7 +128,9 @@ def main(args):
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
             lr_g=args.lr_g,
             lr_d=args.lr_d,
-            conditional_emb_size=args.conditional_emb_size
+            conditional_emb_size=args.conditional_emb_size,
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
         )
         pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
         model.generator.load_weights(os.path.join(pretrained_dir, 'generator', 'generator.index'))
@@ -142,7 +144,9 @@ def main(args):
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
             lr_g=args.lr_g,
             lr_d=args.lr_d,
-            conditional_emb_size=args.conditional_emb_size
+            conditional_emb_size=args.conditional_emb_size,
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
         )
 
         trainer_class = get_trainer(args.dataset_name)
