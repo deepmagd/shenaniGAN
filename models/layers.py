@@ -32,8 +32,9 @@ class ResidualLayer(layers.Layer):
 
 class DeconvBlock(layers.Layer):
 
-    def __init__(self, filters, w_init, bn_init):
+    def __init__(self, filters, w_init, bn_init, activation=False):
         super(DeconvBlock, self).__init__()
+        self.activation = activation
         self.deconv2d = Conv2DTranspose(filters, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=w_init)
         self.conv2d = Conv2D(filters=filters, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=w_init)
         self.bn = BatchNormalization(gamma_initializer=bn_init)
@@ -43,7 +44,9 @@ class DeconvBlock(layers.Layer):
         x = self.deconv2d(x)
         x = self.conv2d(x)
         x = self.bn(x)
-        return self.relu(x)
+        if self.activation:
+            x = self.relu(x)
+        return x
 
 class ConvBlock(layers.Layer):
 
