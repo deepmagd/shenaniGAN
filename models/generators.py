@@ -39,9 +39,9 @@ class Generator(Model):
 
         # Conditional Layers
         self.flatten = Flatten()
-        self.dense_mean = Dense(units=conditional_emb_size, activation='relu')
+        self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
         self.leaky_relu1 = LeakyReLU(alpha=0.2)
-        self.dense_sigma = Dense(units=conditional_emb_size, activation='relu')
+        self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
         self.leaky_relu2 = LeakyReLU(alpha=0.2)
 
     @tf.function
@@ -60,7 +60,9 @@ class Generator(Model):
                 sampled embedding. Shape (batch_size, reshape_dims/2)
         """
         mean, log_sigma = self.generate_conditionals(embedding)
-        smoothed_embedding = sample_normal(mean, log_sigma)
+        epsilon = tf.random.truncated_normal(tf.shape(mean))
+        stddev = tf.math.exp(log_sigma)
+        smoothed_embedding = mean + stddev * epsilon
         return smoothed_embedding, mean, log_sigma
 
     def generate_conditionals(self, embedding):
@@ -76,8 +78,6 @@ class Generator(Model):
                 learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
 
         """
-        # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
-        # flatten all features or average across embeddings
         mean = self.leaky_relu1(self.dense_mean(embedding))
         log_sigma = self.leaky_relu2(self.dense_sigma(embedding))
         return mean, log_sigma
