@@ -110,18 +110,17 @@ class GeneratorStage1(Generator):
         self.dense_1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
-        self.relu_1 = ReLU()
 
         self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
-        self.relu_2 = ReLU()
+        self.relu_1 = ReLU()
 
-        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init)
+        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
 
         self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
-        self.relu_3 = ReLU()
+        self.relu_2 = ReLU()
 
-        self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init)
-        self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init)
+        self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
+        self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)
 
         self.deconv2d_4 = Conv2DTranspose(num_output_channels, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
         self.conv2d_4 = Conv2D(filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
@@ -129,22 +128,21 @@ class GeneratorStage1(Generator):
     @tf.function
     def call(self, embedding, noise):
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
-        noisy_embedding = tf.concat([smoothed_embedding, noise], 1)
+        noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
 
         x = self.dense_1(noisy_embedding)
         x = self.bn_1(x)
         x = self.reshape_layer(x)
-        x = self.relu_1(x)
 
         res_1 = self.res_block_1(x)
         x = tf.add(x, res_1)
-        x = self.relu_2(x)
+        x = self.relu_1(x)
 
         x = self.deconv_block_1(x)
 
         res_2 = self.res_block_2(x)
         x = tf.add(x, res_2)
-        x = self.relu_3(x)
+        x = self.relu_2(x)
 
         x = self.deconv_block_2(x)
         x = self.deconv_block_3(x)
