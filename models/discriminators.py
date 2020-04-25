@@ -44,17 +44,6 @@ class Discriminator(Model):
         x = self.dense2(x)
         return x
 
-    def loss(self, predictions_on_real, predictions_on_fake):
-        """ Calculate the loss for the predictions made on real and fake images.
-                Arguments:
-                predictions_on_real : Tensor
-                predictions_on_fake : Tensor
-        """
-        real_loss = self.xent_loss_fn(tf.ones_like(predictions_on_real), predictions_on_real)
-        fake_loss = self.xent_loss_fn(tf.zeros_like(predictions_on_fake), predictions_on_fake)
-        total_loss = real_loss + fake_loss
-        return total_loss
-
 
 class DiscriminatorStage1(Model):
     """ The definition for a network which
@@ -75,7 +64,6 @@ class DiscriminatorStage1(Model):
 
         self.img_size = img_size
         num_channels = self.img_size[0]
-        # self.xent_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         # TODO: Add the correct layers as per the paper
         self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
@@ -127,12 +115,10 @@ class DiscriminatorStage1(Model):
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(predictions_on_real), logits=predictions_on_real)
+        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.fill(predictions_on_real.shape, 0.9), logits=predictions_on_real)
         real_loss = tf.reduce_mean(real_loss)
         fake_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake)
         fake_loss = tf.reduce_mean(fake_loss)
-        # real_loss = self.xent_loss_fn(tf.ones_like(predictions_on_real), predictions_on_real)
-        # fake_loss = self.xent_loss_fn(tf.zeros_like(predictions_on_fake), predictions_on_fake)
         total_loss = real_loss + fake_loss
         return total_loss
 
