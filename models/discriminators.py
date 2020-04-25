@@ -88,7 +88,6 @@ class DiscriminatorStage1(Model):
         self.res_block = ResidualLayer(64*2, 64*8, self.w_init, self.bn_init)
         self.leaky_relu_2 = LeakyReLU(alpha=0.2)
 
-        self.flatten = Flatten()
         self.dense_embed = Dense(units=128)
         self.leaky_relu_3 = LeakyReLU(alpha=0.2)
 
@@ -111,7 +110,7 @@ class DiscriminatorStage1(Model):
         x = tf.add(x, res)
         x = self.leaky_relu_2(x)
 
-        reduced_embedding = self.dense_embed(self.flatten(embedding))
+        reduced_embedding = self.dense_embed(embedding)
         reduced_embedding = self.leaky_relu_3(reduced_embedding)
         reduced_embedding = tf.expand_dims(tf.expand_dims(reduced_embedding, 1), 1)
         reduced_embedding = tf.tile(reduced_embedding, [1, 4, 4, 1])
