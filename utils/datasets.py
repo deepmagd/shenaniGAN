@@ -124,7 +124,7 @@ class BirdsWithWordsDataset(StackedGANDataset):
         """ Parse the raw data from the TFRecords and arrange into a readable form
             for the trainer object.
         """
-        if not subset in ['train', 'test']:
+        if subset not in ['train', 'test']:
             raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
@@ -177,7 +177,7 @@ class XRaysDataset(StackedGANDataset):
         """ Parse the raw data from the TFRecords and arrange into a readable form
             for the trainer object.
         """
-        if not subset in ['train', 'valid']:
+        if subset not in ['train', 'valid']:
             raise Exception('Invalid subset type: {}, expected train or valid'.format(subset))
 
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
