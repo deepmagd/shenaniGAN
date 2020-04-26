@@ -155,7 +155,8 @@ def main(args):
             batch_size=args.batch_size,
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
-            num_samples=default_settings['num_samples']
+            num_samples=default_settings['num_samples'],
+            augment=default_settings['augment']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 

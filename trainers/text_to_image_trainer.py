@@ -1,4 +1,5 @@
 import io
+from random import randint
 
 import numpy as np
 import tensorflow as tf
@@ -6,13 +7,13 @@ from PIL import Image
 from tqdm import trange
 
 from trainers.base_trainer import Trainer
-from random import randint
+from utils.data_helpers import transform_image
 
 
 class TextToImageTrainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
     def __init__(self, model, batch_size, save_location,
-                 num_embeddings, num_samples,
+                 num_embeddings, num_samples, augment,
                  show_progress_bar=True):
         """ Initialise a model trainer for iamge data.
             Arguments:
@@ -27,6 +28,7 @@ class TextToImageTrainer(Trainer):
         super().__init__(model, batch_size, save_location, show_progress_bar)
         self.num_embeddings = num_embeddings
         self.num_samples = num_samples
+        self.augment = augment
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -45,6 +47,8 @@ class TextToImageTrainer(Trainer):
                 batch_size = len(sample['text'].numpy())
                 for i in range(batch_size):
                     img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
+                    if self.augment:
+                        img = transform_image(img)
                     image_tensor.append(img)
                     idxs = np.random.choice(self.num_embeddings, self.num_samples, replace=False)
                     txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(self.num_embeddings, 1024)[idxs, :] # TODO make dynamic

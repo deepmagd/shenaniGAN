@@ -14,3 +14,4 @@ learning_rate_d: 0.0002
 num_embeddings: 10
 num_samples: 4
 conditional_emb_size: 128
+augment: True
