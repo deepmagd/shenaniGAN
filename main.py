@@ -69,10 +69,6 @@ def parse_arguments(args_to_parse):
         '--conditional-emb-size', type=int, help='The number of elements in the conditiona embedding',
         default=default_settings['conditional_emb_size']
     )
-    training.add_argument(
-        '--aug', type=bool, help='Flag if augmentation must be applied to training data',
-        default=default_settings['augment']
-    )
 
     evaluation = parser.add_argument_group('Evaluation settings')
     evaluation.add_argument(

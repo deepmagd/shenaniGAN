@@ -115,7 +115,7 @@ class DiscriminatorStage1(Model):
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.fill(predictions_on_real.shape, 0.9), logits=predictions_on_real)
+        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(predictions_on_real), logits=predictions_on_real)
         real_loss = tf.reduce_mean(real_loss)
         fake_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake)
         fake_loss = tf.reduce_mean(fake_loss)
