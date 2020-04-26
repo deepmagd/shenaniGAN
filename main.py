@@ -2,6 +2,7 @@ import argparse
 from dataloaders.dataloaders import create_dataloaders
 from math import floor
 from models.conditional_gans import StackGAN1
+from PIL import Image
 from trainers.trainers import get_trainer
 import os
 import sys
@@ -11,7 +12,9 @@ from utils.data_helpers import sample_real_images, show_image_list
 from utils.datasets import DATASETS, get_dataset
 from utils.logger import LogPlotter
 from utils.utils import get_default_settings, save_options, extract_epoch_num
+from visualise.sampler import sample_data
 
+import numpy as np
 
 SETTINGS_FILE = 'settings.yaml'
 RESULTS_ROOT = 'results'
@@ -153,7 +156,8 @@ def main(args):
             batch_size=args.batch_size,
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
-            num_samples=default_settings['num_samples']
+            num_samples=default_settings['num_samples'],
+            conditional_emb_size=args.conditional_emb_size
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 
@@ -163,23 +167,35 @@ def main(args):
 
     if args.visualise:
         # TODO: Check if the model is in eval mode
-        # Visualise fake images
-        fake_images = model.generate_images(num_images=args.images_to_generate)
-        show_image_list(fake_images, save_dir=results_dir)
+        # Visualise fake images from training set
+        noise_list = [tf.random.normal([1, args.conditional_emb_size]) for idx in range(args.images_to_generate)]
 
-        # Classify images
-        num_images_to_classify = args.images_to_classify
-        num_fakes_to_generate = floor(num_images_to_classify / 2)
-        num_real_images = num_images_to_classify - num_fakes_to_generate
+        samples = sample_data(train_loader, num_samples=args.images_to_generate)
+        real_images, real_embeddings = zip(*samples)
 
-        dataset_object = get_dataset(args.dataset_name)
-        real_images = sample_real_images(num_images=num_real_images, dataset_object=dataset_object)
-        fake_images = model.generate_images(num_images=num_fakes_to_generate)
+        fake_images = [model.generator(embedding, noise)[0] for embedding, noise in zip(real_embeddings, noise_list)]
 
-        images = real_images + fake_images
-        predictions = model.classify_images(images)
-        print('Predictions: {}'.format([prediction.numpy() for prediction in predictions]))
-        print('The first {} are real, while the lst {} are fake'.format(len(real_images), len(fake_images)))
+        for i, (real_image, fake_tensor) in enumerate(zip(real_images, fake_images)):
+            real_image.save(f'real-{i}.png')
+            fake_image = tf.squeeze(fake_tensor, axis=0).numpy() * 255
+            Image.fromarray(fake_image.astype(np.uint8)).save(f'fake-{i}.png')
+
+        # fake_images = model.generate_images(num_images=args.images_to_generate)
+        # show_image_list(fake_images, save_dir=results_dir)
+
+        # # Classify images
+        # num_images_to_classify = args.images_to_classify
+        # num_fakes_to_generate = floor(num_images_to_classify / 2)
+        # num_real_images = num_images_to_classify - num_fakes_to_generate
+
+        # dataset_object = get_dataset(args.dataset_name)
+        # real_images = sample_real_images(num_images=num_real_images, dataset_object=dataset_object)
+        # fake_images = model.generate_images(num_images=num_fakes_to_generate)
+
+        # images = real_images + fake_images
+        # predictions = model.classify_images(images)
+        # print('Predictions: {}'.format([prediction.numpy() for prediction in predictions]))
+        # print('The first {} are real, while the lst {} are fake'.format(len(real_images), len(fake_images)))
 
 
 if __name__ == '__main__':

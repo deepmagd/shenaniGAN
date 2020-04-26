@@ -12,7 +12,7 @@ from random import randint
 class TextToImageTrainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
     def __init__(self, model, batch_size, save_location,
-                 num_embeddings, num_samples,
+                 num_embeddings, num_samples, conditional_emb_size,
                  show_progress_bar=True):
         """ Initialise a model trainer for iamge data.
             Arguments:
@@ -27,6 +27,7 @@ class TextToImageTrainer(Trainer):
         super().__init__(model, batch_size, save_location, show_progress_bar)
         self.num_embeddings = num_embeddings
         self.num_samples = num_samples
+        self.conditional_emb_size = conditional_emb_size
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -54,7 +55,7 @@ class TextToImageTrainer(Trainer):
                 text_tensor = np.asarray(text_tensor)
                 # label = sample['label'].numpy()
 
-                noise_z = tf.random.normal([batch_size, 100])
+                noise_z = tf.random.normal([batch_size, self.conditional_emb_size])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
