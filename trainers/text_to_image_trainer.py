@@ -98,8 +98,8 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                if batch_idx == 20:
-                    break
+                # if batch_idx == 20:
+                #     break
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
