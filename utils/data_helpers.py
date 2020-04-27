@@ -239,20 +239,27 @@ def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
             old_size = image.size[:2]
             ratio = max(image_dims)/max(old_size)
             new_size = tuple([int(x*ratio) for x in old_size])
-            image = image.resize(new_size, Image.ANTIALIAS)
-            img = Image.new('RGB', image_dims)
-            img.paste(image, ((image_dims[0]-new_size[0])//2,
-                              (image_dims[1]-new_size[1])//2))
+            image = image.resize(new_size, Image.BICUBIC)
+            new_img = Image.new('RGB', image_dims)
+            new_img.paste(image, ((image_dims[0]-new_size[0])//2,
+                                (image_dims[1]-new_size[1])//2))
         elif preprocessing == 'crop':
             img = np.array(image)
             bb = bounding_boxes[image_path]
-            img = img[bb[1]:bb[1]+bb[3], bb[0]:bb[0]+bb[2], :].astype('uint8')
-            img = np.array(Image.fromarray(img).resize(image_dims, Image.ANTIALIAS)).astype('uint8')
-            img = Image.fromarray(img)
+            cx = int(bb[0]+bb[2]/2)
+            cy = int(bb[1]+bb[3]/2)
+            crop_size = int(max(bb[2], bb[3])*0.75)
+            y1 = max(0, cy - crop_size)
+            y2 = min(img.shape[0], cy + crop_size)
+            x1 = max(0, cx - crop_size)
+            x2 = min(img.shape[1], cx + crop_size)
+            img = img[y1:y2, x1:x2, :]
+            new_img = np.array(Image.fromarray(img).resize(image_dims, Image.BICUBIC)).astype('uint8')
+            new_img = Image.fromarray(new_img)
         else:
             raise Exception(f"No method available for preprpcessing flag '{preprocessing}' when loading byte images")
         img_buffer = io.BytesIO()
-        img.save(img_buffer, format='PNG')
+        new_img.save(img_buffer, format='PNG')
         byte_image = img_buffer.getvalue()
         byte_images_list.append(byte_image)
     return byte_images_list
