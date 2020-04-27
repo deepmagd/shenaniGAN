@@ -153,7 +153,8 @@ def main(args):
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
-            conditional_emb_size=args.conditional_emb_size
+            conditional_emb_size=args.conditional_emb_size,
+            augment=default_settings['augment']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
 

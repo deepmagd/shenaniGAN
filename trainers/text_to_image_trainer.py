@@ -1,4 +1,5 @@
 import io
+from random import randint
 
 import numpy as np
 import tensorflow as tf
@@ -6,13 +7,13 @@ from PIL import Image
 from tqdm import trange
 
 from trainers.base_trainer import Trainer
-from random import randint
+from utils.data_helpers import transform_image
 
 
 class TextToImageTrainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
-    def __init__(self, model, batch_size, save_location,
-                 num_embeddings, num_samples, conditional_emb_size,
+    def __init__(self, model, batch_size, save_location, conditional_emb_size,
+                 num_embeddings, num_samples, augment,
                  show_progress_bar=True):
         """ Initialise a model trainer for iamge data.
             Arguments:
@@ -28,6 +29,7 @@ class TextToImageTrainer(Trainer):
         self.num_embeddings = num_embeddings
         self.num_samples = num_samples
         self.conditional_emb_size = conditional_emb_size
+        self.augment = augment
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -46,6 +48,8 @@ class TextToImageTrainer(Trainer):
                 batch_size = len(sample['text'].numpy())
                 for i in range(batch_size):
                     img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
+                    if self.augment:
+                        img = transform_image(img)
                     image_tensor.append(img)
                     idxs = np.random.choice(self.num_embeddings, self.num_samples, replace=False)
                     txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(self.num_embeddings, 1024)[idxs, :] # TODO make dynamic
@@ -94,8 +98,8 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                # if batch_idx == 20:
-                #     break
+                if batch_idx == 20:
+                    break
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)

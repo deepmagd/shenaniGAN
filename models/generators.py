@@ -1,10 +1,11 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import (BatchNormalization, Conv2D, LeakyReLU,
-                                     Dense, Reshape, Conv2DTranspose,
-                                     ReLU, Flatten)
 from tensorflow.keras.activations import tanh
-from utils.utils import sample_normal
+from tensorflow.keras.layers import (BatchNormalization, Conv2D,
+                                     Conv2DTranspose, Dense, Flatten,
+                                     LeakyReLU, ReLU, Reshape)
+
+from models.layers import ResidualLayer, DeconvBlock
 
 
 class Generator(Model):
@@ -34,9 +35,9 @@ class Generator(Model):
 
         # Conditional Layers
         self.flatten = Flatten()
-        self.dense_mean = Dense(units=conditional_emb_size, activation='relu')
+        self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
         self.leaky_relu1 = LeakyReLU(alpha=0.2)
-        self.dense_sigma = Dense(units=conditional_emb_size, activation='relu')
+        self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
         self.leaky_relu2 = LeakyReLU(alpha=0.2)
 
     @tf.function
@@ -55,7 +56,9 @@ class Generator(Model):
                 sampled embedding. Shape (batch_size, reshape_dims/2)
         """
         mean, log_sigma = self.generate_conditionals(embedding)
-        smoothed_embedding = sample_normal(mean, log_sigma)
+        epsilon = tf.random.truncated_normal(tf.shape(mean))
+        stddev = tf.math.exp(log_sigma)
+        smoothed_embedding = mean + stddev * epsilon
         return smoothed_embedding, mean, log_sigma
 
     def generate_conditionals(self, embedding):
@@ -71,11 +74,10 @@ class Generator(Model):
                 learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
 
         """
-        # NOTE embedding is dim (batch, 10, 1024) where 10 is different samples for same image. Options are to either
-        # flatten all features or average across embeddings
         mean = self.leaky_relu1(self.dense_mean(embedding))
         log_sigma = self.leaky_relu2(self.dense_sigma(embedding))
         return mean, log_sigma
+
 
 class GeneratorStage1(Generator):
     """ The definition for a network which
@@ -99,42 +101,26 @@ class GeneratorStage1(Generator):
         assert num_output_channels == 3 or num_output_channels == 1, \
             f'The number of output channels must be 2 or 1. Found {num_output_channels}'
 
-        self.dense1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
-        self.bn1 = BatchNormalization(gamma_initializer=self.bn_init)
+        self.dense_1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
+        self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
-        self.relu1 = ReLU()
 
-        self.deconv2d1 = Conv2DTranspose(
-            128*4, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init
-        )
-        self.conv1 = Conv2D(
-            filters=128*4, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
-        )
-        self.bn2 = BatchNormalization(gamma_initializer=self.bn_init)
-        self.relu2 = ReLU()
+        self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
+        self.relu_1 = ReLU()
 
-        self.deconv2d2 = Conv2DTranspose(
-            128*2, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init
-        )
-        self.conv2 = Conv2D(
-            filters=128*2, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
-        )
-        self.bn3 = BatchNormalization(gamma_initializer=self.bn_init)
-        self.relu3 = ReLU()
+        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
 
-        self.deconv2d3 = Conv2DTranspose(
-            128, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init
-        )
-        self.conv3 = Conv2D(
-            filters=128, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
-        )
-        self.bn4 = BatchNormalization(gamma_initializer=self.bn_init)
-        self.relu4 = ReLU()
+        self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
+        self.relu_2 = ReLU()
 
-        self.deconv2d4 = Conv2DTranspose(
-            num_output_channels, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init
+        self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
+        self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)
+
+        self.deconv2d_4 = Conv2DTranspose(
+            num_output_channels, kernel_size=(4, 4), strides=(2, 2),
+            padding='same', kernel_initializer=self.w_init
         )
-        self.conv4 = Conv2D(
+        self.conv2d_4 = Conv2D(
             filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1),
             padding='same', kernel_initializer=self.w_init
         )
@@ -142,30 +128,27 @@ class GeneratorStage1(Generator):
     @tf.function
     def call(self, embedding, noise):
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
-        noisy_embedding = tf.concat([smoothed_embedding, noise], 1)
+        noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
 
-        x = self.dense1(noisy_embedding)
-        x = self.bn1(x)
+        x = self.dense_1(noisy_embedding)
+        x = self.bn_1(x)
         x = self.reshape_layer(x)
-        x = self.relu1(x)
 
-        x = self.deconv2d1(x)
-        x = self.conv1(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
+        res_1 = self.res_block_1(x)
+        x = tf.add(x, res_1)
+        x = self.relu_1(x)
 
-        x = self.deconv2d2(x)
-        x = self.conv2(x)
-        x = self.bn3(x)
-        x = self.relu3(x)
+        x = self.deconv_block_1(x)
 
-        x = self.deconv2d3(x)
-        x = self.conv3(x)
-        x = self.bn4(x)
-        x = self.relu4(x)
+        res_2 = self.res_block_2(x)
+        x = tf.add(x, res_2)
+        x = self.relu_2(x)
 
-        x = self.deconv2d4(x)
-        x = self.conv4(x)
+        x = self.deconv_block_2(x)
+        x = self.deconv_block_3(x)
+
+        x = self.deconv2d_4(x)
+        x = self.conv2d_4(x)
 
         x = tanh(x)
 
@@ -175,7 +158,7 @@ class GeneratorStage1(Generator):
         """ Only calculate the loss based on the discriminator
             predictions for the images generated by this model.
         """
-        kl_coeff = 1
+        kl_coeff = 2
         loss = tf.nn.sigmoid_cross_entropy_with_logits(
             labels=tf.ones_like(predictions_on_fake),
             logits=predictions_on_fake
