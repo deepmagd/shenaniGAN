@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 import re
+import shutil
 import tensorflow as tf
 import yaml
 
@@ -77,6 +78,12 @@ def mkdir(directory):
 def remove_file(file_name):
     try:
         os.remove(file_name)
+    except OSError:
+        pass
+
+def rmdir(dir_to_remove):
+    try:
+        shutil.rmtree(dir_to_remove)
     except OSError:
         pass
 

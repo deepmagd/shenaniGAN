@@ -15,15 +15,16 @@ def sample_data(data_loader, num_samples):
     return sample_list
 
 def select_sample_fn(data_loader):
-    """ """
-    print(f'data_loader.dataset_object.type: {data_loader.dataset_object.type}')
+    """ A function to determine which sampling function to select """
     if data_loader.dataset_object.type == 'images-with-captions':
         return sample_img_with_captions
     else:
         raise NotImplementedError(f'Sampling dataset stype: {data_loader.dataset_object.type} is not ready yet')
 
 def sample_img_with_captions(data_loader):
-    """ """
+    """ A function which samples from the images-with-captions dataset.
+        We return the image and caption (embedding) as a tuple
+    """
     sample = next(iter(data_loader.parsed_subset))
     sample_batch_size = len(sample['text'].numpy())
     random_idx = randint(0, sample_batch_size - 1)
