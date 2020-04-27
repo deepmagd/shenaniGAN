@@ -1,18 +1,14 @@
-import io
-from random import randint
-
 import numpy as np
 import tensorflow as tf
-from PIL import Image
 from tqdm import trange
-
 from trainers.base_trainer import Trainer
 from utils.data_helpers import transform_image
+from utils.utils import extract_image_with_text
 
 
 class TextToImageTrainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
-    def __init__(self, model, batch_size, save_location,
+    def __init__(self, model, batch_size, save_location, conditional_emb_size,
                  num_embeddings, num_samples, augment,
                  show_progress_bar=True):
         """ Initialise a model trainer for iamge data.
@@ -28,6 +24,7 @@ class TextToImageTrainer(Trainer):
         super().__init__(model, batch_size, save_location, show_progress_bar)
         self.num_embeddings = num_embeddings
         self.num_samples = num_samples
+        self.conditional_emb_size = conditional_emb_size
         self.augment = augment
 
     def train_epoch(self, train_loader, epoch_num):
@@ -46,19 +43,21 @@ class TextToImageTrainer(Trainer):
                 text_tensor = []
                 batch_size = len(sample['text'].numpy())
                 for i in range(batch_size):
-                    img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
+                    img, txt = extract_image_with_text(
+                        sample=sample,
+                        index=i,
+                        embedding_size=1024,
+                        num_embeddings_to_sample=self.num_embeddings
+                    )
+                    img = np.asarray(img)
                     if self.augment:
                         img = transform_image(img)
                     image_tensor.append(img)
-                    idxs = np.random.choice(self.num_embeddings, self.num_samples, replace=False)
-                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(self.num_embeddings, 1024)[idxs, :] # TODO make dynamic
-                    txt = np.mean(txt, axis=0)
                     text_tensor.append(txt)
                 image_tensor = np.asarray(image_tensor)
                 text_tensor = np.asarray(text_tensor)
-                # label = sample['label'].numpy()
 
-                noise_z = tf.random.normal([batch_size, 100])
+                noise_z = tf.random.normal([batch_size, self.conditional_emb_size])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
@@ -81,7 +80,9 @@ class TextToImageTrainer(Trainer):
 
                 # Update gradients
                 generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
-                discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.discriminator.trainable_variables)
+                discriminator_gradients = discriminator_tape.gradient(
+                    discriminator_loss, self.model.discriminator.trainable_variables
+                )
 
                 self.model.generator.optimiser.apply_gradients(
                     zip(generator_gradients, self.model.generator.trainable_variables)

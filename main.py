@@ -1,16 +1,15 @@
 import argparse
 from dataloaders.dataloaders import create_dataloaders
-from math import floor
 from models.conditional_gans import StackGAN1
 from trainers.trainers import get_trainer
 import os
 import sys
 import tensorflow as tf
 from tensorflow import keras
-from utils.data_helpers import sample_real_images, show_image_list
-from utils.datasets import DATASETS, get_dataset
+from utils.datasets import DATASETS
 from utils.logger import LogPlotter
 from utils.utils import get_default_settings, save_options, extract_epoch_num
+from visualise.visualise import compare_generated_to_real
 
 
 SETTINGS_FILE = 'settings.yaml'
@@ -122,7 +121,6 @@ def main(args):
 
         model = StackGAN1(
             img_size=dataset_dims,
-            num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
@@ -138,7 +136,6 @@ def main(args):
     else:
         model = StackGAN1(
             img_size=dataset_dims,
-            num_latent_dims=100,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
@@ -156,6 +153,7 @@ def main(args):
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
+            conditional_emb_size=args.conditional_emb_size,
             augment=default_settings['augment']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
@@ -166,23 +164,14 @@ def main(args):
 
     if args.visualise:
         # TODO: Check if the model is in eval mode
-        # Visualise fake images
-        fake_images = model.generate_images(num_images=args.images_to_generate)
-        show_image_list(fake_images, save_dir=results_dir)
-
-        # Classify images
-        num_images_to_classify = args.images_to_classify
-        num_fakes_to_generate = floor(num_images_to_classify / 2)
-        num_real_images = num_images_to_classify - num_fakes_to_generate
-
-        dataset_object = get_dataset(args.dataset_name)
-        real_images = sample_real_images(num_images=num_real_images, dataset_object=dataset_object)
-        fake_images = model.generate_images(num_images=num_fakes_to_generate)
-
-        images = real_images + fake_images
-        predictions = model.classify_images(images)
-        print('Predictions: {}'.format([prediction.numpy() for prediction in predictions]))
-        print('The first {} are real, while the lst {} are fake'.format(len(real_images), len(fake_images)))
+        # Visualise fake images from training set
+        compare_generated_to_real(
+            dataloader=train_loader,
+            num_images=args.images_to_generate,
+            conditional_emb_size=args.images_to_generate,
+            model=model,
+            save_location=os.path.join(results_dir, 'viz')
+        )
 
 
 if __name__ == '__main__':

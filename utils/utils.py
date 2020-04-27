@@ -1,8 +1,12 @@
 from glob import glob
+import io
 import json
+import numpy as np
 import os
 import pickle
+from PIL import Image
 import re
+import shutil
 import tensorflow as tf
 import yaml
 
@@ -55,7 +59,7 @@ def sample_normal(mean, log_var):
             latent_dim)
     """
     std = tf.math.exp(log_var)
-    epsilon = tf.random.normal(tf.shape(mean)) # TODO is shape the correct thing to use here?
+    epsilon = tf.random.normal(tf.shape(mean))  # TODO is shape the correct thing to use here?
     return mean + std * epsilon
 
 def product_list(num_list):
@@ -79,6 +83,10 @@ def remove_file(file_name):
         os.remove(file_name)
     except OSError:
         pass
+
+def rmdir(dir_to_remove):
+    if os.path.isdir(dir_to_remove):
+        shutil.rmtree(dir_to_remove)
 
 def save_options(options, save_dir):
     """ Save all options to JSON file.
@@ -112,3 +120,12 @@ def extract_epoch_num(results_dir):
     candidate_dirs = [directory for directory in glob(f'{results_dir}/*/') if 'model' in directory]
     only_checkpoint_dirs = [int(re.search(r'\d+', candidate_dir.split('/')[-2])[0]) for candidate_dir in candidate_dirs]
     return max(only_checkpoint_dirs)
+
+def extract_image_with_text(sample, index, embedding_size, num_embeddings_to_sample):
+    img = Image.open(io.BytesIO(sample['image_raw'].numpy()[index]))
+    txt = np.frombuffer(
+        sample['text'].numpy()[index], dtype=np.float32
+    ).reshape(-1, embedding_size)
+    emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
+    txt = np.mean(txt[emb_idxs, :], axis=0)
+    return img, txt

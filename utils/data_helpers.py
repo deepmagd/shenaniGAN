@@ -242,7 +242,7 @@ def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
             image = image.resize(new_size, Image.ANTIALIAS)
             img = Image.new('RGB', image_dims)
             img.paste(image, ((image_dims[0]-new_size[0])//2,
-                                (image_dims[1]-new_size[1])//2))
+                              (image_dims[1]-new_size[1])//2))
         elif preprocessing == 'crop':
             img = np.array(image)
             bb = bounding_boxes[image_path]
@@ -328,7 +328,7 @@ def show_image_list(image_tensor_list, save_dir, name='fake-images.png'):
     plt.figure(figsize=(10, 10))
     for idx, image_tensor in enumerate(image_tensor_list):
         image_tensor = image_tensor
-        x = plt.subplot(5, 5, idx + 1)
+        _ = plt.subplot(5, 5, idx + 1)
         plt.imshow(tf.squeeze(image_tensor, axis=0))
         plt.axis('off')
     plt.savefig(os.path.join(save_dir, name))
@@ -380,7 +380,7 @@ def build_encoding_map(column):
         encoding_map[unique_value] = idx
     return encoding_map
 
-def encode_tabular_data(tab_xray_df, image_path_prefix:str):
+def encode_tabular_data(tab_xray_df, image_path_prefix):
     """ Encode the tabular data so that it is represented in one-hot
         encoding for categorical variables, and normalised for continious
         variables
