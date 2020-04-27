@@ -18,13 +18,17 @@ class Discriminator(Model):
         """
         super().__init__()
         self.img_size = img_size
-
-        # Optimiser
-        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
-
-        # Weight Initialisation Parameters
-        self.w_init = w_init
-        self.bn_init = bn_init
+        num_channels = self.img_size[0]
+        # TODO: Add the correct layers as per the paper
+        self.leaky_relu_1 = LeakyReLU()
+        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, padding='same')
+        self.leaky_relu_2 = LeakyReLU()
+        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, padding="same")
+        self.bn1 = BatchNormalization()
+        self.conv3 = Conv1D(filters=num_filters, kernel_size=1, padding="same")
+        self.flatten = Flatten()
+        self.dense1 = Dense(units=32, activation='relu')
+        self.dense2 = Dense(units=1, activation='sigmoid')
 
     @tf.function
     def call(self, images, embedding):
@@ -45,10 +49,15 @@ class DiscriminatorStage1(Discriminator):
         """
         super().__init__(img_size, lr, w_init, bn_init)
 
-        self.conv_1 = Conv2D(
-            filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same',
-            kernel_initializer=self.w_init
-        )
+        self.w_init = tf.random_normal_initializer(stddev=0.02)
+        self.bn_init = tf.random_normal_initializer(1., 0.02)
+
+        self.img_size = img_size
+        num_channels = self.img_size[0]
+        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
+        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        # TODO: Add the correct layers as per the paper
+        self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
         self.conv_block_1 = ConvBlock(
@@ -112,15 +121,8 @@ class DiscriminatorStage1(Discriminator):
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.ones_like(predictions_on_real), logits=predictions_on_real
-        )
-        real_loss = tf.reduce_mean(real_loss)
-
-        fake_loss = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake
-        )
-        fake_loss = tf.reduce_mean(fake_loss)
+        real_loss = self.cross_entropy(tf.ones_like(predictions_on_real), predictions_on_real)
+        fake_loss = self.cross_entropy(tf.zeros_like(predictions_on_fake), predictions_on_fake)
         total_loss = real_loss + fake_loss
         return total_loss
 
