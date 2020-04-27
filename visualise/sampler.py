@@ -1,7 +1,6 @@
-import io
 import numpy as np
-from PIL import Image
 from random import randint
+from utils.utils import extract_image_with_text
 
 
 NUM_EMBEDDINGS_TO_SAMPLE = 4
@@ -28,9 +27,12 @@ def sample_img_with_captions(data_loader):
     sample = next(iter(data_loader.parsed_subset))
     sample_batch_size = len(sample['text'].numpy())
     random_idx = randint(0, sample_batch_size - 1)
-    img = Image.open(io.BytesIO(sample['image_raw'].numpy()[random_idx]))
-    txt = np.frombuffer(
-        sample['text'].numpy()[random_idx], dtype=np.float32
-    ).reshape(-1, 1024)[:NUM_EMBEDDINGS_TO_SAMPLE - 1, :]
-    txt = np.mean(txt, axis=0, keepdims=True)
+    img, txt = extract_image_with_text(
+        sample=sample,
+        index=random_idx,
+        embedding_size=1024,
+        num_embeddings_to_sample=NUM_EMBEDDINGS_TO_SAMPLE
+    )
+    if len(txt.shape) == 1:
+        txt = txt[np.newaxis, :]
     return (img, txt)

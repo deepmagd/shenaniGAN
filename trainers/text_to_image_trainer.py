@@ -1,13 +1,9 @@
-import io
-from random import randint
-
 import numpy as np
 import tensorflow as tf
-from PIL import Image
 from tqdm import trange
-
 from trainers.base_trainer import Trainer
 from utils.data_helpers import transform_image
+from utils.utils import extract_image_with_text
 
 
 class TextToImageTrainer(Trainer):
@@ -47,17 +43,19 @@ class TextToImageTrainer(Trainer):
                 text_tensor = []
                 batch_size = len(sample['text'].numpy())
                 for i in range(batch_size):
-                    img = np.asarray(Image.open(io.BytesIO(sample['image_raw'].numpy()[i])), dtype=np.float32)
+                    img, txt = extract_image_with_text(
+                        sample=sample,
+                        index=i,
+                        embedding_size=1024,
+                        num_embeddings_to_sample=self.num_embeddings
+                    )
+                    img = np.asarray(img)
                     if self.augment:
                         img = transform_image(img)
                     image_tensor.append(img)
-                    idxs = np.random.choice(self.num_embeddings, self.num_samples, replace=False)
-                    txt = np.frombuffer(sample['text'].numpy()[i], dtype=np.float32).reshape(self.num_embeddings, 1024)[idxs, :] # TODO make dynamic
-                    txt = np.mean(txt, axis=0)
                     text_tensor.append(txt)
                 image_tensor = np.asarray(image_tensor)
                 text_tensor = np.asarray(text_tensor)
-                # label = sample['label'].numpy()
 
                 noise_z = tf.random.normal([batch_size, self.conditional_emb_size])
 
@@ -82,7 +80,9 @@ class TextToImageTrainer(Trainer):
 
                 # Update gradients
                 generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
-                discriminator_gradients = discriminator_tape.gradient(discriminator_loss, self.model.discriminator.trainable_variables)
+                discriminator_gradients = discriminator_tape.gradient(
+                    discriminator_loss, self.model.discriminator.trainable_variables
+                )
 
                 self.model.generator.optimiser.apply_gradients(
                     zip(generator_gradients, self.model.generator.trainable_variables)
