@@ -1,3 +1,7 @@
+import io
+from random import randint
+from skimage import io as sio
+
 import numpy as np
 import tensorflow as tf
 from tqdm import trange
@@ -36,7 +40,7 @@ class TextToImageTrainer(Trainer):
             leave=False,
             disable=not self.show_progress_bar
         )
-
+        abc = 0
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 image_tensor = []
@@ -61,6 +65,15 @@ class TextToImageTrainer(Trainer):
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
+                    # temp = fake_images[0, :, :, :].numpy()
+                    # print(temp.min(), temp.max(), temp.mean())
+                    # temp = ((temp+1)*127.5).astype('uint8')
+                    # print(temp.min(), temp.max(), temp.mean())
+                    # if abc == 20:
+                    # sio.imshow(temp)
+                    # sio.show()
+                        # abc = 0
+                    # abc += 1
 
                     assert fake_images.shape == image_tensor.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(

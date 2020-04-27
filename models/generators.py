@@ -138,19 +138,23 @@ class GeneratorStage1(Generator):
         x = tf.add(x, res_1)
         x = self.relu_1(x)
 
+        x = tf.image.resize(images=x, size=(64//8, 64//8), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv_block_1(x)
 
         res_2 = self.res_block_2(x)
         x = tf.add(x, res_2)
         x = self.relu_2(x)
 
+        x = tf.image.resize(images=x, size=(64//4, 64//4), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv_block_2(x)
+        x = tf.image.resize(images=x, size=(64//2, 64//2), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv_block_3(x)
 
-        x = self.deconv2d_4(x)
+        x = tf.image.resize(images=x, size=(64, 64), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        # x = self.deconv2d_4(x)
         x = self.conv2d_4(x)
 
-        x = tanh(x)
+        x = tf.nn.tanh(x)
 
         return x, mean, log_sigma
 
