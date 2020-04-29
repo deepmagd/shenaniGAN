@@ -1,6 +1,7 @@
 import io
 from random import randint
 from skimage import io as sio
+import matplotlib.pyplot as plt
 
 import numpy as np
 import tensorflow as tf
@@ -40,7 +41,7 @@ class TextToImageTrainer(Trainer):
             leave=False,
             disable=not self.show_progress_bar
         )
-        abc = 0
+        # abc = 0
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 image_tensor = []
@@ -65,14 +66,24 @@ class TextToImageTrainer(Trainer):
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
-                    # temp = fake_images[0, :, :, :].numpy()
-                    # print(temp.min(), temp.max(), temp.mean())
-                    # temp = ((temp+1)*127.5).astype('uint8')
-                    # print(temp.min(), temp.max(), temp.mean())
-                    # if abc == 20:
-                    # sio.imshow(temp)
-                    # sio.show()
-                        # abc = 0
+                    # temp2 = image_tensor[0, :, :, :]
+
+                    # plt.hist(temp.flatten(), bins=20, alpha=0.7)
+                    # plt.hist(temp2.flatten(), bins=20, alpha=0.7)
+                    # plt.legend(['fake', 'real'])
+                    # plt.show()
+
+                    # if abc == 10:
+                    #     temp = fake_images[0, :, :, :].numpy()
+                    #     temp = ((temp + 1) * 127.5).astype(np.uint8)
+                    #     temp2 = image_tensor[0, :, :, :]
+                    #     temp2 = ((temp2 + 1) * 127.5).astype(np.uint8)
+                    #     # print(temp.min(), temp.max())
+                    #     sio.imshow(temp2)
+                    #     sio.show()
+                    #     sio.imshow(temp)
+                    #     sio.show()
+                    #     abc = 0
                     # abc += 1
 
                     assert fake_images.shape == image_tensor.shape, \
