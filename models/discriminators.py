@@ -17,18 +17,6 @@ class Discriminator(Model):
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
         """
         super().__init__()
-        self.img_size = img_size
-        num_channels = self.img_size[0]
-        # TODO: Add the correct layers as per the paper
-        self.leaky_relu_1 = LeakyReLU()
-        self.conv1 = Conv2D(filters=num_channels, kernel_size=kernel_size, padding='same')
-        self.leaky_relu_2 = LeakyReLU()
-        self.conv2 = Conv2D(filters=num_filters, kernel_size=kernel_size, padding="same")
-        self.bn1 = BatchNormalization()
-        self.conv3 = Conv1D(filters=num_filters, kernel_size=1, padding="same")
-        self.flatten = Flatten()
-        self.dense1 = Dense(units=32, activation='relu')
-        self.dense2 = Dense(units=1, activation='sigmoid')
 
     @tf.function
     def call(self, images, embedding):

@@ -52,7 +52,7 @@ class TextToImageTrainer(Trainer):
                         sample=sample,
                         index=i,
                         embedding_size=1024,
-                        num_embeddings_to_sample=self.num_embeddings
+                        num_embeddings_to_sample=self.num_samples
                     )
                     img = np.asarray(img)
                     if self.augment:
@@ -124,6 +124,7 @@ class TextToImageTrainer(Trainer):
 
                 # if batch_idx == 20:
                 #     break
+
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
