@@ -44,8 +44,7 @@ class DiscriminatorStage1(Discriminator):
         num_channels = self.img_size[0]
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        # TODO: Add the correct layers as per the paper
-        self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init, use_bias=False)
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
         self.conv_block_1 = ConvBlock(

@@ -1,11 +1,12 @@
 import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow.keras import Model
 from tensorflow.keras.activations import tanh
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Flatten,
-                                     LeakyReLU, ReLU, Reshape)
+                                     LeakyReLU, ReLU, Reshape, UpSampling2D, Activation)
 
-from models.layers import ResidualLayer, DeconvBlock
+from models.layers import DeconvBlock, ResidualLayer
 
 
 class Generator(Model):
@@ -30,8 +31,6 @@ class Generator(Model):
         self.w_init = w_init
         self.bn_init = bn_init
 
-        # Conditional Layers
-        self.flatten = Flatten()
         self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
         self.leaky_relu1 = LeakyReLU(alpha=0.2)
         self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
@@ -53,7 +52,7 @@ class Generator(Model):
                 sampled embedding. Shape (batch_size, reshape_dims/2)
         """
         mean, log_sigma = self.generate_conditionals(embedding)
-        epsilon = tf.random.truncated_normal(tf.shape(mean))
+        epsilon = K.random_normal(shape=K.constant((mean.shape[1], ), dtype='int32'))
         stddev = tf.math.exp(log_sigma)
         smoothed_embedding = mean + stddev * epsilon
         return smoothed_embedding, mean, log_sigma
@@ -122,8 +121,10 @@ class GeneratorStage1(Generator):
         )
         self.conv2d_4 = Conv2D(
             filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1),
-            padding='same', kernel_initializer=self.w_init
+            padding='same', kernel_initializer=self.w_init, use_bias=False
         )
+
+        self.tanh = Activation('tanh')
 
     @tf.function
     def call(self, embedding, noise):
@@ -138,23 +139,19 @@ class GeneratorStage1(Generator):
         x = tf.add(x, res_1)
         x = self.relu_1(x)
 
-        # x = tf.image.resize(images=x, size=(64//8, 64//8), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv_block_1(x)
 
         res_2 = self.res_block_2(x)
         x = tf.add(x, res_2)
         x = self.relu_2(x)
 
-        # x = tf.image.resize(images=x, size=(64//4, 64//4), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv_block_2(x)
-        # x = tf.image.resize(images=x, size=(64//2, 64//2), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv_block_3(x)
 
-        # x = tf.image.resize(images=x, size=(64, 64), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         x = self.deconv2d_4(x)
         x = self.conv2d_4(x)
 
-        x = tf.nn.tanh(x)
+        x = self.tanh(x)
 
         return x, mean, log_sigma
 
@@ -171,7 +168,7 @@ class GeneratorStage1(Generator):
         return loss
 
     def kl_loss(self, mean, log_sigma):
-        loss = -.5 * log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.square(mean))
+        loss = -.5 * log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
         loss = tf.reduce_mean(loss)
         return loss
 
