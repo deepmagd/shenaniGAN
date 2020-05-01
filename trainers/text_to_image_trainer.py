@@ -45,36 +45,46 @@ class TextToImageTrainer(Trainer):
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 image_tensor = []
+                wrong_image_tensor = []
                 text_tensor = []
                 batch_size = len(sample['text'].numpy())
                 for i in range(batch_size):
-                    img, txt = extract_image_with_text(
+                    img, wrong_img, txt = extract_image_with_text(
                         sample=sample,
                         index=i,
                         embedding_size=1024,
                         num_embeddings_to_sample=self.num_samples
                     )
                     img = np.asarray(img)
+                    wrong_img = np.asarray(wrong_img)
                     if self.augment:
                         img = transform_image(img)
+                        wrong_img = transform_image(wrong_img)
                     image_tensor.append(img)
+                    wrong_image_tensor.append(wrong_img)
                     text_tensor.append(txt)
                 image_tensor = np.asarray(image_tensor)
+                wrong_image_tensor = np.asarray(wrong_image_tensor)
                 text_tensor = np.asarray(text_tensor)
+
+                assert image_tensor.shape == wrong_image_tensor.shape, \
+                    'Real ({}) and wrong ({}) images must have the same dimensions'.format(
+                        image_tensor.shape, wrong_image_tensor.shape
+                    )
 
                 noise_z = tf.random.normal([batch_size, self.conditional_emb_size])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
 
-                    # if abc == 5:
-                    #     temp = fake_images[0, :, :, :].numpy()
-                    #     temp = ((temp + 1) * 127.5)#.astype(np.uint8)
-                    #     image = plt.figure()
-                    #     ax = image.add_subplot(1,1,1)
-                    #     ax.imshow(temp)
-                    #     ax.axis("off")
-                    #     plt.savefig('image.png')
+                    # if abc == 1:
+                        # temp = fake_images[0, :, :, :].numpy()
+                        # temp = ((temp + 1) / 2)#.astype(np.uint8)
+                        # image = plt.figure()
+                        # ax = image.add_subplot(1, 1, 1)
+                        # ax.imshow(temp)
+                        # ax.axis("off")
+                        # plt.savefig('image.png')
                     #     abc = 0
                     # abc += 1
 
@@ -84,15 +94,16 @@ class TextToImageTrainer(Trainer):
                         )
 
                     real_predictions = self.model.discriminator(image_tensor, text_tensor)
+                    wrong_predictions = self.model.discriminator(wrong_image_tensor, text_tensor)
                     fake_predictions = self.model.discriminator(fake_images, text_tensor)
 
-                    assert real_predictions.shape == fake_predictions.shape, \
-                        'Predictions for real ({}) and fakes ({}) images must have the same dimensions'.format(
-                            real_predictions.shape, fake_predictions.shape
+                    assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
+                        'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
+                            real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                         )
 
                     generator_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                    discriminator_loss = self.model.discriminator.loss(real_predictions, fake_predictions)
+                    discriminator_loss = self.model.discriminator.loss(real_predictions, wrong_predictions, fake_predictions)
 
                 # Update gradients
                 generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)

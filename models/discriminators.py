@@ -102,15 +102,16 @@ class DiscriminatorStage1(Discriminator):
 
         return x
 
-    def loss(self, predictions_on_real, predictions_on_fake):
+    def loss(self, predictions_on_real, predictions_on_wrong, predictions_on_fake):
         """ Calculate the loss for the predictions made on real and fake images.
                 Arguments:
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
         real_loss = self.cross_entropy(tf.ones_like(predictions_on_real), predictions_on_real)
+        wrong_loss = self.cross_entropy(tf.zeros_like(predictions_on_wrong), predictions_on_wrong)
         fake_loss = self.cross_entropy(tf.zeros_like(predictions_on_fake), predictions_on_fake)
-        total_loss = real_loss + fake_loss
+        total_loss = real_loss + (wrong_loss + fake_loss) / 2
         return total_loss
 
 

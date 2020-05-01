@@ -123,9 +123,10 @@ def extract_epoch_num(results_dir):
 
 def extract_image_with_text(sample, index, embedding_size, num_embeddings_to_sample):
     img = Image.open(io.BytesIO(sample['image_raw'].numpy()[index]))
+    wrong_img = Image.open(io.BytesIO(sample['wrong_image_raw'].numpy()[index]))
     txt = np.frombuffer(
         sample['text'].numpy()[index], dtype=np.float32
     ).reshape(-1, embedding_size)
     emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
     txt = np.mean(txt[emb_idxs, :], axis=0)
-    return img, txt
+    return img, wrong_img, txt

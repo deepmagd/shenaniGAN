@@ -89,9 +89,30 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
         # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
         byte_images = get_byte_images(image_paths=file_names, image_dims=image_dims, bounding_boxes=bb_map, preprocessing='crop')
+        wrong_byte_images = get_wrong_images(images=byte_images, labels=class_info)
         # Arrange and write to file
-        shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images])
+        shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images, wrong_byte_images])
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
+
+def get_wrong_images(images, labels):
+    """
+    """
+    labels = np.array(labels)
+    images = np.array(images)
+    wrong_idxs = np.array(list(range(0, len(labels))))
+    np.random.shuffle(wrong_idxs)
+
+    error_counter = 0
+    while (sum(labels == labels[wrong_idxs]) > 0):
+        if (error_counter == 100):
+            raise Exception("Too many iterations in producing 'wrong' images, assuming will not converge")
+        collisions = labels == labels[wrong_idxs]
+        if (sum(collisions) == 1): # can allow for one duplicate
+            wrong_idxs[collisions] = np.random.choice(range(0, len(labels)), 1)[0]
+        else:
+            wrong_idxs[collisions] = np.random.choice(wrong_idxs[collisions], sum(collisions), replace=False)
+        error_counter += 1
+    return images[wrong_idxs].tolist()
 
 def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset for image-tabular pairs """
@@ -350,11 +371,12 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
             tfrecords_dir: str
                 Directory in which the save the TFRecords
     """
-    for i, (file_name, label, text_embedding, str_image) in enumerate(example_iterable):
+    for i, (file_name, label, text_embedding, str_image, str_wrong_image) in enumerate(example_iterable):
         example = tf.train.Example(
             features=tf.train.Features(
                 feature={
                     'image_raw': _bytes_feature(str_image),
+                    'wrong_image_raw': _bytes_feature(str_wrong_image),
                     'name': _bytes_feature(file_name),
                     'text': _bytes_feature(text_embedding),
                     'label': _int64_feature(label)
