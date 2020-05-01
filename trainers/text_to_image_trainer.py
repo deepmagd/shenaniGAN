@@ -54,7 +54,8 @@ class TextToImageTrainer(Trainer):
                         sample=sample,
                         index=i,
                         embedding_size=1024,
-                        num_embeddings_to_sample=self.num_samples
+                        num_embeddings_to_sample=self.num_samples,
+                        include_wrong=True
                     )
                     img = np.asarray(img, dtype='float32')
                     wrong_img = np.asarray(wrong_img, dtype='float32')
