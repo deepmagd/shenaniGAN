@@ -2,6 +2,7 @@ import io
 from random import randint
 from skimage import io as sio
 import matplotlib.pyplot as plt
+import matplotlib
 
 import numpy as np
 import tensorflow as tf
@@ -55,17 +56,17 @@ class TextToImageTrainer(Trainer):
                         embedding_size=1024,
                         num_embeddings_to_sample=self.num_samples
                     )
-                    img = np.asarray(img)
-                    wrong_img = np.asarray(wrong_img)
+                    img = np.asarray(img, dtype='float32')
+                    wrong_img = np.asarray(wrong_img, dtype='float32')
                     if self.augment:
                         img = transform_image(img)
                         wrong_img = transform_image(wrong_img)
                     image_tensor.append(img)
                     wrong_image_tensor.append(wrong_img)
                     text_tensor.append(txt)
-                image_tensor = np.asarray(image_tensor)
-                wrong_image_tensor = np.asarray(wrong_image_tensor)
-                text_tensor = np.asarray(text_tensor)
+                image_tensor = np.asarray(image_tensor, dtype='float32')
+                wrong_image_tensor = np.asarray(wrong_image_tensor, dtype='float32')
+                text_tensor = np.asarray(text_tensor, dtype='float32')
 
                 assert image_tensor.shape == wrong_image_tensor.shape, \
                     'Real ({}) and wrong ({}) images must have the same dimensions'.format(
@@ -78,13 +79,21 @@ class TextToImageTrainer(Trainer):
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
 
                     # if abc == 1:
-                        # temp = fake_images[0, :, :, :].numpy()
-                        # temp = ((temp + 1) / 2)#.astype(np.uint8)
-                        # image = plt.figure()
-                        # ax = image.add_subplot(1, 1, 1)
-                        # ax.imshow(temp)
-                        # ax.axis("off")
-                        # plt.savefig('image.png')
+                    temp = fake_images[0, :, :, :].numpy()
+                    temp = ((temp + 1) / 2)#.astype(np.uint8)
+                    temp[temp < 0] = 0
+                    temp[temp > 1] = 1
+                    matplotlib.image.imsave('gen.png', temp)
+                    temp2 = image_tensor[0, :, :, :]
+                    temp2 = ((temp2 + 1) / 2)#.astype(np.uint8)
+                    temp2[temp2 < 0] = 0
+                    temp2[temp2 > 1] = 1
+                    matplotlib.image.imsave('real.png', temp2)
+                    # image = plt.figure()
+                    # ax = image.add_subplot(1, 1, 1)
+                    # ax.imshow(temp)
+                    # ax.axis("off")
+                    # plt.savefig('image.png')
                     #     abc = 0
                     # abc += 1
 

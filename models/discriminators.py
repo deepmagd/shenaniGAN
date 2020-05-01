@@ -43,7 +43,6 @@ class DiscriminatorStage1(Discriminator):
         self.img_size = img_size
         num_channels = self.img_size[0]
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
-        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init, use_bias=False)
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
@@ -108,9 +107,9 @@ class DiscriminatorStage1(Discriminator):
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = self.cross_entropy(tf.ones_like(predictions_on_real), predictions_on_real)
-        wrong_loss = self.cross_entropy(tf.zeros_like(predictions_on_wrong), predictions_on_wrong)
-        fake_loss = self.cross_entropy(tf.zeros_like(predictions_on_fake), predictions_on_fake)
+        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(predictions_on_real), logits=predictions_on_real))
+        wrong_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_wrong), logits=predictions_on_wrong))
+        fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake))
         total_loss = real_loss + (wrong_loss + fake_loss) / 2
         return total_loss
 
