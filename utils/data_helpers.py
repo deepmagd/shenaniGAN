@@ -108,7 +108,7 @@ def get_wrong_images(images, labels):
             raise Exception("Too many iterations in producing 'wrong' images, assuming will not converge")
         collisions = labels == labels[wrong_idxs]
         if (sum(collisions) == 1): # can allow for one duplicate
-            wrong_idxs[collisions] = np.random.choice(range(0, len(labels)), 1)[0]
+            wrong_idxs[collisions] = np.random.randint(0, len(labels))
         else:
             wrong_idxs[collisions] = np.random.choice(wrong_idxs[collisions], sum(collisions), replace=False)
         error_counter += 1
