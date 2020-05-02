@@ -133,18 +133,18 @@ class GeneratorStage1(Generator):
         x = self.bn_1(x, training=training)
         x = self.reshape_layer(x)
 
-        res_1 = self.res_block_1(x)
+        res_1 = self.res_block_1(x, training=training)
         x = tf.add(x, res_1)
         x = self.relu_1(x)
 
-        x = self.deconv_block_1(x)
+        x = self.deconv_block_1(x, training=training)
 
-        res_2 = self.res_block_2(x)
+        res_2 = self.res_block_2(x, training=training)
         x = tf.add(x, res_2)
         x = self.relu_2(x)
 
-        x = self.deconv_block_2(x)
-        x = self.deconv_block_3(x)
+        x = self.deconv_block_2(x, training=training)
+        x = self.deconv_block_3(x, training=training)
 
         x = self.deconv2d_4(x)
         x = self.conv2d_4(x)
