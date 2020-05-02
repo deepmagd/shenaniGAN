@@ -1,20 +1,27 @@
 import argparse
+import os
+import sys
+from math import floor
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
 from trainers.trainers import get_trainer
-import os
-import sys
-import tensorflow as tf
-from tensorflow import keras
-from utils.datasets import DATASETS
+from utils.data_helpers import sample_real_images, show_image_list
+from utils.datasets import DATASETS, get_dataset
 from utils.logger import LogPlotter
-from utils.utils import get_default_settings, save_options, extract_epoch_num
+from utils.utils import extract_epoch_num, get_default_settings, save_options
 from visualise.visualise import compare_generated_to_real
-
 
 SETTINGS_FILE = 'settings.yaml'
 RESULTS_ROOT = 'results'
+SEED = 1234
 
+tf.random.set_seed(SEED)
+np.random.seed(SEED)
 
 def parse_arguments(args_to_parse):
     """ Parse CLI arguments """

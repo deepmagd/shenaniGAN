@@ -95,6 +95,7 @@ class BirdsWithWordsDataset(StackedGANDataset):
         # self.classes = None
         self.feature_description = {
             'image_raw': tf.io.FixedLenFeature([], tf.string),
+            'wrong_image_raw': tf.io.FixedLenFeature([], tf.string),
             'name': tf.io.FixedLenFeature([], tf.string),
             'text': tf.io.FixedLenFeature([], tf.string),
             'label': tf.io.FixedLenFeature([], tf.int64),
