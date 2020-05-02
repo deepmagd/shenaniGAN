@@ -18,7 +18,9 @@ def compare_generated_to_real(dataloader, num_images, conditional_emb_size, mode
     samples = sample_data(dataloader, num_samples=num_images)
     real_images, real_embeddings = zip(*samples)
 
-    fake_tensors = [model.generator(embedding, noise)[0] for embedding, noise in zip(real_embeddings, noise_list)]
+    fake_tensors = [
+        model.generator(embedding, noise, training=False)[0] for embedding, noise in zip(real_embeddings, noise_list)
+    ]
 
     for i, (real_image, fake_tensor) in enumerate(zip(real_images, fake_tensors)):
         fake_image = tf.squeeze(fake_tensor, axis=0).numpy() * 255

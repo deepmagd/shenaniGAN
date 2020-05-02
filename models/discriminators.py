@@ -76,16 +76,16 @@ class DiscriminatorStage1(Discriminator):
         )
 
     @tf.function
-    def call(self, images, embedding):
+    def call(self, images, embedding, training=True):
 
         x = self.conv_1(images)
         x = self.leaky_relu_1(x)
 
-        x = self.conv_block_1(x)
-        x = self.conv_block_2(x)
-        x = self.conv_block_3(x)
+        x = self.conv_block_1(x, training=training)
+        x = self.conv_block_2(x, training=training)
+        x = self.conv_block_3(x, training=training)
 
-        res = self.res_block(x)
+        res = self.res_block(x, training=training)
         x = tf.add(x, res)
         x = self.leaky_relu_2(x)
 
@@ -95,7 +95,7 @@ class DiscriminatorStage1(Discriminator):
         reduced_embedding = tf.tile(reduced_embedding, [1, 4, 4, 1])
         x = tf.concat([x, reduced_embedding], 3)
 
-        x = self.conv_block_4(x)
+        x = self.conv_block_4(x, training=training)
         x = self.conv_2(x)
 
         return x
