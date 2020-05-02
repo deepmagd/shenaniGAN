@@ -4,7 +4,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.activations import tanh
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense,
-                                     LeakyReLU, ReLU, Reshape, Activation)
+                                     LeakyReLU, ReLU, Reshape, Activation, UpSampling2D)
 
 from models.layers import DeconvBlock, ResidualLayer
 
@@ -105,7 +105,7 @@ class GeneratorStage1(Generator):
         self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
         self.relu_1 = ReLU()
 
-        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
+        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=True)
 
         self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
         self.relu_2 = ReLU()
@@ -113,10 +113,11 @@ class GeneratorStage1(Generator):
         self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
         self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)
 
-        self.deconv2d_4 = Conv2DTranspose(
-            num_output_channels, kernel_size=(4, 4), strides=(2, 2),
-            padding='same', kernel_initializer=self.w_init
-        )
+        self.deconv2d_4 = UpSampling2D((2, 2))
+        # self.deconv2d_4 = Conv2DTranspose(
+        #     num_output_channels, kernel_size=(4, 4), strides=(2, 2),
+        #     padding='same', kernel_initializer=self.w_init, use_bias=False
+        # )
         self.conv2d_4 = Conv2D(
             filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1),
             padding='same', kernel_initializer=self.w_init, use_bias=False
@@ -133,15 +134,15 @@ class GeneratorStage1(Generator):
         x = self.bn_1(x, training=training)
         x = self.reshape_layer(x)
 
-        res_1 = self.res_block_1(x, training=training)
-        x = tf.add(x, res_1)
+        # res_1 = self.res_block_1(x, training=training)
+        # x = tf.add(x, res_1)
         x = self.relu_1(x)
 
         x = self.deconv_block_1(x, training=training)
 
-        res_2 = self.res_block_2(x, training=training)
-        x = tf.add(x, res_2)
-        x = self.relu_2(x)
+        # res_2 = self.res_block_2(x, training=training)
+        # x = tf.add(x, res_2)
+        # x = self.relu_2(x)
 
         x = self.deconv_block_2(x, training=training)
         x = self.deconv_block_3(x, training=training)

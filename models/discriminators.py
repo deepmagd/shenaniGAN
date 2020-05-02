@@ -55,7 +55,7 @@ class DiscriminatorStage1(Discriminator):
         )
         self.conv_block_3 = ConvBlock(
             filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding='same',
-            w_init=self.w_init, bn_init=self.bn_init, activation=False
+            w_init=self.w_init, bn_init=self.bn_init, activation=True
         )
 
         self.res_block = ResidualLayer(64*2, 64*8, self.w_init, self.bn_init)
@@ -85,9 +85,9 @@ class DiscriminatorStage1(Discriminator):
         x = self.conv_block_2(x, training=training)
         x = self.conv_block_3(x, training=training)
 
-        res = self.res_block(x, training=training)
-        x = tf.add(x, res)
-        x = self.leaky_relu_2(x)
+        # res = self.res_block(x, training=training)
+        # x = tf.add(x, res)
+        # x = self.leaky_relu_2(x)
 
         reduced_embedding = self.dense_embed(embedding)
         reduced_embedding = self.leaky_relu_3(reduced_embedding)
