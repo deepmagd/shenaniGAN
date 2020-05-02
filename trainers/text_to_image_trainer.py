@@ -42,7 +42,6 @@ class TextToImageTrainer(Trainer):
             leave=False,
             disable=not self.show_progress_bar
         )
-        # abc = 0
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 image_tensor = []
@@ -78,25 +77,6 @@ class TextToImageTrainer(Trainer):
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
-
-                    # if abc == 1:
-                    temp = fake_images[0, :, :, :].numpy()
-                    temp = ((temp + 1) / 2)#.astype(np.uint8)
-                    temp[temp < 0] = 0
-                    temp[temp > 1] = 1
-                    matplotlib.image.imsave('gen.png', temp)
-                    temp2 = image_tensor[0, :, :, :]
-                    temp2 = ((temp2 + 1) / 2)#.astype(np.uint8)
-                    temp2[temp2 < 0] = 0
-                    temp2[temp2 > 1] = 1
-                    matplotlib.image.imsave('real.png', temp2)
-                    # image = plt.figure()
-                    # ax = image.add_subplot(1, 1, 1)
-                    # ax.imshow(temp)
-                    # ax.axis("off")
-                    # plt.savefig('image.png')
-                    #     abc = 0
-                    # abc += 1
 
                     assert fake_images.shape == image_tensor.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
