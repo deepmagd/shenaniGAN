@@ -60,15 +60,15 @@ class TextToImageTrainer(Trainer):
                 noise_z = tf.random.normal([batch_size, self.conditional_emb_size])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
-                    fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z)
+                    fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z, training=True)
 
                     assert fake_images.shape == image_tensor.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
                             image_tensor.shape, fake_images.shape
                         )
 
-                    real_predictions = self.model.discriminator(image_tensor, text_tensor)
-                    fake_predictions = self.model.discriminator(fake_images, text_tensor)
+                    real_predictions = self.model.discriminator(image_tensor, text_tensor, training=True)
+                    fake_predictions = self.model.discriminator(fake_images, text_tensor, training=True)
 
                     assert real_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}) and fakes ({}) images must have the same dimensions'.format(

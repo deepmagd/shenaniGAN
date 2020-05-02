@@ -18,17 +18,17 @@ class ResidualLayer(layers.Layer):
         self.conv2d_3 = Conv2D(filters=filters_out, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=w_init)
         self.bn_3 = BatchNormalization(gamma_initializer=bn_init)
 
-    def call(self, x):
+    def call(self, x, training=True):
         x = self.conv2d_1(x)
-        x = self.bn_1(x)
+        x = self.bn_1(x, training=training)
         x = self.relu_1(x)
 
         x = self.conv2d_2(x)
-        x = self.bn_2(x)
+        x = self.bn_2(x, training=training)
         x = self.relu_2(x)
 
         x = self.conv2d_3(x)
-        return self.bn_3(x)
+        return self.bn_3(x, training=training)
 
 class DeconvBlock(layers.Layer):
 
@@ -40,10 +40,10 @@ class DeconvBlock(layers.Layer):
         self.bn = BatchNormalization(gamma_initializer=bn_init)
         self.relu = ReLU()
 
-    def call(self, x):
+    def call(self, x, training=True):
         x = self.deconv2d(x)
         x = self.conv2d(x)
-        x = self.bn(x)
+        x = self.bn(x, training=training)
         if self.activation:
             x = self.relu(x)
         return x
@@ -57,9 +57,9 @@ class ConvBlock(layers.Layer):
         self.bn = BatchNormalization(gamma_initializer=bn_init)
         self.leaky_relu = LeakyReLU(alpha=0.2)
 
-    def call(self, x):
+    def call(self, x, training=True):
         x = self.conv2d(x)
-        x = self.bn(x)
+        x = self.bn(x, training=training)
         if self.activation:
             x = self.leaky_relu(x)
         return x

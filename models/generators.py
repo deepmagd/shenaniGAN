@@ -126,12 +126,12 @@ class GeneratorStage1(Generator):
         )
 
     @tf.function
-    def call(self, embedding, noise):
+    def call(self, embedding, noise, training=True):
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
         noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
 
         x = self.dense_1(noisy_embedding)
-        x = self.bn_1(x)
+        x = self.bn_1(x, training=training)
         x = self.reshape_layer(x)
 
         res_1 = self.res_block_1(x)
