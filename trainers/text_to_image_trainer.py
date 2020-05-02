@@ -49,9 +49,14 @@ class TextToImageTrainer(Trainer):
                         embedding_size=1024,
                         num_embeddings_to_sample=self.num_embeddings
                     )
-                    img = np.asarray(img)
+                    print('==============================')
+                    print(img)
+                    np_img = np.asarray(img, dtype=np.float32)
+                    print(np_img)
                     if self.augment:
-                        img = transform_image(img)
+                        np_img = transform_image(np_img)
+                    print(np_img)
+                    print('==============================')
                     image_tensor.append(img)
                     text_tensor.append(txt)
                 image_tensor = np.asarray(image_tensor)
@@ -66,9 +71,13 @@ class TextToImageTrainer(Trainer):
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
                             image_tensor.shape, fake_images.shape
                         )
+                    # print('type(image_tensor): {}'.format(type(image_tensor)))
+                    # print('type(fake_images.numpy()): {}'.format(type(fake_images.numpy())))
+                    # print('type(fake_images): {}'.format(type(fake_images)))
+                    # print('type(text_tensor): {}'.format(type(text_tensor)))
 
                     real_predictions = self.model.discriminator(image_tensor, text_tensor, training=True)
-                    fake_predictions = self.model.discriminator(fake_images, text_tensor, training=True)
+                    fake_predictions = self.model.discriminator(fake_images.numpy(), text_tensor, training=True)
 
                     assert real_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -98,8 +107,8 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                # if batch_idx == 20:
-                #     break
+                if batch_idx == 20:
+                    break
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
