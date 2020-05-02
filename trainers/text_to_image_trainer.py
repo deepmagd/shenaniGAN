@@ -87,9 +87,9 @@ class TextToImageTrainer(Trainer):
                     # print('type(fake_images): {}'.format(type(fake_images)))
                     # print('type(text_tensor): {}'.format(type(text_tensor)))
 
-                    real_predictions = self.model.discriminator(image_tensor.numpy(), text_tensor, training=True)
+                    real_predictions = self.model.discriminator(image_tensor, text_tensor, training=True)
                     wrong_predictions = self.model.discriminator(wrong_image_tensor, text_tensor, training=True)
-                    fake_predictions = self.model.discriminator(fake_images, text_tensor, training=True)
+                    fake_predictions = self.model.discriminator(fake_images.numpy(), text_tensor, training=True)
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
