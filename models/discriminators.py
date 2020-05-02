@@ -15,9 +15,12 @@ class Discriminator(Model):
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
         """
         super().__init__()
-        self.w_init = tf.random_normal_initializer(stddev=0.02)
-        self.bn_init = tf.random_normal_initializer(1., 0.02)
         self.img_size = img_size
+
+        # Weight Initialisation Parameters
+        self.w_init = w_init
+        self.bn_init = bn_init
+
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
     @tf.function
