@@ -107,7 +107,7 @@ def get_wrong_images(images, labels):
         if (error_counter == 100):
             raise Exception("Too many iterations in producing 'wrong' images, assuming will not converge")
         collisions = labels == labels[wrong_idxs]
-        if (sum(collisions) == 1): # can allow for one duplicate
+        if (sum(collisions) == 1):  # can allow for one duplicate
             wrong_idxs[collisions] = np.random.randint(0, len(labels))
         else:
             wrong_idxs[collisions] = np.random.choice(wrong_idxs[collisions], sum(collisions), replace=False)
@@ -206,21 +206,21 @@ def download_cub(include_text=False):
 
 def download_flowers():
     """ Download the flowers dataset """
-    FLOWERS_DATASET_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
+    FLOWERS_DATASET_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
     print('Downloading the flowers dataset from: {}'.format(FLOWERS_DATASET_URL))
 
-    flowers_download_loc = pathlib.Path('data/flowers/flowers.tgz')
+    flowers_download_loc = pathlib.Path('data/flowers.tgz')
     urllib.request.urlretrieve(FLOWERS_DATASET_URL, flowers_download_loc)
     tar = tarfile.open(flowers_download_loc, "r:gz")
     tar.extractall("data/flowers/images")
     tar.close()
     os.remove(flowers_download_loc)
 
-    DATA_SPLITS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
+    DATA_SPLITS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
     data_splits_download_loc = pathlib.Path('data/flowers/setid.mat')
     urllib.request.urlretrieve(DATA_SPLITS_URL, data_splits_download_loc)
 
-    IMAGE_LABELS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
+    IMAGE_LABELS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
     image_labels_download_loc = pathlib.Path('data/flowers/imagelabels.mat')
     urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
 
@@ -263,7 +263,7 @@ def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
             image = image.resize(new_size, Image.BICUBIC)
             new_img = Image.new('RGB', image_dims)
             new_img.paste(image, ((image_dims[0]-new_size[0])//2,
-                                (image_dims[1]-new_size[1])//2))
+                                  (image_dims[1]-new_size[1])//2))
         elif preprocessing == 'crop':
             img = np.array(image)
             bb = bounding_boxes[image_path]
@@ -444,8 +444,8 @@ def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
     return encoded_tabular_lists, image_paths
 
 def transform_image(img):
+    """ Apply a sequence of tranforms to an image.
+        Currently just normalisation.
     """
-    apply a sequence of tranforms to an image
-    """
-    img = img * (2/255) - 1 # normalise
+    img = img * (2/255) - 1
     return img

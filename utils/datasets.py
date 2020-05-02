@@ -141,7 +141,17 @@ class FlowersDataset(StackedGANDataset):
     """ TODO: Container for the birds dataset properties """
     def __init__(self):
         super().__init__()
-        raise NotImplementedError
+        self.type = 'flowers'
+        self.directory = pathlib.Path(os.path.join('data/flowers/'))
+        if not os.path.isdir(self.directory):
+            download_dataset(dataset='flowers')
+        self.classes = np.array(
+            [item.name for item in self.directory.glob('*') if os.path.isdir(item.name)]
+        )
+        self.width = None
+        self.height = None
+        self.num_channels = 3
+        # self.get_image_label_pairs()
 
 class XRaysDataset(StackedGANDataset):
     """ XXX: Container for the x-rays dataset properties """
