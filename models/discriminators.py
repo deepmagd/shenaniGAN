@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import (Conv2D, Dense, LeakyReLU)
+from tensorflow.keras.layers import Conv2D, Dense, LeakyReLU
 from models.layers import ResidualLayer, ConvBlock
 
 class Discriminator(Model):
@@ -17,12 +17,11 @@ class Discriminator(Model):
         super().__init__()
         self.img_size = img_size
 
-        # Optimiser
-        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
-
         # Weight Initialisation Parameters
         self.w_init = w_init
         self.bn_init = bn_init
+
+        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
     @tf.function
     def call(self, images, embedding):
@@ -43,10 +42,7 @@ class DiscriminatorStage1(Discriminator):
         """
         super().__init__(img_size, lr, w_init, bn_init)
 
-        self.conv_1 = Conv2D(
-            filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same',
-            kernel_initializer=self.w_init
-        )
+        self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init, use_bias=False)
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
         self.conv_block_1 = ConvBlock(
@@ -104,22 +100,16 @@ class DiscriminatorStage1(Discriminator):
 
         return x
 
-    def loss(self, predictions_on_real, predictions_on_fake):
+    def loss(self, predictions_on_real, predictions_on_wrong, predictions_on_fake):
         """ Calculate the loss for the predictions made on real and fake images.
                 Arguments:
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.ones_like(predictions_on_real), logits=predictions_on_real
-        )
-        real_loss = tf.reduce_mean(real_loss)
-
-        fake_loss = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake
-        )
-        fake_loss = tf.reduce_mean(fake_loss)
-        total_loss = real_loss + fake_loss
+        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(predictions_on_real), logits=predictions_on_real))
+        wrong_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_wrong), logits=predictions_on_wrong))
+        fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake))
+        total_loss = real_loss + (wrong_loss + fake_loss) / 2
         return total_loss
 
 

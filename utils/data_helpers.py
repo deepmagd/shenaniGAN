@@ -89,9 +89,30 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
         # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
         byte_images = get_byte_images(image_paths=file_names, image_dims=image_dims, bounding_boxes=bb_map, preprocessing='crop')
+        wrong_byte_images = get_wrong_images(images=byte_images, labels=class_info)
         # Arrange and write to file
-        shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images])
+        shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images, wrong_byte_images])
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
+
+def get_wrong_images(images, labels):
+    """
+    """
+    labels = np.array(labels)
+    images = np.array(images)
+    wrong_idxs = np.array(list(range(0, len(labels))))
+    np.random.shuffle(wrong_idxs)
+
+    error_counter = 0
+    while (sum(labels == labels[wrong_idxs]) > 0):
+        if (error_counter == 100):
+            raise Exception("Too many iterations in producing 'wrong' images, assuming will not converge")
+        collisions = labels == labels[wrong_idxs]
+        if (sum(collisions) == 1): # can allow for one duplicate
+            wrong_idxs[collisions] = np.random.randint(0, len(labels))
+        else:
+            wrong_idxs[collisions] = np.random.choice(wrong_idxs[collisions], sum(collisions), replace=False)
+        error_counter += 1
+    return images[wrong_idxs].tolist()
 
 def create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
     """ Create the TFRecords dataset for image-tabular pairs """
@@ -239,20 +260,27 @@ def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
             old_size = image.size[:2]
             ratio = max(image_dims)/max(old_size)
             new_size = tuple([int(x*ratio) for x in old_size])
-            image = image.resize(new_size, Image.ANTIALIAS)
-            img = Image.new('RGB', image_dims)
-            img.paste(image, ((image_dims[0]-new_size[0])//2,
-                              (image_dims[1]-new_size[1])//2))
+            image = image.resize(new_size, Image.BICUBIC)
+            new_img = Image.new('RGB', image_dims)
+            new_img.paste(image, ((image_dims[0]-new_size[0])//2,
+                                (image_dims[1]-new_size[1])//2))
         elif preprocessing == 'crop':
             img = np.array(image)
             bb = bounding_boxes[image_path]
-            img = img[bb[1]:bb[1]+bb[3], bb[0]:bb[0]+bb[2], :].astype('uint8')
-            img = np.array(Image.fromarray(img).resize(image_dims, Image.ANTIALIAS)).astype('uint8')
-            img = Image.fromarray(img)
+            cx = int(bb[0]+bb[2]/2)
+            cy = int(bb[1]+bb[3]/2)
+            crop_size = int(max(bb[2], bb[3])*0.75)
+            y1 = max(0, cy - crop_size)
+            y2 = min(img.shape[0], cy + crop_size)
+            x1 = max(0, cx - crop_size)
+            x2 = min(img.shape[1], cx + crop_size)
+            img = img[y1:y2, x1:x2, :]
+            new_img = np.array(Image.fromarray(img).resize(image_dims, Image.BICUBIC)).astype('uint8')
+            new_img = Image.fromarray(new_img)
         else:
             raise Exception(f"No method available for preprpcessing flag '{preprocessing}' when loading byte images")
         img_buffer = io.BytesIO()
-        img.save(img_buffer, format='PNG')
+        new_img.save(img_buffer, format='PNG')
         byte_image = img_buffer.getvalue()
         byte_images_list.append(byte_image)
     return byte_images_list
@@ -343,11 +371,12 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
             tfrecords_dir: str
                 Directory in which the save the TFRecords
     """
-    for i, (file_name, label, text_embedding, str_image) in enumerate(example_iterable):
+    for i, (file_name, label, text_embedding, str_image, str_wrong_image) in enumerate(example_iterable):
         example = tf.train.Example(
             features=tf.train.Features(
                 feature={
                     'image_raw': _bytes_feature(str_image),
+                    'wrong_image_raw': _bytes_feature(str_wrong_image),
                     'name': _bytes_feature(file_name),
                     'text': _bytes_feature(text_embedding),
                     'label': _int64_feature(label)
