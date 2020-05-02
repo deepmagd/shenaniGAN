@@ -85,7 +85,7 @@ class TextToImageTrainer(Trainer):
 
                     real_predictions = self.model.discriminator(image_tensor, text_tensor, training=True)
                     wrong_predictions = self.model.discriminator(wrong_image_tensor, text_tensor, training=True)
-                    fake_predictions = self.model.discriminator(fake_images.numpy(), text_tensor, training=True)
+                    fake_predictions = self.model.discriminator(fake_images.numpy().astype('float32'), text_tensor, training=True)
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -114,6 +114,13 @@ class TextToImageTrainer(Trainer):
                 # Accumulate losses
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
+
+            samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
+            temp = samples[0, :, :, :].numpy()
+            temp = ((temp + 1) / 2)#.astype(np.uint8)
+            temp[temp < 0] = 0
+            temp[temp > 1] = 1
+            matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
 
                 # if batch_idx == 20:
                 #     break
