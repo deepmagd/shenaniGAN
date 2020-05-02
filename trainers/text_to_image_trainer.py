@@ -83,7 +83,7 @@ class TextToImageTrainer(Trainer):
                             image_tensor.shape, fake_images.shape
                         )
 
-                    real_predictions = self.model.discriminator(image_tensor, text_tensor)
+                    real_predictions = self.model.discriminator(image_tensor.numpy(), text_tensor)
                     wrong_predictions = self.model.discriminator(wrong_image_tensor, text_tensor)
                     fake_predictions = self.model.discriminator(fake_images, text_tensor)
 

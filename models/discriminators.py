@@ -1,8 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import (BatchNormalization, Conv1D, Conv2D, Dense,
-                                     Flatten, LeakyReLU)
-from tensorflow.keras.activations import sigmoid
+from tensorflow.keras.layers import Conv2D, Dense, LeakyReLU
 from models.layers import ResidualLayer, ConvBlock
 
 class Discriminator(Model):
@@ -17,6 +15,10 @@ class Discriminator(Model):
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
         """
         super().__init__()
+        self.w_init = tf.random_normal_initializer(stddev=0.02)
+        self.bn_init = tf.random_normal_initializer(1., 0.02)
+        self.img_size = img_size
+        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
     @tf.function
     def call(self, images, embedding):
@@ -37,12 +39,6 @@ class DiscriminatorStage1(Discriminator):
         """
         super().__init__(img_size, lr, w_init, bn_init)
 
-        self.w_init = tf.random_normal_initializer(stddev=0.02)
-        self.bn_init = tf.random_normal_initializer(1., 0.02)
-
-        self.img_size = img_size
-        num_channels = self.img_size[0]
-        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
         self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init, use_bias=False)
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 

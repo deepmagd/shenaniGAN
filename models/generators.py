@@ -26,6 +26,7 @@ class Generator(Model):
         """
         super().__init__()
         self.img_size = img_size
+        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
         # Weight Initialisation Parameters
         self.w_init = w_init
@@ -97,8 +98,6 @@ class GeneratorStage1(Generator):
         assert num_output_channels == 3 or num_output_channels == 1, \
             f'The number of output channels must be 2 or 1. Found {num_output_channels}'
 
-        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
-
         self.dense_1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
@@ -164,7 +163,7 @@ class GeneratorStage1(Generator):
         return loss
 
     def kl_loss(self, mean, log_sigma):
-        loss = -.5 * log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
+        loss = .5 * (-log_sigma - 1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
         loss = tf.reduce_mean(loss)
         return loss
 
