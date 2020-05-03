@@ -116,12 +116,12 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-            samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
-            temp = samples[0, :, :, :].numpy()
-            temp = ((temp + 1) / 2)#.astype(np.uint8)
-            temp[temp < 0] = 0
-            temp[temp > 1] = 1
-            matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
+            # samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
+            # temp = samples[0, :, :, :].numpy()
+            # temp = ((temp + 1) / 2)#.astype(np.uint8)
+            # temp[temp < 0] = 0
+            # temp[temp > 1] = 1
+            # matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
 
                 # if batch_idx == 20:
                 #     break

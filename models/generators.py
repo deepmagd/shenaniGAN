@@ -4,7 +4,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.activations import tanh
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense,
-                                     LeakyReLU, ReLU, Reshape, Activation, UpSampling2D)
+                                     LeakyReLU, ReLU, Reshape, Activation)
 
 from models.layers import DeconvBlock, ResidualLayer
 

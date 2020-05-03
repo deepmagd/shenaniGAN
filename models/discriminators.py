@@ -93,7 +93,6 @@ class DiscriminatorStage1(Discriminator):
             kernel_initializer=self.w_init
         )
 
-    # @tf.function
     def call(self, images, embedding, training=True):
 
         x = self.conv_1(images)
