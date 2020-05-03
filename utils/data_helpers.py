@@ -447,5 +447,5 @@ def transform_image(img):
     """
     apply a sequence of tranforms to an image
     """
-    img = img * (2/255) - 1 # normalise
+    img = img * (2./255) - 1. # normalise
     return img
