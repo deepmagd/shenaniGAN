@@ -37,40 +37,32 @@ def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_dir, image_dims):
-    """ Create the TFRecords dataset
-        Arguments:
-            dataset_type: str
-                The dataset type which dictates how we create the records
-            tfrecords_dir: str
-                Root save location for the TFRecrods
-            image_source_dir: str
-                Root source directory from which to read the images
-            text_source_dir: str
-                Root source directory from which to read the text
-            image_dims: tuple
-                (height (int), width (int))
+def extract_image_bounding_boxes(image_filenames, base_path):
+    """ Returns a map of filename to bounding box in format [x-top, y-top, w, h]
+        If no path is provided (None), then simply return None.
     """
-    if dataset_type == 'images-with-captions':
-        create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
-    elif dataset_type == 'images-with-tabular':
-        create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
+    if base_path is None:
+        # TODO: Return some default bounding box setting
+        return None
     else:
-        raise Exception(f'{dataset_type} is not a recognised dataset type')
+        return extract_bounding_boxes_from_file(image_filenames, base_path)
 
-def extract_image_bounding_boxes(image_filenames, base_path='data/CUB_200_2011_with_text/images/CUB_200_2011'):
-    """
-    Returns a map of filename to bounding box in format [x-top, y-top, w, h]
-    """
-    bb_df = pd.read_csv(os.path.join(base_path, 'bounding_boxes.txt'), names=['idx', 'x', 'y', 'w', 'h'], sep=" ").astype(int)
+def extract_bounding_boxes_from_file(image_filenames, base_path):
+    bb_df = pd.read_csv(
+        os.path.join(base_path, 'bounding_boxes.txt'),
+        names=['idx', 'x', 'y', 'w', 'h'], sep=" "
+    ).astype(int)
     imgs_df = pd.read_csv(os.path.join(base_path, 'images.txt'), names=['idx', 'filename'], sep=" ")
     combined_df = imgs_df.merge(bb_df, how='left', on='idx')
     bb_map = {}
     for idx, fn in enumerate(image_filenames):
-        bb_map[fn] = combined_df[combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])].iloc[:, 2:].values.squeeze().astype(int).tolist()
+        bb_map[fn] = combined_df[
+            combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])
+        ].iloc[:, 2:].values.squeeze().astype(int).tolist()
     return bb_map
 
-def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir,
+                                   bounding_boxes_path, image_dims):
     """ Create the TFRecords dataset for image-caption pairs
         Arguments:
             tfrecords_dir: str
@@ -86,10 +78,22 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
         # Read from file and format
         file_names, class_info, text_embeddings = read_text_subset(subset, text_source_dir)
         file_names = [format_file_name(image_source_dir, file_name) for file_name in file_names]
-        bb_map = extract_image_bounding_boxes(image_filenames=file_names)
+        bb_map = extract_image_bounding_boxes(image_filenames=file_names, base_path=bounding_boxes_path)
         # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
-        byte_images = get_byte_images(image_paths=file_names, image_dims=image_dims, bounding_boxes=bb_map, preprocessing='crop')
+        # NOTE: Ideally we will have a default bb_map returned, but for now we have to skip
+        if bb_map is None:
+            byte_images = get_byte_images(
+                image_paths=file_names,
+                image_dims=image_dims,
+            )
+        else:
+            byte_images = get_byte_images(
+                image_paths=file_names,
+                image_dims=image_dims,
+                bounding_boxes=bb_map,
+                preprocessing='crop'
+            )
         wrong_byte_images = get_wrong_images(images=byte_images, labels=class_info)
         # Arrange and write to file
         shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images, wrong_byte_images])

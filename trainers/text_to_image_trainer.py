@@ -1,6 +1,5 @@
 import io
 from random import randint
-from skimage import io as sio
 import matplotlib.pyplot as plt
 import matplotlib
 

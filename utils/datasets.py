@@ -2,7 +2,8 @@ import numpy as np
 import os
 import pathlib
 import tensorflow as tf
-from utils.data_helpers import download_dataset, check_for_xrays, create_tfrecords, get_record_paths
+from utils.data_helpers import (download_dataset, check_for_xrays, get_record_paths,
+                                create_image_caption_tfrecords, create_image_tabular_tfrecords)
 from utils.data_helpers import NUM_COLOUR_CHANNELS, extract_flowers_labels
 
 DATASETS_DICT = {
@@ -113,11 +114,11 @@ class BirdsWithWordsDataset(StackedGANDataset):
         )
         if not os.path.isdir(self.directory):
             download_dataset(dataset='birds-with-text')
-            create_tfrecords(
-                dataset_type=self.type,
+            create_image_caption_tfrecords(
                 tfrecords_dir=os.path.join(self.directory, 'records'),
                 image_source_dir=os.path.join(self.directory, 'images', 'CUB_200_2011', 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
+                bounding_boxes_path=os.path.join(self.directory, 'images', 'CUB_200_2011'),
                 image_dims=(self.height, self.width)
             )
 
@@ -178,12 +179,11 @@ class FlowersWithWordsDataset(StackedGANDataset):
         )
         if not os.path.isdir(self.directory):
             download_dataset(dataset='flowers-with-text')
-            raise Exception('Not completely implemented yet')
-            create_tfrecords(
-                dataset_type=self.type,
+            create_image_caption_tfrecords(
                 tfrecords_dir=os.path.join(self.directory, 'records'),
                 image_source_dir=os.path.join(self.directory, 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
+                bounding_boxes_path=None,
                 image_dims=(self.height, self.width)
             )
 
@@ -229,8 +229,7 @@ class XRaysDataset(StackedGANDataset):
 
         self.directory = os.path.join(base_directory, 'records')
         if not os.path.isdir(self.directory):
-            create_tfrecords(
-                dataset_type=self.type,
+            create_image_tabular_tfrecords(
                 tfrecords_dir=self.directory,
                 image_source_dir=os.path.join(base_directory, 'raw'),
                 text_source_dir=os.path.join(base_directory, 'raw'),
