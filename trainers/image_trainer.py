@@ -7,7 +7,7 @@ from trainers.base_trainer import Trainer
 class ImageTrainer(Trainer):
     """ A image-to-image GAN training class """
     def __init__(self, model, batch_size, save_location,
-                 show_progress_bar=True):
+                 show_progress_bar=True, **kwargs):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
@@ -19,6 +19,7 @@ class ImageTrainer(Trainer):
                 results from training the model.
         """
         super().__init__(model, batch_size, save_location, show_progress_bar)
+        self.noise_size = kwargs.get('conditional_emb_size')
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -35,7 +36,7 @@ class ImageTrainer(Trainer):
                 # Assuming that batch is the first dimension
                 # and that we use a normal distribution for noise
                 batch_size = real_images.shape[0]
-                noise = tf.random.normal([batch_size, self.model.generator.num_latent_dims])
+                noise = tf.random.normal([batch_size, self.noise_size])
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images = self.model.generator(noise)

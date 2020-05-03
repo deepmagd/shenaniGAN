@@ -14,9 +14,8 @@ from utils.utils import extract_image_with_text
 
 class TextToImageTrainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
-    def __init__(self, model, batch_size, save_location, conditional_emb_size,
-                 num_embeddings, num_samples, augment,
-                 show_progress_bar=True):
+    def __init__(self, model, batch_size, save_location,
+                 show_progress_bar=True, **kwargs):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
@@ -28,10 +27,10 @@ class TextToImageTrainer(Trainer):
                 results from training the model.
         """
         super().__init__(model, batch_size, save_location, show_progress_bar)
-        self.num_embeddings = num_embeddings
-        self.num_samples = num_samples
-        self.conditional_emb_size = conditional_emb_size
-        self.augment = augment
+        self.num_embeddings = kwargs.get('num_embeddings')
+        self.num_samples = kwargs.get('num_samples')
+        self.conditional_emb_size = kwargs.get('conditional_emb_size')
+        self.augment = kwargs.get('augment')
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """

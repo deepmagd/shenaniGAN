@@ -2,6 +2,7 @@ import io
 import os
 import pathlib
 import shutil
+from scipy.io import loadmat
 import tarfile
 import urllib.request
 import zipfile
@@ -142,6 +143,8 @@ def download_dataset(dataset):
         download_cub(include_text=True)
     elif dataset == 'flowers':
         download_flowers()
+    elif dataset == 'flowers-with-text':
+        download_flowers(include_text=True)
     elif dataset == 'xrays':
         """ TODO / NOTE: Since this is a really large download, (and requires the authors' permission)
             we are going to assume that the user will manually download the CheXpert dataset
@@ -204,7 +207,7 @@ def download_cub(include_text=False):
             raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
         os.remove(cub_text_download_location)
 
-def download_flowers():
+def download_flowers(include_text=False):
     """ Download the flowers dataset """
     FLOWERS_DATASET_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
     print('Downloading the flowers dataset from: {}'.format(FLOWERS_DATASET_URL))
@@ -212,17 +215,51 @@ def download_flowers():
     flowers_download_loc = pathlib.Path('data/flowers.tgz')
     urllib.request.urlretrieve(FLOWERS_DATASET_URL, flowers_download_loc)
     tar = tarfile.open(flowers_download_loc, "r:gz")
-    tar.extractall("data/flowers/images")
+    if include_text:
+        images_save_location = 'data/flowers_with_text/images/'
+    else:
+        images_save_location = 'data/flowers'
+    tar.extractall(images_save_location)
     tar.close()
     os.remove(flowers_download_loc)
 
     DATA_SPLITS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
-    data_splits_download_loc = pathlib.Path('data/flowers/setid.mat')
+    data_splits_download_loc = pathlib.Path(os.path.join(images_save_location, 'setid.mat'))
     urllib.request.urlretrieve(DATA_SPLITS_URL, data_splits_download_loc)
 
     IMAGE_LABELS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
-    image_labels_download_loc = pathlib.Path('data/flowers/imagelabels.mat')
+    image_labels_download_loc = pathlib.Path(os.path.join(images_save_location, 'imagelabels.mat'))
     urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
+
+    if include_text:
+        # Download the image captions
+        FLOWERS_TEXT_GDRIVE_ID = '0B3y_msrWZaXLaUc0UXpmcnhaVmM'
+
+        flowers_text_download_location = "data/flowers.zip"
+        flowers_text_backup_location = 'data/backup/flowers.zip'
+        extracted_text_dir = flowers_text_download_location[:-4]
+
+        if os.path.exists(flowers_text_backup_location):
+            # Restore from back up
+            print('Retrieving flowers dataset from: {}'.format(flowers_text_backup_location))
+            shutil.copy(flowers_text_backup_location, flowers_text_download_location)
+            with zipfile.ZipFile(flowers_text_backup_location, 'r') as zipfd:
+                zipfd.extractall('data/')
+        else:
+            # Clean download
+            print('Downloading flowers text from Google Drive ID: {}'.format(FLOWERS_TEXT_GDRIVE_ID))
+            gdd.download_file_from_google_drive(file_id=FLOWERS_TEXT_GDRIVE_ID,
+                                                dest_path=flowers_text_download_location,
+                                                unzip=True)
+            mkdir('data/backup')
+            shutil.copy(flowers_text_download_location, flowers_text_backup_location)
+
+        # Move and clean up data
+        if os.path.isdir(extracted_text_dir):
+            os.rename(extracted_text_dir, 'data/flowers_with_text/text')
+        else:
+            raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
+        os.remove(flowers_text_download_location)
 
 def check_for_xrays(directory):
     """ Check to see if the xray dataset has been downloaded at all.
@@ -442,6 +479,16 @@ def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
     encoded_tabular_lists = encoded_tabular_df.loc[:, encoded_tabular_df.columns != 'Path'].values
     encoded_tabular_lists = [sample.tobytes() for sample in encoded_tabular_lists]
     return encoded_tabular_lists, image_paths
+
+def extract_flowers_labels(path):
+    return loadmat(path)['labels'][0, :].tolist()
+
+def extract_flowers_data_split(path):
+    data = loadmat(path)
+    train_ids = data['trnid'][0, :].tolist()
+    val_ids = data['valid'][0, :].tolist()
+    test_ids = data['tstid'][0, :].tolist()
+    return train_ids, val_ids, test_ids
 
 def transform_image(img):
     """ Apply a sequence of tranforms to an image.

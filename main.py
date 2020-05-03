@@ -120,7 +120,7 @@ def main(args):
     train_loader, val_generator, dataset_dims = create_dataloaders(args)
 
     # Create the model
-    # TODO: Check and see how many latent dims should be used and insert CLI argument
+    # TODO: conditional_emb_size is probably too specific for when we just have a standard GAN
     if args.use_pretrained:
         if args.epoch_num == -1:
             # Find last checkpoint
