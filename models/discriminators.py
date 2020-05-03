@@ -40,31 +40,50 @@ class DiscriminatorStage1(Discriminator):
                 lr : float
         """
         super().__init__(img_size, lr, w_init, bn_init)
+        self.d_dim = 64
 
-        self.conv_1 = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init, use_bias=False)
+        self.conv_1 = Conv2D(filters=self.d_dim,
+                             kernel_size=(4, 4),
+                             strides=(2, 2),
+                             padding='same',
+                             kernel_initializer=self.w_init,
+                             use_bias=False
+                            )
         self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
-        self.conv_block_1 = ConvBlock(
-            filters=64*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
-            w_init=self.w_init, bn_init=self.bn_init, activation=True
-        )
-        self.conv_block_2 = ConvBlock(
-            filters=64*4, kernel_size=(4, 4), strides=(2, 2), padding='same',
-            w_init=self.w_init, bn_init=self.bn_init, activation=True
-        )
-        self.conv_block_3 = ConvBlock(
-            filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding='same',
-            w_init=self.w_init, bn_init=self.bn_init, activation=False
-        )
+        self.conv_block_1 = ConvBlock(filters=self.d_dim*2,
+                                      kernel_size=(4, 4),
+                                      strides=(2, 2),
+                                      padding='same',
+                                      w_init=self.w_init,
+                                      bn_init=self.bn_init,
+                                      activation=True
+                            )
+        self.conv_block_2 = ConvBlock(filters=self.d_dim*4,
+                                      kernel_size=(4, 4),
+                                      strides=(2, 2),
+                                      padding='same',
+                                      w_init=self.w_init,
+                                      bn_init=self.bn_init,
+                                      activation=True
+                                    )
+        self.conv_block_3 = ConvBlock(filters=self.d_dim*8,
+                                      kernel_size=(4, 4),
+                                      strides=(2, 2),
+                                      padding='same',
+                                      w_init=self.w_init,
+                                      bn_init=self.bn_init,
+                                      activation=False
+                                    )
 
-        self.res_block = ResidualLayer(64*2, 64*8, self.w_init, self.bn_init)
+        self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init)
         self.leaky_relu_2 = LeakyReLU(alpha=0.2)
 
         self.dense_embed = Dense(units=128)
         self.leaky_relu_3 = LeakyReLU(alpha=0.2)
 
         self.conv_block_4 = ConvBlock(
-            filters=64*8, kernel_size=(1, 1), strides=(1, 1), padding='valid',
+            filters=self.d_dim*8, kernel_size=(1, 1), strides=(1, 1), padding='valid',
             w_init=self.w_init, bn_init=self.bn_init, activation=True
         )
 
