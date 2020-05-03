@@ -178,12 +178,11 @@ class FlowersWithWordsDataset(StackedGANDataset):
         )
         if not os.path.isdir(self.directory):
             download_dataset(dataset='flowers-with-text')
-            import sys
-            sys.exit()
+            raise Exception('Not completely implemented yet')
             create_tfrecords(
                 dataset_type=self.type,
                 tfrecords_dir=os.path.join(self.directory, 'records'),
-                image_source_dir=os.path.join(self.directory, 'images', 'CUB_200_2011', 'images'),
+                image_source_dir=os.path.join(self.directory, 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
                 image_dims=(self.height, self.width)
             )
