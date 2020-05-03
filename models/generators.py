@@ -37,7 +37,6 @@ class Generator(Model):
         self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
         self.leaky_relu2 = LeakyReLU(alpha=0.2)
 
-    @tf.function
     def call(self, x):
         pass
 
@@ -124,7 +123,6 @@ class GeneratorStage1(Generator):
 
         self.tanh = Activation('tanh')
 
-    @tf.function
     def call(self, embedding, noise, training=True):
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
         noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
@@ -192,7 +190,6 @@ class GeneratorStage2(Model):
         super().__init__()
         pass
 
-    @tf.function
     def call(self, noise, embedding):
         pass
 

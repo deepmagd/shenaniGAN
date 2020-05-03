@@ -23,7 +23,6 @@ class Discriminator(Model):
 
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
-    @tf.function
     def call(self, images, embedding):
         pass
 
@@ -75,7 +74,6 @@ class DiscriminatorStage1(Discriminator):
             kernel_initializer=self.w_init
         )
 
-    @tf.function
     def call(self, images, embedding, training=True):
 
         x = self.conv_1(images)
@@ -127,7 +125,6 @@ class DiscriminatorStage2(Model):
         super().__init__()
         pass
 
-    @tf.function
     def call(self, images, embedding):
         pass
 

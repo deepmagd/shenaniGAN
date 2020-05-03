@@ -126,7 +126,6 @@ class StackGAN2(ConditionalGAN):
             reshape_dims=reshape_dims
         )
 
-    @tf.function
     def call(self, embedding, z):
         """
         """
