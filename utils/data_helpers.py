@@ -184,32 +184,36 @@ def download_cub(include_text=False):
     os.remove(cub_download_location)
 
     if include_text:
-        # Download the image captions
-        BIRDS_TEXT_GDRIVE_ID = '0B3y_msrWZaXLT1BZdVdycDY5TEE'
+        download_captions(
+            GDRIVE_ID='0B3y_msrWZaXLT1BZdVdycDY5TEE',
+            text_download_location='data/birds.zip',
+            backup_location='data/backup/birds.zip',
+            res_subdir='CUB_200_2011_with_text'
+        )
 
-        cub_text_download_location = "data/birds.zip"
-        cub_text_backup_location = 'data/backup/birds.zip'
-        extracted_text_dir = cub_text_download_location[:-4]
+def download_captions(GDRIVE_ID, text_download_location, backup_location, res_subdir):
+    """ The Download and processing for the captions / text part of the dataset """
+    extracted_text_dir = text_download_location[:-4]
 
-        if os.path.exists(cub_text_backup_location):
-            print('Retrieving CUB dataset from: {}'.format(cub_text_backup_location))
-            shutil.copy(cub_text_backup_location, cub_text_download_location)
-            with zipfile.ZipFile(cub_text_backup_location, 'r') as zipfd:
-                zipfd.extractall('data/')
-        else:
-            print('Downloading CUB text from Google Drive ID: {}'.format(BIRDS_TEXT_GDRIVE_ID))
-            gdd.download_file_from_google_drive(file_id=BIRDS_TEXT_GDRIVE_ID,
-                                                dest_path=cub_text_download_location,
-                                                unzip=True)
-            mkdir('data/backup')
-            shutil.copy(cub_text_download_location, cub_text_backup_location)
+    if os.path.exists(backup_location):
+        print('Retrieving dataset from: {}'.format(backup_location))
+        shutil.copy(backup_location, text_download_location)
+        with zipfile.ZipFile(backup_location, 'r') as zipfd:
+            zipfd.extractall('data/')
+    else:
+        print('Downloading text from Google Drive ID: {}'.format(GDRIVE_ID))
+        gdd.download_file_from_google_drive(file_id=GDRIVE_ID,
+                                            dest_path=text_download_location,
+                                            unzip=True)
+        mkdir('data/backup')
+        shutil.copy(text_download_location, backup_location)
 
-        # Move and clean up data
-        if os.path.isdir(extracted_text_dir):
-            os.rename(extracted_text_dir, 'data/CUB_200_2011_with_text/text')
-        else:
-            raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
-        os.remove(cub_text_download_location)
+    # Move and clean up data
+    if os.path.isdir(extracted_text_dir):
+        os.rename(extracted_text_dir, f'data/{res_subdir}/text')
+    else:
+        raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
+    os.remove(text_download_location)
 
 def download_flowers(include_text=False):
     """ Download the flowers dataset """
@@ -236,34 +240,12 @@ def download_flowers(include_text=False):
     urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
 
     if include_text:
-        # Download the image captions
-        FLOWERS_TEXT_GDRIVE_ID = '0B3y_msrWZaXLaUc0UXpmcnhaVmM'
-
-        flowers_text_download_location = "data/flowers.zip"
-        flowers_text_backup_location = 'data/backup/flowers.zip'
-        extracted_text_dir = flowers_text_download_location[:-4]
-
-        if os.path.exists(flowers_text_backup_location):
-            # Restore from back up
-            print('Retrieving flowers dataset from: {}'.format(flowers_text_backup_location))
-            shutil.copy(flowers_text_backup_location, flowers_text_download_location)
-            with zipfile.ZipFile(flowers_text_backup_location, 'r') as zipfd:
-                zipfd.extractall('data/')
-        else:
-            # Clean download
-            print('Downloading flowers text from Google Drive ID: {}'.format(FLOWERS_TEXT_GDRIVE_ID))
-            gdd.download_file_from_google_drive(file_id=FLOWERS_TEXT_GDRIVE_ID,
-                                                dest_path=flowers_text_download_location,
-                                                unzip=True)
-            mkdir('data/backup')
-            shutil.copy(flowers_text_download_location, flowers_text_backup_location)
-
-        # Move and clean up data
-        if os.path.isdir(extracted_text_dir):
-            os.rename(extracted_text_dir, 'data/flowers_with_text/text')
-        else:
-            raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
-        os.remove(flowers_text_download_location)
+        download_captions(
+            GDRIVE_ID='0B3y_msrWZaXLaUc0UXpmcnhaVmM',
+            text_download_location='data/flowers.zip',
+            backup_location='data/backup/flowers.zip',
+            res_subdir='flowers_with_text'
+        )
 
 def check_for_xrays(directory):
     """ Check to see if the xray dataset has been downloaded at all.
