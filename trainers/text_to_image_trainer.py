@@ -28,7 +28,7 @@ class TextToImageTrainer(Trainer):
         super().__init__(model, batch_size, save_location, show_progress_bar)
         self.num_embeddings = kwargs.get('num_embeddings')
         self.num_samples = kwargs.get('num_samples')
-        self.conditional_emb_size = kwargs.get('conditional_emb_size')
+        self.noise_size = kwargs.get('noise_size')
         self.augment = kwargs.get('augment')
 
     def train_epoch(self, train_loader, epoch_num):
@@ -72,7 +72,7 @@ class TextToImageTrainer(Trainer):
                         image_tensor.shape, wrong_image_tensor.shape
                     )
 
-                noise_z = np.random.normal(0, 1, (batch_size, 100)).astype('float32')
+                noise_z = np.random.normal(0, 1, (batch_size, self.noise_size)).astype('float32')
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z, training=True)
@@ -114,12 +114,12 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-            samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
-            temp = samples[0, :, :, :].numpy()
-            temp = ((temp + 1) / 2)#.astype(np.uint8)
-            temp[temp < 0] = 0
-            temp[temp > 1] = 1
-            matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
+                samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
+                temp = samples[0, :, :, :].numpy()
+                temp = ((temp + 1) / 2)#.astype(np.uint8)
+                temp[temp < 0] = 0
+                temp[temp > 1] = 1
+                matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
 
                 # if batch_idx == 20:
                 #     break

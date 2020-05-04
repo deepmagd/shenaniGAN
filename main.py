@@ -160,7 +160,7 @@ def main(args):
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
-            conditional_emb_size=args.conditional_emb_size,
+            noise_size=default_settings['noise_size'],
             augment=default_settings['augment']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
@@ -175,7 +175,7 @@ def main(args):
         compare_generated_to_real(
             dataloader=train_loader,
             num_images=args.images_to_generate,
-            conditional_emb_size=args.images_to_generate,
+            noise_size=args.noise_size,
             model=model,
             save_location=os.path.join(results_dir, 'viz')
         )

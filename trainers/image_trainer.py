@@ -19,7 +19,7 @@ class ImageTrainer(Trainer):
                 results from training the model.
         """
         super().__init__(model, batch_size, save_location, show_progress_bar)
-        self.noise_size = kwargs.get('conditional_emb_size')
+        self.noise_size = kwargs.get('noise_size')
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
