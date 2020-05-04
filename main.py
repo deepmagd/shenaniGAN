@@ -120,7 +120,7 @@ def main(args):
     train_loader, val_generator, dataset_dims = create_dataloaders(args)
 
     # Create the model
-    # TODO: Check and see how many latent dims should be used and insert CLI argument
+    # TODO: conditional_emb_size is probably too specific for when we just have a standard GAN
     if args.use_pretrained:
         if args.epoch_num == -1:
             # Find last checkpoint
@@ -160,7 +160,7 @@ def main(args):
             save_location=results_dir,
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
-            conditional_emb_size=args.conditional_emb_size,
+            noise_size=default_settings['noise_size'],
             augment=default_settings['augment']
         )
         trainer(train_loader, num_epochs=args.num_epochs)
@@ -175,7 +175,7 @@ def main(args):
         compare_generated_to_real(
             dataloader=train_loader,
             num_images=args.images_to_generate,
-            conditional_emb_size=args.images_to_generate,
+            noise_size=args.noise_size,
             model=model,
             save_location=os.path.join(results_dir, 'viz')
         )

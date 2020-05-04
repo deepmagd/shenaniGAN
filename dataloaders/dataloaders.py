@@ -14,6 +14,8 @@ def create_dataloaders(args):
         return image_with_captions_loaders(dataset, args.batch_size)
     elif dataset.type == 'images-with-tabular':
         return image_with_tabular(dataset, args.batch_size)
+    elif dataset.type == 'flowers':
+        return image_loaders(dataset, args.batch_size)
     else:
         raise Exception('Unexpected dataset type: {}'.format(dataset.type))
 

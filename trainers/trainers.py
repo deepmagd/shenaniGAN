@@ -6,6 +6,7 @@ TRAINERS_DICT = {
     "birds": "ImageTrainer",
     "birds-with-text": "TextToImageTrainer",
     "flowers": "ImageTrainer",
+    "flowers-with-text": "TextToImageTrainer",
     "xrays": "TextToImageTrainer"
 }
 TRAINERS = list(TRAINERS_DICT.keys())

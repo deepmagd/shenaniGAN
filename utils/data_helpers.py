@@ -2,6 +2,7 @@ import io
 import os
 import pathlib
 import shutil
+from scipy.io import loadmat
 import tarfile
 import urllib.request
 import zipfile
@@ -36,40 +37,32 @@ def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-def create_tfrecords(dataset_type, tfrecords_dir, image_source_dir, text_source_dir, image_dims):
-    """ Create the TFRecords dataset
-        Arguments:
-            dataset_type: str
-                The dataset type which dictates how we create the records
-            tfrecords_dir: str
-                Root save location for the TFRecrods
-            image_source_dir: str
-                Root source directory from which to read the images
-            text_source_dir: str
-                Root source directory from which to read the text
-            image_dims: tuple
-                (height (int), width (int))
+def extract_image_bounding_boxes(image_filenames, base_path):
+    """ Returns a map of filename to bounding box in format [x-top, y-top, w, h]
+        If no path is provided (None), then simply return None.
     """
-    if dataset_type == 'images-with-captions':
-        create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
-    elif dataset_type == 'images-with-tabular':
-        create_image_tabular_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims)
+    if base_path is None:
+        # TODO: Return some default bounding box setting
+        return None
     else:
-        raise Exception(f'{dataset_type} is not a recognised dataset type')
+        return extract_bounding_boxes_from_file(image_filenames, base_path)
 
-def extract_image_bounding_boxes(image_filenames, base_path='data/CUB_200_2011_with_text/images/CUB_200_2011'):
-    """
-    Returns a map of filename to bounding box in format [x-top, y-top, w, h]
-    """
-    bb_df = pd.read_csv(os.path.join(base_path, 'bounding_boxes.txt'), names=['idx', 'x', 'y', 'w', 'h'], sep=" ").astype(int)
+def extract_bounding_boxes_from_file(image_filenames, base_path):
+    bb_df = pd.read_csv(
+        os.path.join(base_path, 'bounding_boxes.txt'),
+        names=['idx', 'x', 'y', 'w', 'h'], sep=" "
+    ).astype(int)
     imgs_df = pd.read_csv(os.path.join(base_path, 'images.txt'), names=['idx', 'filename'], sep=" ")
     combined_df = imgs_df.merge(bb_df, how='left', on='idx')
     bb_map = {}
     for idx, fn in enumerate(image_filenames):
-        bb_map[fn] = combined_df[combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])].iloc[:, 2:].values.squeeze().astype(int).tolist()
+        bb_map[fn] = combined_df[
+            combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])
+        ].iloc[:, 2:].values.squeeze().astype(int).tolist()
     return bb_map
 
-def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir, image_dims):
+def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_dir,
+                                   bounding_boxes_path, image_dims):
     """ Create the TFRecords dataset for image-caption pairs
         Arguments:
             tfrecords_dir: str
@@ -85,10 +78,22 @@ def create_image_caption_tfrecords(tfrecords_dir, image_source_dir, text_source_
         # Read from file and format
         file_names, class_info, text_embeddings = read_text_subset(subset, text_source_dir)
         file_names = [format_file_name(image_source_dir, file_name) for file_name in file_names]
-        bb_map = extract_image_bounding_boxes(image_filenames=file_names)
+        bb_map = extract_image_bounding_boxes(image_filenames=file_names, base_path=bounding_boxes_path)
         # Convert to bytes
         text_embeddings = [text_embedding.tobytes() for text_embedding in text_embeddings]
-        byte_images = get_byte_images(image_paths=file_names, image_dims=image_dims, bounding_boxes=bb_map, preprocessing='crop')
+        # NOTE: Ideally we will have a default bb_map returned, but for now we have to skip
+        if bb_map is None:
+            byte_images = get_byte_images(
+                image_paths=file_names,
+                image_dims=image_dims,
+            )
+        else:
+            byte_images = get_byte_images(
+                image_paths=file_names,
+                image_dims=image_dims,
+                bounding_boxes=bb_map,
+                preprocessing='crop'
+            )
         wrong_byte_images = get_wrong_images(images=byte_images, labels=class_info)
         # Arrange and write to file
         shard_iterator = zip(*[file_names, class_info, text_embeddings, byte_images, wrong_byte_images])
@@ -107,7 +112,7 @@ def get_wrong_images(images, labels):
         if (error_counter == 100):
             raise Exception("Too many iterations in producing 'wrong' images, assuming will not converge")
         collisions = labels == labels[wrong_idxs]
-        if (sum(collisions) == 1): # can allow for one duplicate
+        if (sum(collisions) == 1):  # can allow for one duplicate
             wrong_idxs[collisions] = np.random.randint(0, len(labels))
         else:
             wrong_idxs[collisions] = np.random.choice(wrong_idxs[collisions], sum(collisions), replace=False)
@@ -142,6 +147,8 @@ def download_dataset(dataset):
         download_cub(include_text=True)
     elif dataset == 'flowers':
         download_flowers()
+    elif dataset == 'flowers-with-text':
+        download_flowers(include_text=True)
     elif dataset == 'xrays':
         """ TODO / NOTE: Since this is a really large download, (and requires the authors' permission)
             we are going to assume that the user will manually download the CheXpert dataset
@@ -177,52 +184,68 @@ def download_cub(include_text=False):
     os.remove(cub_download_location)
 
     if include_text:
-        # Download the image captions
-        BIRDS_TEXT_GDRIVE_ID = '0B3y_msrWZaXLT1BZdVdycDY5TEE'
+        download_captions(
+            GDRIVE_ID='0B3y_msrWZaXLT1BZdVdycDY5TEE',
+            text_download_location='data/birds.zip',
+            backup_location='data/backup/birds.zip',
+            res_subdir='CUB_200_2011_with_text'
+        )
 
-        cub_text_download_location = "data/birds.zip"
-        cub_text_backup_location = 'data/backup/birds.zip'
-        extracted_text_dir = cub_text_download_location[:-4]
+def download_captions(GDRIVE_ID, text_download_location, backup_location, res_subdir):
+    """ The Download and processing for the captions / text part of the dataset """
+    extracted_text_dir = text_download_location[:-4]
 
-        if os.path.exists(cub_text_backup_location):
-            print('Retrieving CUB dataset from: {}'.format(cub_text_backup_location))
-            shutil.copy(cub_text_backup_location, cub_text_download_location)
-            with zipfile.ZipFile(cub_text_backup_location, 'r') as zipfd:
-                zipfd.extractall('data/')
-        else:
-            print('Downloading CUB text from Google Drive ID: {}'.format(BIRDS_TEXT_GDRIVE_ID))
-            gdd.download_file_from_google_drive(file_id=BIRDS_TEXT_GDRIVE_ID,
-                                                dest_path=cub_text_download_location,
-                                                unzip=True)
-            mkdir('data/backup')
-            shutil.copy(cub_text_download_location, cub_text_backup_location)
+    if os.path.exists(backup_location):
+        print('Retrieving dataset from: {}'.format(backup_location))
+        shutil.copy(backup_location, text_download_location)
+        with zipfile.ZipFile(backup_location, 'r') as zipfd:
+            zipfd.extractall('data/')
+    else:
+        print('Downloading text from Google Drive ID: {}'.format(GDRIVE_ID))
+        gdd.download_file_from_google_drive(file_id=GDRIVE_ID,
+                                            dest_path=text_download_location,
+                                            unzip=True)
+        mkdir('data/backup')
+        shutil.copy(text_download_location, backup_location)
 
-        # Move and clean up data
-        if os.path.isdir(extracted_text_dir):
-            os.rename(extracted_text_dir, 'data/CUB_200_2011_with_text/text')
-        else:
-            raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
-        os.remove(cub_text_download_location)
+    # Move and clean up data
+    if os.path.isdir(extracted_text_dir):
+        os.rename(extracted_text_dir, f'data/{res_subdir}/text')
+    else:
+        raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
+    os.remove(text_download_location)
 
-def download_flowers():
+def download_flowers(include_text=False):
     """ Download the flowers dataset """
-    FLOWERS_DATASET_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
+    FLOWERS_DATASET_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
     print('Downloading the flowers dataset from: {}'.format(FLOWERS_DATASET_URL))
 
-    flowers_download_loc = pathlib.Path('data/flowers/flowers.tgz')
+    flowers_download_loc = pathlib.Path('data/flowers.tgz')
     urllib.request.urlretrieve(FLOWERS_DATASET_URL, flowers_download_loc)
     tar = tarfile.open(flowers_download_loc, "r:gz")
-    tar.extractall("data/flowers/images")
+    if include_text:
+        images_save_location = 'data/flowers_with_text/images/'
+    else:
+        images_save_location = 'data/flowers'
+    tar.extractall(images_save_location)
     tar.close()
     os.remove(flowers_download_loc)
 
-    DATA_SPLITS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
-    data_splits_download_loc = pathlib.Path('data/flowers/setid.mat')
+    DATA_SPLITS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
+    data_splits_download_loc = pathlib.Path(os.path.join(images_save_location, 'setid.mat'))
     urllib.request.urlretrieve(DATA_SPLITS_URL, data_splits_download_loc)
 
-    IMAGE_LABELS_URL = "www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
-    image_labels_download_loc = pathlib.Path('data/flowers/imagelabels.mat')
+    IMAGE_LABELS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
+    image_labels_download_loc = pathlib.Path(os.path.join(images_save_location, 'imagelabels.mat'))
     urllib.request.urlretrieve(IMAGE_LABELS_URL, image_labels_download_loc)
+
+    if include_text:
+        download_captions(
+            GDRIVE_ID='0B3y_msrWZaXLaUc0UXpmcnhaVmM',
+            text_download_location='data/flowers.zip',
+            backup_location='data/backup/flowers.zip',
+            res_subdir='flowers_with_text'
+        )
 
 def check_for_xrays(directory):
     """ Check to see if the xray dataset has been downloaded at all.
@@ -263,7 +286,7 @@ def get_byte_images(image_paths, image_dims, preprocessing='pad', **kwargs):
             image = image.resize(new_size, Image.BICUBIC)
             new_img = Image.new('RGB', image_dims)
             new_img.paste(image, ((image_dims[0]-new_size[0])//2,
-                                (image_dims[1]-new_size[1])//2))
+                                  (image_dims[1]-new_size[1])//2))
         elif preprocessing == 'crop':
             img = np.array(image)
             bb = bounding_boxes[image_path]
@@ -443,9 +466,19 @@ def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
     encoded_tabular_lists = [sample.tobytes() for sample in encoded_tabular_lists]
     return encoded_tabular_lists, image_paths
 
+def extract_flowers_labels(path):
+    return loadmat(path)['labels'][0, :].tolist()
+
+def extract_flowers_data_split(path):
+    data = loadmat(path)
+    train_ids = data['trnid'][0, :].tolist()
+    val_ids = data['valid'][0, :].tolist()
+    test_ids = data['tstid'][0, :].tolist()
+    return train_ids, val_ids, test_ids
+
 def transform_image(img):
+    """ Apply a sequence of tranforms to an image.
+        Currently just normalisation.
     """
-    apply a sequence of tranforms to an image
-    """
-    img = img * (2./255) - 1. # normalise
+    img = img * (2./255) - 1.
     return img
