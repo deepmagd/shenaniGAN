@@ -5,7 +5,7 @@ from math import floor
 
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
+# from tensorflow import keras
 
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
@@ -138,8 +138,15 @@ def main(args):
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
         pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
-        model.generator.load_weights(os.path.join(pretrained_dir, 'generator', 'generator.index'))
-        model.discriminator.load_weights(os.path.join(pretrained_dir, 'discriminator', 'discriminator.index'))
+
+        # model.generator.load_model(os.path.join(pretrained_dir, 'generator', 'generator'))
+        model.generator = tf.saved_model.load(os.path.join(pretrained_dir, 'generator', 'generator'))
+        print(model.generator.trainable_variables)
+
+        # model.discriminator.load_model(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
+        model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
+        print(model.discriminator.trainable_variables)
+
     else:
         model = StackGAN1(
             img_size=dataset_dims,

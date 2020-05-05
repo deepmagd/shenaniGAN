@@ -23,7 +23,7 @@ class Discriminator(Model):
 
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
-    def call(self, images, embedding):
+    def __call__(self, images, embedding, training=True):
         pass
 
 
@@ -93,7 +93,7 @@ class DiscriminatorStage1(Discriminator):
             kernel_initializer=self.w_init
         )
 
-    def call(self, images, embedding, training=True):
+    def __call__(self, images, embedding, training=True):
 
         x = self.conv_1(images)
         x = self.leaky_relu_1(x)
@@ -144,7 +144,7 @@ class DiscriminatorStage2(Model):
         super().__init__()
         pass
 
-    def call(self, images, embedding):
+    def __call__(self, images, embedding):
         pass
 
     def loss(self, predictions_on_real, predictions_on_fake):

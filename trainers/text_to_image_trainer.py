@@ -72,9 +72,10 @@ class TextToImageTrainer(Trainer):
                         image_tensor.shape, wrong_image_tensor.shape
                     )
 
-                noise_z = np.random.normal(0, 1, (batch_size, self.noise_size)).astype('float32')
-
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
+                    noise_z = tf.random.normal((batch_size, self.noise_size))
+                    # print(f'text_tensor.shape: {text_tensor.shape}')
+                    # print(f'noise_z.shape: {noise_z.shape}')
                     fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z, training=True)
 
                     assert fake_images.shape == image_tensor.shape, \
@@ -82,6 +83,7 @@ class TextToImageTrainer(Trainer):
                             image_tensor.shape, fake_images.shape
                         )
 
+                    # print(f'image_tensor.shape: {image_tensor.shape}')
                     real_predictions = tf.squeeze(self.model.discriminator(image_tensor, text_tensor, training=True))
                     wrong_predictions = tf.squeeze(self.model.discriminator(wrong_image_tensor, text_tensor, training=True))
                     fake_predictions = tf.squeeze(self.model.discriminator(fake_images, text_tensor, training=True))
@@ -114,15 +116,15 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
-                temp = samples[0, :, :, :].numpy()
-                temp = ((temp + 1) / 2)#.astype(np.uint8)
-                temp[temp < 0] = 0
-                temp[temp > 1] = 1
-                matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
+                # samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
+                # temp = samples[0, :, :, :].numpy()
+                # temp = ((temp + 1) / 2)#.astype(np.uint8)
+                # temp[temp < 0] = 0
+                # temp[temp > 1] = 1
+                # matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
 
-                # if batch_idx == 20:
-                #     break
+                if batch_idx == 5:
+                    break
 
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),

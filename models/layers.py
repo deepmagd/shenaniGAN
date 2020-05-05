@@ -18,7 +18,7 @@ class ResidualLayer(layers.Layer):
         self.conv2d_3 = Conv2D(filters=filters_out, kernel_size=(3, 3), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=w_init)
         self.bn_3 = BatchNormalization(gamma_initializer=bn_init)
 
-    def call(self, x, training=True):
+    def __call__(self, x, training=True):
         x = self.conv2d_1(x)
         x = self.bn_1(x, training=training)
         x = self.relu_1(x)
@@ -40,7 +40,7 @@ class DeconvBlock(layers.Layer):
         self.bn = BatchNormalization(gamma_initializer=bn_init)
         self.relu = ReLU()
 
-    def call(self, x, training=True):
+    def __call__(self, x, training=True):
         x = self.deconv2d(x)
         x = self.conv2d(x)
         x = self.bn(x, training=training)
@@ -57,7 +57,7 @@ class ConvBlock(layers.Layer):
         self.bn = BatchNormalization(gamma_initializer=bn_init)
         self.leaky_relu = LeakyReLU(alpha=0.2)
 
-    def call(self, x, training=True):
+    def __call__(self, x, training=True):
         x = self.conv2d(x)
         x = self.bn(x, training=training)
         if self.activation:
