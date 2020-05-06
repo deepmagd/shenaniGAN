@@ -1,10 +1,11 @@
 import tensorflow as tf
-import tensorflow.keras.backend as K
+# import tensorflow.keras.backend as K
 from tensorflow.keras import Model
 from tensorflow.keras.activations import tanh
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense,
-                                     LeakyReLU, ReLU, Reshape, Activation)
+                                     Reshape, Activation)
+from tensorflow.nn import relu, leaky_relu
 
 from models.layers import DeconvBlock, ResidualLayer
 
@@ -33,9 +34,9 @@ class Generator(Model):
         self.bn_init = bn_init
 
         self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.leaky_relu1 = LeakyReLU(alpha=0.2)
+        self.leaky_relu1 = leaky_relu
         self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.leaky_relu2 = LeakyReLU(alpha=0.2)
+        self.leaky_relu2 = leaky_relu
 
     def __call__(self, embedding, noise, training=True):
         pass
@@ -70,8 +71,8 @@ class Generator(Model):
                 learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
 
         """
-        mean = self.leaky_relu1(self.dense_mean(embedding))
-        log_sigma = self.leaky_relu2(self.dense_sigma(embedding))
+        mean = self.leaky_relu1(self.dense_mean(embedding), alpha=0.2)
+        log_sigma = self.leaky_relu2(self.dense_sigma(embedding), alpha=0.2)
         return mean, log_sigma
 
 
@@ -102,12 +103,12 @@ class GeneratorStage1(Generator):
         self.reshape_layer = Reshape([4, 4, 128*8])
 
         self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
-        self.relu_1 = ReLU()
+        self.relu_1 = relu
 
         self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
 
         self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
-        self.relu_2 = ReLU()
+        self.relu_2 = relu
 
         self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
         self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)

@@ -1,6 +1,7 @@
 from tensorflow.keras import layers
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
-                                     Conv2DTranspose, LeakyReLU, ReLU, UpSampling2D)
+                                     Conv2DTranspose, UpSampling2D)
+from tensorflow.nn import relu, leaky_relu
 
 
 class ResidualLayer(layers.Layer):
@@ -9,11 +10,11 @@ class ResidualLayer(layers.Layer):
         super(ResidualLayer, self).__init__()
         self.conv2d_1 = Conv2D(filters=filters_in, kernel_size=(1, 1), strides=(1, 1), padding='valid', use_bias=False, kernel_initializer=w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=bn_init)
-        self.relu_1 = ReLU()
+        self.relu_1 = relu
 
         self.conv2d_2 = Conv2D(filters=filters_in, kernel_size=(3, 3), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=w_init)
         self.bn_2 = BatchNormalization(gamma_initializer=bn_init)
-        self.relu_2 = ReLU()
+        self.relu_2 = relu
 
         self.conv2d_3 = Conv2D(filters=filters_out, kernel_size=(3, 3), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=w_init)
         self.bn_3 = BatchNormalization(gamma_initializer=bn_init)
@@ -38,7 +39,7 @@ class DeconvBlock(layers.Layer):
         self.deconv2d = Conv2DTranspose(filters, kernel_size=(4, 4), strides=(2, 2), padding='same', use_bias=False, kernel_initializer=w_init)
         self.conv2d = Conv2D(filters=filters, kernel_size=(3, 3), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=w_init)
         self.bn = BatchNormalization(gamma_initializer=bn_init)
-        self.relu = ReLU()
+        self.relu = relu
 
     def __call__(self, x, training=True):
         x = self.deconv2d(x)
@@ -55,11 +56,11 @@ class ConvBlock(layers.Layer):
         self.activation = activation
         self.conv2d = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, kernel_initializer=w_init, use_bias=False)
         self.bn = BatchNormalization(gamma_initializer=bn_init)
-        self.leaky_relu = LeakyReLU(alpha=0.2)
+        self.leaky_relu = leaky_relu
 
     def __call__(self, x, training=True):
         x = self.conv2d(x)
         x = self.bn(x, training=training)
         if self.activation:
-            x = self.leaky_relu(x)
+            x = self.leaky_relu(x, alpha=0.2)
         return x
