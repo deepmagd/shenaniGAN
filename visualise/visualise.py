@@ -22,7 +22,7 @@ def compare_generated_to_real(dataloader, num_images, noise_size, model, save_lo
     # print(f'noise_list: {noise_list[0].shape}')
 
     fake_tensors = [
-        model.generator(embedding, noise, training=False)[0] for embedding, noise in zip(real_embeddings, noise_list)
+        model.generator([embedding, noise], training=False)[0] for embedding, noise in zip(real_embeddings, noise_list)
     ]
 
     for i, (real_image, fake_tensor) in enumerate(zip(real_images, fake_tensors)):
