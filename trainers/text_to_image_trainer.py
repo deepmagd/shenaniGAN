@@ -76,7 +76,7 @@ class TextToImageTrainer(Trainer):
                     noise_z = tf.random.normal((batch_size, self.noise_size))
                     # print(f'text_tensor.shape: {text_tensor.shape}')
                     # print(f'noise_z.shape: {noise_z.shape}')
-                    fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z, training=True)
+                    fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=True)
 
                     assert fake_images.shape == image_tensor.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -84,9 +84,9 @@ class TextToImageTrainer(Trainer):
                         )
 
                     # print(f'image_tensor.shape: {image_tensor.shape}')
-                    real_predictions = tf.squeeze(self.model.discriminator(image_tensor, text_tensor, training=True))
-                    wrong_predictions = tf.squeeze(self.model.discriminator(wrong_image_tensor, text_tensor, training=True))
-                    fake_predictions = tf.squeeze(self.model.discriminator(fake_images, text_tensor, training=True))
+                    real_predictions = tf.squeeze(self.model.discriminator([image_tensor, text_tensor], training=True))
+                    wrong_predictions = tf.squeeze(self.model.discriminator([wrong_image_tensor, text_tensor], training=True))
+                    fake_predictions = tf.squeeze(self.model.discriminator([fake_images, text_tensor], training=True))
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(

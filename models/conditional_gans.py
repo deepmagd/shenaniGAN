@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, Flatten, LeakyReLU
+from tensorflow.keras.layers import Dense, Flatten
 
 from models.discriminators import Discriminator, DiscriminatorStage1, DiscriminatorStage2
 from models.generators import Generator, GeneratorStage1, GeneratorStage2

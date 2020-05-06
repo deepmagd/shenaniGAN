@@ -5,8 +5,6 @@ from tensorflow.keras.activations import tanh
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense,
                                      Reshape, Activation)
-from tensorflow.nn import relu, leaky_relu
-
 from models.layers import DeconvBlock, ResidualLayer
 
 
@@ -34,12 +32,7 @@ class Generator(Model):
         self.bn_init = bn_init
 
         self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.leaky_relu1 = leaky_relu
         self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.leaky_relu2 = leaky_relu
-
-    def __call__(self, embedding, noise, training=True):
-        pass
 
     def conditional_augmentation(self, embedding):
         """ Perform conditional augmentation by sampling normal distribution generated
@@ -71,8 +64,8 @@ class Generator(Model):
                 learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
 
         """
-        mean = self.leaky_relu1(self.dense_mean(embedding), alpha=0.2)
-        log_sigma = self.leaky_relu2(self.dense_sigma(embedding), alpha=0.2)
+        mean = tf.nn.leaky_relu(self.dense_mean(embedding), alpha=0.2)
+        log_sigma = tf.nn.leaky_relu(self.dense_sigma(embedding), alpha=0.2)
         return mean, log_sigma
 
 
@@ -94,37 +87,40 @@ class GeneratorStage1(Generator):
                 lr : float
         """
         super().__init__(img_size, lr, conditional_emb_size, w_init, bn_init)
-        num_output_channels = self.img_size[0]
-        assert num_output_channels == 3 or num_output_channels == 1, \
-            f'The number of output channels must be 2 or 1. Found {num_output_channels}'
+        self.num_output_channels = self.img_size[0]
+        assert self.num_output_channels == 3 or self.num_output_channels == 1, \
+            f'The number of output channels must be 2 or 1. Found {self.num_output_channels}'
 
+    def build(self, input_shape):
         self.dense_1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
 
         self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
-        self.relu_1 = relu
 
         self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
 
         self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
-        self.relu_2 = relu
 
         self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
         self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)
 
         self.deconv2d_4 = Conv2DTranspose(
-            num_output_channels, kernel_size=(4, 4), strides=(2, 2),
+            self.num_output_channels, kernel_size=(4, 4), strides=(2, 2),
             padding='same', kernel_initializer=self.w_init, use_bias=False
         )
         self.conv2d_4 = Conv2D(
-            filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1),
+            filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1),
             padding='same', kernel_initializer=self.w_init, use_bias=False
         )
 
         self.tanh = Activation('tanh')
 
-    def __call__(self, embedding, noise, training=True):
+
+    @tf.function()
+    def call(self, inputs, training=True):
+        embedding = inputs[0]
+        noise = inputs[1]
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
         noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
 
@@ -134,13 +130,13 @@ class GeneratorStage1(Generator):
 
         res_1 = self.res_block_1(x, training=training)
         x = tf.add(x, res_1)
-        x = self.relu_1(x)
+        x = tf.nn.relu(x)
 
         x = self.deconv_block_1(x, training=training)
 
         res_2 = self.res_block_2(x, training=training)
         x = tf.add(x, res_2)
-        x = self.relu_2(x)
+        x = tf.nn.relu(x)
 
         x = self.deconv_block_2(x, training=training)
         x = self.deconv_block_3(x, training=training)
