@@ -141,11 +141,11 @@ def main(args):
 
         # model.generator.load_model(os.path.join(pretrained_dir, 'generator', 'generator'))
         model.generator = tf.saved_model.load(os.path.join(pretrained_dir, 'generator', 'generator'))
-        print(model.generator.trainable_variables)
+        # print(model.generator.trainable_variables)
 
         # model.discriminator.load_model(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
         model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
-        print(model.discriminator.trainable_variables)
+        # print(model.discriminator.trainable_variables)
 
     else:
         model = StackGAN1(
@@ -182,7 +182,7 @@ def main(args):
         compare_generated_to_real(
             dataloader=train_loader,
             num_images=args.images_to_generate,
-            noise_size=args.noise_size,
+            noise_size=default_settings['noise_size'],
             model=model,
             save_location=os.path.join(results_dir, 'viz')
         )
