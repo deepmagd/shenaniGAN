@@ -87,7 +87,6 @@ class DiscriminatorStage1(Discriminator):
             kernel_initializer=self.w_init
         )
 
-    @tf.function()
     def call(self, inputs, training=True):
         images = inputs[0]
         embedding = inputs[1]

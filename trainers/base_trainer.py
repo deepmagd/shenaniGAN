@@ -43,25 +43,5 @@ class Trainer(object):
         pass
 
     def save_model(self, epoch_num):
-        # NOTE: Hard coded for now
-        dummy_noise = tf.constant(0, shape=(8, 100), dtype=tf.float32)
-        dummy_image = tf.constant(0, shape=(8, 64, 64, 3), dtype=tf.float32)
-        dummy_text = tf.constant(0, shape=(8, 1024), dtype=tf.float32)
-
-        # self.model.generator(dummy_text, dummy_noise)
         tf.saved_model.save(self.model.generator, os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator'))
-        # self.model.generator.save(
-        #     os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator'),
-        #     save_format='tf'
-        # )
-        # self.model.discriminator(dummy_image, dummy_text)
         tf.saved_model.save(self.model.discriminator, os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator'))
-        # self.model.discriminator.save(
-        #     os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator'),
-        #     save_format='tf'
-        # )
-        # self.checkpoint.save(os.path.join(self.save_dir, f'model_{epoch_num}', "ckpt"))
-        # self.model.save(
-        #     os.path.join(self.save_dir, f'model_{epoch_num}'),
-        #     save_format='tf'
-        # )

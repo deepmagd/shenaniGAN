@@ -82,7 +82,6 @@ class GeneratorStage1(Generator):
         self.tanh = Activation('tanh')
 
 
-    @tf.function()
     def call(self, inputs, training=True):
         embedding = inputs[0]
         noise = inputs[1]
