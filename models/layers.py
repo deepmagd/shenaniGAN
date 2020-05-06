@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
-                                     Conv2DTranspose, UpSampling2D)
+                                     Conv2DTranspose, UpSampling2D, Dense)
 
 
 class ResidualLayer(layers.Layer):
@@ -79,3 +79,22 @@ class ConvBlock(layers.Layer):
         if self.activation:
             x = tf.nn.leaky_relu(x, alpha=0.2)
         return x
+
+class ConditionalAugmentation(layers.Layer):
+
+    def __init__(self, conditional_emb_size, w_init):
+        super(ConditionalAugmentation, self).__init__()
+        self.conditional_emb_size = conditional_emb_size
+        self.w_init = w_init
+
+    def build(self, x):
+        self.dense_mean = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
+        self.dense_sigma = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
+
+    def call(self, embedding):
+        mean = tf.nn.leaky_relu(self.dense_mean(embedding), alpha=0.2)
+        log_sigma = tf.nn.leaky_relu(self.dense_sigma(embedding), alpha=0.2)
+        epsilon = tf.random.truncated_normal(tf.shape(mean))
+        stddev = tf.math.exp(log_sigma)
+        smoothed_embedding = mean + stddev * epsilon
+        return smoothed_embedding, mean, log_sigma

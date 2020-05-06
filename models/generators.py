@@ -5,7 +5,7 @@ from tensorflow.keras.activations import tanh
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense,
                                      Reshape, Activation)
-from models.layers import DeconvBlock, ResidualLayer
+from models.layers import DeconvBlock, ResidualLayer, ConditionalAugmentation
 
 
 class Generator(Model):
@@ -31,43 +31,6 @@ class Generator(Model):
         self.w_init = w_init
         self.bn_init = bn_init
 
-        self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-
-    def conditional_augmentation(self, embedding):
-        """ Perform conditional augmentation by sampling normal distribution generated
-            from the embedding.
-            Arguments
-            embedding : Tensor
-                text embedding. Shape (batch_size, feature_size, embedding_size)
-
-            Returns
-            Tensor
-                sampled embedding. Shape (batch_size, reshape_dims/2)
-        """
-        mean, log_sigma = self.generate_conditionals(embedding)
-        epsilon = tf.random.truncated_normal(tf.shape(mean))
-        stddev = tf.math.exp(log_sigma)
-        smoothed_embedding = mean + stddev * epsilon
-        return smoothed_embedding, mean, log_sigma
-
-    def generate_conditionals(self, embedding):
-        """ Generate distribution for text embedding.
-            Arguments
-            embedding : Tensor
-                text embedding. Shape (batch_size, feature_size, embedding_size)
-
-            Returns
-            Tensor
-                learnt mean of embedding distribution. Shape (batch_size, reshape_dims/2)
-            Tensor
-                learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
-
-        """
-        mean = tf.nn.leaky_relu(self.dense_mean(embedding), alpha=0.2)
-        log_sigma = tf.nn.leaky_relu(self.dense_sigma(embedding), alpha=0.2)
-        return mean, log_sigma
-
 
 class GeneratorStage1(Generator):
     """ The definition for a network which
@@ -88,10 +51,12 @@ class GeneratorStage1(Generator):
         """
         super().__init__(img_size, lr, conditional_emb_size, w_init, bn_init)
         self.num_output_channels = self.img_size[0]
+        self.conditional_emb_size = conditional_emb_size
         assert self.num_output_channels == 3 or self.num_output_channels == 1, \
             f'The number of output channels must be 2 or 1. Found {self.num_output_channels}'
 
     def build(self, input_shape):
+        self.conditional_augmentation = ConditionalAugmentation(self.conditional_emb_size, self.w_init)
         self.dense_1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
