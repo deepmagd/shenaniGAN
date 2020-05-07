@@ -1,6 +1,6 @@
 import numpy as np
 from random import randint
-from utils.utils import extract_image_with_text
+from utils.data_helpers import extract_image_with_text
 
 
 NUM_EMBEDDINGS_TO_SAMPLE = 4

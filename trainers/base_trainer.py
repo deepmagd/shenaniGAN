@@ -21,25 +21,38 @@ class Trainer(object):
         self.batch_size = batch_size
         self.save_dir = save_location
         self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.csv'))
+        self.val_logger = MetricsLogger(os.path.join(self.save_dir, 'val.csv'))
 
-    def __call__(self, data_loader, num_epochs):
+    def __call__(self, train_loader, val_loader, num_epochs):
         """ Trains the model.
             Arguments:
-            data_loader: DirectoryIterator
+            train_loader: DirectoryIterator
                 Yields tuples (x, y)
             num_epochs: int
                 Number of epochs to train the model for.
         """
         for epoch_num in range(num_epochs):
-            metrics = self.train_epoch(data_loader, epoch_num)
-            metrics['epoch'] = epoch_num
-            print(f'Metrics: {metrics}')
-            self.train_logger(metrics)
+            # Train
+            train_metrics = self.train_epoch(train_loader, epoch_num)
+            train_metrics['epoch'] = epoch_num
+            print(f'Metrics: {train_metrics}')
+            self.train_logger(train_metrics)
+            # Validation
+            val_metrics = self.val_epoch(val_loader, epoch_num)
+            val_metrics['epoch'] = epoch_num
+            print(f'Metrics: {val_metrics}')
+            self.val_logger(val_metrics)
+            # Save
             self.save_model(epoch_num)
+
         self.train_logger.close()
+        self.val_logger.close()
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
+        pass
+
+    def val_epoch(self, val_loader):
         pass
 
     def save_model(self, epoch_num):

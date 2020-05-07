@@ -115,7 +115,7 @@ def main(args):
 
     default_settings = get_default_settings(SETTINGS_FILE)
 
-    train_loader, val_generator, dataset_dims = create_dataloaders(args)
+    train_loader, val_loader, dataset_dims = create_dataloaders(args)
 
     # Create the model
     # TODO: conditional_emb_size is probably too specific for when we just have a standard GAN
@@ -162,7 +162,7 @@ def main(args):
             noise_size=default_settings['noise_size'],
             augment=default_settings['augment']
         )
-        trainer(train_loader, num_epochs=args.num_epochs)
+        trainer(train_loader, val_loader, num_epochs=args.num_epochs)
 
         # Plot metrics
         plotter = LogPlotter(results_dir)

@@ -99,6 +99,7 @@ class BirdsWithWordsDataset(StackedGANDataset):
         self.width = 64
         self.height = 64
         self.num_channels = 3
+        self.text_embedding_dim = 1024
 
         # self.classes = None
         self.feature_description = {
@@ -165,6 +166,7 @@ class FlowersWithWordsDataset(StackedGANDataset):
         self.width = 64
         self.height = 64
         self.num_channels = 3
+        self.text_embedding_dim = 1024
 
         self.feature_description = {
             'image_raw': tf.io.FixedLenFeature([], tf.string),
@@ -215,6 +217,8 @@ class XRaysDataset(StackedGANDataset):
         self.width = 390
         self.height = 320
         self.num_channels = 1
+        # TODO: Set this
+        self.text_embedding_dim = None
 
         self.feature_description = {
             'image_raw': tf.io.FixedLenFeature([], tf.string),

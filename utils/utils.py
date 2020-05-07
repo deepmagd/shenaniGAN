@@ -120,15 +120,3 @@ def extract_epoch_num(results_dir):
     candidate_dirs = [directory for directory in glob(f'{results_dir}/*/') if 'model' in directory]
     only_checkpoint_dirs = [int(re.search(r'\d+', candidate_dir.split('/')[-2])[0]) for candidate_dir in candidate_dirs]
     return max(only_checkpoint_dirs)
-
-def extract_image_with_text(sample, index, embedding_size, num_embeddings_to_sample, include_wrong=False):
-    img = Image.open(io.BytesIO(sample['image_raw'].numpy()[index]))
-    txt = np.frombuffer(
-        sample['text'].numpy()[index], dtype=np.float32
-    ).reshape(-1, embedding_size)
-    emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
-    txt = np.mean(txt[emb_idxs, :], axis=0)
-    if include_wrong:
-        wrong_img = Image.open(io.BytesIO(sample['wrong_image_raw'].numpy()[index]))
-        return img, wrong_img, txt
-    return img, txt
