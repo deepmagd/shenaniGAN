@@ -1,11 +1,9 @@
 import argparse
 import os
 import sys
-from math import floor
 
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
@@ -111,7 +109,6 @@ def parse_arguments(args_to_parse):
 
 
 def main(args):
-    # Save options:
     results_dir = os.path.join(RESULTS_ROOT, args.name)
     save_options(options=args, save_dir=results_dir)
 
@@ -138,8 +135,9 @@ def main(args):
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
         pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
-        model.generator.load_weights(os.path.join(pretrained_dir, 'generator', 'generator.index'))
-        model.discriminator.load_weights(os.path.join(pretrained_dir, 'discriminator', 'discriminator.index'))
+        model.generator = tf.saved_model.load(os.path.join(pretrained_dir, 'generator', 'generator'))
+        model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
+
     else:
         model = StackGAN1(
             img_size=dataset_dims,
@@ -175,7 +173,7 @@ def main(args):
         compare_generated_to_real(
             dataloader=train_loader,
             num_images=args.images_to_generate,
-            noise_size=args.noise_size,
+            noise_size=default_settings['noise_size'],
             model=model,
             save_location=os.path.join(results_dir, 'viz')
         )

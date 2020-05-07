@@ -1,11 +1,7 @@
-import io
-from random import randint
-import matplotlib.pyplot as plt
-import matplotlib
-
 import numpy as np
 import tensorflow as tf
 from tqdm import trange
+
 from trainers.base_trainer import Trainer
 from utils.data_helpers import transform_image
 from utils.utils import extract_image_with_text
@@ -72,19 +68,18 @@ class TextToImageTrainer(Trainer):
                         image_tensor.shape, wrong_image_tensor.shape
                     )
 
-                noise_z = np.random.normal(0, 1, (batch_size, self.noise_size)).astype('float32')
-
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
-                    fake_images, mean, log_sigma = self.model.generator(text_tensor, noise_z, training=True)
+                    noise_z = tf.random.normal((batch_size, self.noise_size))
+                    fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=True)
 
                     assert fake_images.shape == image_tensor.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
                             image_tensor.shape, fake_images.shape
                         )
 
-                    real_predictions = tf.squeeze(self.model.discriminator(image_tensor, text_tensor, training=True))
-                    wrong_predictions = tf.squeeze(self.model.discriminator(wrong_image_tensor, text_tensor, training=True))
-                    fake_predictions = tf.squeeze(self.model.discriminator(fake_images, text_tensor, training=True))
+                    real_predictions = tf.squeeze(self.model.discriminator([image_tensor, text_tensor], training=True))
+                    wrong_predictions = tf.squeeze(self.model.discriminator([wrong_image_tensor, text_tensor], training=True))
+                    fake_predictions = tf.squeeze(self.model.discriminator([fake_images, text_tensor], training=True))
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -114,14 +109,14 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                samples, _, _ = self.model.generator(text_tensor, noise_z, training=False)
-                temp = samples[0, :, :, :].numpy()
-                temp = ((temp + 1) / 2)#.astype(np.uint8)
-                temp[temp < 0] = 0
-                temp[temp > 1] = 1
-                matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
+                # samples, _, _ = self.model.generator([text_tensor, noise_z], training=False)
+                # temp = samples[0, :, :, :].numpy()
+                # temp = ((temp + 1) / 2)#.astype(np.uint8)
+                # temp[temp < 0] = 0
+                # temp[temp > 1] = 1
+                # matplotlib.image.imsave('gen_{}.png'.format(epoch_num), temp)
 
-                # if batch_idx == 20:
+                # if batch_idx == 2:
                 #     break
 
         return {

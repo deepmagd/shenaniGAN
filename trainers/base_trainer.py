@@ -1,5 +1,7 @@
 import os
+
 import tensorflow as tf
+
 from utils.logger import MetricsLogger
 
 
@@ -43,11 +45,5 @@ class Trainer(object):
         pass
 
     def save_model(self, epoch_num):
-        self.model.generator.save_weights(
-            os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator'),
-            save_format='tf'
-        )
-        self.model.discriminator.save_weights(
-            os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator'),
-            save_format='tf'
-        )
+        tf.saved_model.save(self.model.generator, os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator'))
+        tf.saved_model.save(self.model.discriminator, os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator'))

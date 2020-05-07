@@ -1,12 +1,9 @@
 import tensorflow as tf
-import tensorflow.keras.backend as K
 from tensorflow.keras import Model
-from tensorflow.keras.activations import tanh
-from tensorflow.keras.layers import (BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dense,
-                                     LeakyReLU, ReLU, Reshape, Activation)
+from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
+                                     Conv2DTranspose, Dense, Reshape)
 
-from models.layers import DeconvBlock, ResidualLayer
+from models.layers import ConditionalAugmentation, DeconvBlock, ResidualLayer
 
 
 class Generator(Model):
@@ -32,48 +29,6 @@ class Generator(Model):
         self.w_init = w_init
         self.bn_init = bn_init
 
-        self.dense_mean = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.leaky_relu1 = LeakyReLU(alpha=0.2)
-        self.dense_sigma = Dense(units=conditional_emb_size, kernel_initializer=self.w_init)
-        self.leaky_relu2 = LeakyReLU(alpha=0.2)
-
-    def call(self, x):
-        pass
-
-    def conditional_augmentation(self, embedding):
-        """ Perform conditional augmentation by sampling normal distribution generated
-            from the embedding.
-            Arguments
-            embedding : Tensor
-                text embedding. Shape (batch_size, feature_size, embedding_size)
-
-            Returns
-            Tensor
-                sampled embedding. Shape (batch_size, reshape_dims/2)
-        """
-        mean, log_sigma = self.generate_conditionals(embedding)
-        epsilon = tf.random.truncated_normal(tf.shape(mean))
-        stddev = tf.math.exp(log_sigma)
-        smoothed_embedding = mean + stddev * epsilon
-        return smoothed_embedding, mean, log_sigma
-
-    def generate_conditionals(self, embedding):
-        """ Generate distribution for text embedding.
-            Arguments
-            embedding : Tensor
-                text embedding. Shape (batch_size, feature_size, embedding_size)
-
-            Returns
-            Tensor
-                learnt mean of embedding distribution. Shape (batch_size, reshape_dims/2)
-            Tensor
-                learnt log variance of embedding distribution. Shape (batch_size, reshape_dims/2)
-
-        """
-        mean = self.leaky_relu1(self.dense_mean(embedding))
-        log_sigma = self.leaky_relu2(self.dense_sigma(embedding))
-        return mean, log_sigma
-
 
 class GeneratorStage1(Generator):
     """ The definition for a network which
@@ -93,37 +48,40 @@ class GeneratorStage1(Generator):
                 lr : float
         """
         super().__init__(img_size, lr, conditional_emb_size, w_init, bn_init)
-        num_output_channels = self.img_size[0]
-        assert num_output_channels == 3 or num_output_channels == 1, \
-            f'The number of output channels must be 2 or 1. Found {num_output_channels}'
+        self.num_output_channels = self.img_size[0]
+        self.conditional_emb_size = conditional_emb_size
+        assert self.num_output_channels == 3 or self.num_output_channels == 1, \
+            f'The number of output channels must be 2 or 1. Found {self.num_output_channels}'
 
+    def build(self, input_shape):
+        self.conditional_augmentation = ConditionalAugmentation(self.conditional_emb_size, self.w_init)
         self.dense_1 = Dense(units=128*8*4*4, kernel_initializer=self.w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
 
         self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
-        self.relu_1 = ReLU()
 
         self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
 
         self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
-        self.relu_2 = ReLU()
 
         self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
         self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)
 
         self.deconv2d_4 = Conv2DTranspose(
-            num_output_channels, kernel_size=(4, 4), strides=(2, 2),
+            self.num_output_channels, kernel_size=(4, 4), strides=(2, 2),
             padding='same', kernel_initializer=self.w_init, use_bias=False
         )
         self.conv2d_4 = Conv2D(
-            filters=num_output_channels, kernel_size=(3, 3), strides=(1, 1),
+            filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1),
             padding='same', kernel_initializer=self.w_init, use_bias=False
         )
 
         self.tanh = Activation('tanh')
 
-    def call(self, embedding, noise, training=True):
+
+    def call(self, inputs, training=True):
+        embedding, noise = inputs
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
         noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
 
@@ -133,13 +91,13 @@ class GeneratorStage1(Generator):
 
         res_1 = self.res_block_1(x, training=training)
         x = tf.add(x, res_1)
-        x = self.relu_1(x)
+        x = tf.nn.relu(x)
 
         x = self.deconv_block_1(x, training=training)
 
         res_2 = self.res_block_2(x, training=training)
         x = tf.add(x, res_2)
-        x = self.relu_2(x)
+        x = tf.nn.relu(x)
 
         x = self.deconv_block_2(x, training=training)
         x = self.deconv_block_3(x, training=training)
@@ -190,7 +148,7 @@ class GeneratorStage2(Model):
         super().__init__()
         pass
 
-    def call(self, noise, embedding):
+    def __call__(self, noise, embedding):
         pass
 
     def loss(self, predictions_on_fake):

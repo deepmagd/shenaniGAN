@@ -1,7 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Conv2D, Dense, LeakyReLU
-from models.layers import ResidualLayer, ConvBlock
+from tensorflow.keras.layers import Conv2D, Dense
+
+from models.layers import ConvBlock, ResidualLayer
+
 
 class Discriminator(Model):
     """ The definition for a network which
@@ -23,10 +25,6 @@ class Discriminator(Model):
 
         self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
-    def call(self, images, embedding):
-        pass
-
-
 class DiscriminatorStage1(Discriminator):
     """ The definition for a network which
         classifies inputs as fake or genuine.
@@ -42,6 +40,7 @@ class DiscriminatorStage1(Discriminator):
         super().__init__(img_size, lr, w_init, bn_init)
         self.d_dim = 64
 
+    def build(self, input_size):
         self.conv_1 = Conv2D(filters=self.d_dim,
                              kernel_size=(4, 4),
                              strides=(2, 2),
@@ -49,7 +48,6 @@ class DiscriminatorStage1(Discriminator):
                              kernel_initializer=self.w_init,
                              use_bias=False
                             )
-        self.leaky_relu_1 = LeakyReLU(alpha=0.2)
 
         self.conv_block_1 = ConvBlock(filters=self.d_dim*2,
                                       kernel_size=(4, 4),
@@ -77,10 +75,8 @@ class DiscriminatorStage1(Discriminator):
                                     )
 
         self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init)
-        self.leaky_relu_2 = LeakyReLU(alpha=0.2)
 
         self.dense_embed = Dense(units=128)
-        self.leaky_relu_3 = LeakyReLU(alpha=0.2)
 
         self.conv_block_4 = ConvBlock(
             filters=self.d_dim*8, kernel_size=(1, 1), strides=(1, 1), padding='valid',
@@ -93,10 +89,10 @@ class DiscriminatorStage1(Discriminator):
             kernel_initializer=self.w_init
         )
 
-    def call(self, images, embedding, training=True):
-
+    def call(self, inputs, training=True):
+        images, embedding = inputs
         x = self.conv_1(images)
-        x = self.leaky_relu_1(x)
+        x = tf.nn.leaky_relu(x, alpha=0.2)
 
         x = self.conv_block_1(x, training=training)
         x = self.conv_block_2(x, training=training)
@@ -104,10 +100,10 @@ class DiscriminatorStage1(Discriminator):
 
         res = self.res_block(x, training=training)
         x = tf.add(x, res)
-        x = self.leaky_relu_2(x)
+        x = tf.nn.leaky_relu(x, alpha=0.2)
 
         reduced_embedding = self.dense_embed(embedding)
-        reduced_embedding = self.leaky_relu_3(reduced_embedding)
+        reduced_embedding = tf.nn.leaky_relu(reduced_embedding, alpha=0.2)
         reduced_embedding = tf.expand_dims(tf.expand_dims(reduced_embedding, 1), 1)
         reduced_embedding = tf.tile(reduced_embedding, [1, 4, 4, 1])
         x = tf.concat([x, reduced_embedding], 3)
@@ -144,7 +140,7 @@ class DiscriminatorStage2(Model):
         super().__init__()
         pass
 
-    def call(self, images, embedding):
+    def __call__(self, images, embedding):
         pass
 
     def loss(self, predictions_on_real, predictions_on_fake):
