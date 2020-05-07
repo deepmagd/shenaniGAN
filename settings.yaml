@@ -16,3 +16,5 @@ num_samples: 4
 conditional_emb_size: 128
 noise_size: 100
 augment: True
+save_every_n_epochs: 50
+save_best_after_n_epochs: 100

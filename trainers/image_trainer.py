@@ -7,7 +7,7 @@ from trainers.base_trainer import Trainer
 class ImageTrainer(Trainer):
     """ A image-to-image GAN training class """
     def __init__(self, model, batch_size, save_location,
-                 show_progress_bar=True, **kwargs):
+                 save_every, save_best_after, show_progress_bar=True, **kwargs):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
@@ -18,7 +18,7 @@ class ImageTrainer(Trainer):
                 The directory in which to save all
                 results from training the model.
         """
-        super().__init__(model, batch_size, save_location, show_progress_bar)
+        super().__init__(model, batch_size, save_location, save_every, save_best_after, show_progress_bar)
         self.noise_size = kwargs.get('noise_size')
 
     def train_epoch(self, train_loader, epoch_num):

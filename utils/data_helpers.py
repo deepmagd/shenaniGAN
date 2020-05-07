@@ -482,3 +482,47 @@ def transform_image(img):
     """
     img = img * (2./255) - 1.
     return img
+
+def extract_image_with_text(sample, index, embedding_size, num_embeddings_to_sample, include_wrong=False):
+    img = Image.open(io.BytesIO(sample['image_raw'].numpy()[index]))
+    txt = np.frombuffer(
+        sample['text'].numpy()[index], dtype=np.float32
+    ).reshape(-1, embedding_size)
+    emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
+    txt = np.mean(txt[emb_idxs, :], axis=0)
+    if include_wrong:
+        wrong_img = Image.open(io.BytesIO(sample['wrong_image_raw'].numpy()[index]))
+        return img, wrong_img, txt
+    return img, txt
+
+def tensors_from_sample(sample, batch_size, text_embedding_size, num_samples, augment):
+    """ Extract and format the input samples such that they are ready to be fed into the model """
+    image_tensor = []
+    wrong_image_tensor = []
+    text_tensor = []
+    for i in range(batch_size):
+        img, wrong_img, txt = extract_image_with_text(
+            sample=sample,
+            index=i,
+            embedding_size=text_embedding_size,
+            num_embeddings_to_sample=num_samples,
+            include_wrong=True
+        )
+        img = np.asarray(img, dtype='float32')
+        wrong_img = np.asarray(wrong_img, dtype='float32')
+        txt = np.asarray(txt, dtype='float32')
+        if augment:
+            img = transform_image(img)
+            wrong_img = transform_image(wrong_img)
+        image_tensor.append(img)
+        wrong_image_tensor.append(wrong_img)
+        text_tensor.append(txt)
+    image_tensor = np.asarray(image_tensor, dtype='float32')
+    wrong_image_tensor = np.asarray(wrong_image_tensor, dtype='float32')
+    text_tensor = np.asarray(text_tensor, dtype='float32')
+
+    assert image_tensor.shape == wrong_image_tensor.shape, \
+        'Real ({}) and wrong ({}) images must have the same dimensions'.format(
+            image_tensor.shape, wrong_image_tensor.shape
+        )
+    return image_tensor, wrong_image_tensor, text_tensor
