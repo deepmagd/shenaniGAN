@@ -1,11 +1,9 @@
 import tensorflow as tf
-# import tensorflow.keras.backend as K
 from tensorflow.keras import Model
-from tensorflow.keras.activations import tanh
-from tensorflow.keras.layers import (BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dense,
-                                     Reshape, Activation)
-from models.layers import DeconvBlock, ResidualLayer, ConditionalAugmentation
+from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
+                                     Conv2DTranspose, Dense, Reshape)
+
+from models.layers import ConditionalAugmentation, DeconvBlock, ResidualLayer
 
 
 class Generator(Model):
@@ -83,8 +81,7 @@ class GeneratorStage1(Generator):
 
 
     def call(self, inputs, training=True):
-        embedding = inputs[0]
-        noise = inputs[1]
+        embedding, noise = inputs
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
         noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
 

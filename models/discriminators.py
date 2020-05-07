@@ -1,7 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Conv2D, Dense
-from models.layers import ResidualLayer, ConvBlock
+
+from models.layers import ConvBlock, ResidualLayer
+
 
 class Discriminator(Model):
     """ The definition for a network which
@@ -88,8 +90,7 @@ class DiscriminatorStage1(Discriminator):
         )
 
     def call(self, inputs, training=True):
-        images = inputs[0]
-        embedding = inputs[1]
+        images, embedding = inputs
         x = self.conv_1(images)
         x = tf.nn.leaky_relu(x, alpha=0.2)
 

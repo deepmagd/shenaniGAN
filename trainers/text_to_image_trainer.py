@@ -1,11 +1,7 @@
-import io
-from random import randint
-import matplotlib.pyplot as plt
-import matplotlib
-
 import numpy as np
 import tensorflow as tf
 from tqdm import trange
+
 from trainers.base_trainer import Trainer
 from utils.data_helpers import transform_image
 from utils.utils import extract_image_with_text
