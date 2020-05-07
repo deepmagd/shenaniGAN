@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
-                                     Conv2DTranspose, UpSampling2D, Dense)
+                                     Conv2DTranspose, Dense)
 
 
 class ResidualLayer(layers.Layer):
@@ -87,7 +87,7 @@ class ConditionalAugmentation(layers.Layer):
         self.conditional_emb_size = conditional_emb_size
         self.w_init = w_init
 
-    def build(self, x):
+    def build(self, inout_shape):
         self.dense_mean = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
         self.dense_sigma = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
 

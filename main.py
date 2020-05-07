@@ -1,7 +1,6 @@
 import argparse
 import os
 import sys
-from math import floor
 
 import numpy as np
 import tensorflow as tf

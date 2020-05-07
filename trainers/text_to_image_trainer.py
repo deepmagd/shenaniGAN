@@ -1,9 +1,7 @@
-import matplotlib.pyplot as plt
-import matplotlib
-
 import numpy as np
 import tensorflow as tf
 from tqdm import trange
+
 from trainers.base_trainer import Trainer
 from utils.data_helpers import tensors_from_sample
 
