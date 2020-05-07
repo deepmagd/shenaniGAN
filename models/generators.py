@@ -3,7 +3,8 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Reshape)
 
-from models.layers import ConditionalAugmentation, DeconvBlock, ResidualLayer
+from models.layers import (ConditionalAugmentation, ConvBlock, DeconvBlock,
+                           ResidualLayer, ResidualLayerStage2)
 
 
 class Generator(Model):
@@ -61,12 +62,12 @@ class GeneratorStage1(Generator):
 
         self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
 
-        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init, activation=False)
+        self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init)
 
         self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
 
-        self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=True)
-        self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=True)
+        self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=tf.nn.relu)
+        self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=tf.nn.relu)
 
         self.deconv2d_4 = Conv2DTranspose(
             self.num_output_channels, kernel_size=(4, 4), strides=(2, 2),
@@ -127,29 +128,121 @@ class GeneratorStage1(Generator):
         return loss
 
 
-class GeneratorStage2(Model):
+class GeneratorStage2(Generator):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
-    def __init__(self, img_size, num_latent_dims, kernel_size, num_filters,
-                 reshape_dims):
+    def __init__(self, img_size, kernel_size, num_filters,
+                 reshape_dims, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
                 img_size : tuple of ints
                     Size of images. E.g. (1, 32, 32) or (3, 64, 64).
-                num_latent_dims : int
-                    Dimensionality of latent input.
                 kernel_size : tuple
                     (height, width)
-                reshape_dims : tuple or list
+                reshape_dims : tuple or list TODO: actually use
                     [91, 125, 128]
+                lr : float
         """
-        super().__init__()
-        pass
+        super().__init__(img_size, lr, conditional_emb_size, w_init, bn_init)
+        self.num_output_channels = self.img_size[0]
+        self.conditional_emb_size = conditional_emb_size
+        assert self.num_output_channels == 3 or self.num_output_channels == 1, \
+            f'The number of output channels must be 2 or 1. Found {self.num_output_channels}'
 
-    def __call__(self, noise, embedding):
-        pass
+    def build(self, input_shape):
 
-    def loss(self, predictions_on_fake):
-        pass
+        # NOTE in authors implementation they do not use w_init in stage 2
+        self.conv2d_1 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), kernel_initializer=self.w_init)
+
+        self.conv_block_1 = ConvBlock(filters=128*2,
+                                      kernel_size=(4, 4),
+                                      strides=(2, 2),
+                                      padding='same',
+                                      w_init=self.w_init,
+                                      bn_init=self.bn_init,
+                                      activation=tf.nn.relu
+                                      )
+        self.conv_block_2 = ConvBlock(filters=128*4,
+                                      kernel_size=(4, 4),
+                                      strides=(2, 2),
+                                      padding='same',
+                                      w_init=self.w_init,
+                                      bn_init=self.bn_init,
+                                      activation=tf.nn.relu
+                                      )
+
+        self.conditional_augmentation = ConditionalAugmentation(self.conditional_emb_size, self.w_init)
+
+        self.conv_block_3 = ConvBlock(filters=128*4,
+                                      kernel_size=(3, 3),
+                                      strides=(1, 1),
+                                      padding='same',
+                                      w_init=self.w_init,
+                                      bn_init=self.bn_init,
+                                      activation=tf.nn.relu
+                                      )
+
+        self.res_block_1 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
+        self.res_block_2 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
+        self.res_block_3 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
+        self.res_block_4 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
+
+        self.deconv_block_1 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=tf.nn.relu)
+        self.deconv_block_2 = DeconvBlock(128, self.w_init, self.bn_init, activation=tf.nn.relu)
+        self.deconv_block_3 = DeconvBlock(128//2, self.w_init, self.bn_init, activation=tf.nn.relu)
+        self.deconv_block_4 = DeconvBlock(128//4, self.w_init, self.bn_init, activation=tf.nn.relu)
+
+        self.conv2d_2 = Conv2D(filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1))
+        self.tanh = Activation('tanh')
+
+
+    def call(self, inputs, training=True):
+        generated_image, embedding = inputs
+
+        x = self.conv2d_1(generated_image)
+        x = tf.nn.relu(x)
+
+        x = self.conv_block_1(x, training=training)
+        x = self.conv_block_2(x, training=training)
+
+        smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
+
+        smoothed_embedding = tf.expand_dims(tf.expand_dims(smoothed_embedding, 1), 1)
+        smoothed_embedding = tf.tile(smoothed_embedding, [1, 16, 16, 1])
+        x = tf.concat([x, smoothed_embedding], 3)
+
+        x = self.conv_block_3(x, training=training)
+
+        x = self.res_block_1(x, training=training)
+        x = self.res_block_2(x, training=training)
+        x = self.res_block_3(x, training=training)
+        x = self.res_block_4(x, training=training)
+
+        x = self.deconv_block_1(x, training=training)
+        x = self.deconv_block_2(x, training=training)
+        x = self.deconv_block_3(x, training=training)
+        x = self.deconv_block_4(x, training=training)
+
+        x = self.conv2d_2(x)
+        x = self.tanh(x)
+
+        return x, mean, log_sigma
+
+    def loss(self, predictions_on_fake, mean, log_sigma):
+        """ Only calculate the loss based on the discriminator
+            predictions for the images generated by this model.
+        """
+        kl_coeff = 2
+        loss = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=tf.ones_like(predictions_on_fake), logits=predictions_on_fake
+            ))
+        loss = loss + kl_coeff * self.kl_loss(mean, log_sigma)
+        return loss
+
+    def kl_loss(self, mean, log_sigma):
+        loss = .5 * (-log_sigma - 1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
+        loss = tf.reduce_mean(loss)
+        return loss
