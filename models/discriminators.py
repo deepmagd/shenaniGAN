@@ -41,6 +41,8 @@ class DiscriminatorStage1(Discriminator):
         self.d_dim = 64
 
     def build(self, input_size):
+        activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
+
         self.conv_1 = Conv2D(filters=self.d_dim,
                              kernel_size=(4, 4),
                              strides=(2, 2),
@@ -55,7 +57,7 @@ class DiscriminatorStage1(Discriminator):
                                       padding='same',
                                       w_init=self.w_init,
                                       bn_init=self.bn_init,
-                                      activation=True
+                                      activation=activation
                             )
         self.conv_block_2 = ConvBlock(filters=self.d_dim*4,
                                       kernel_size=(4, 4),
@@ -63,15 +65,14 @@ class DiscriminatorStage1(Discriminator):
                                       padding='same',
                                       w_init=self.w_init,
                                       bn_init=self.bn_init,
-                                      activation=True
+                                      activation=activation
                                     )
         self.conv_block_3 = ConvBlock(filters=self.d_dim*8,
                                       kernel_size=(4, 4),
                                       strides=(2, 2),
                                       padding='same',
                                       w_init=self.w_init,
-                                      bn_init=self.bn_init,
-                                      activation=False
+                                      bn_init=self.bn_init
                                     )
 
         self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init)
@@ -80,7 +81,7 @@ class DiscriminatorStage1(Discriminator):
 
         self.conv_block_4 = ConvBlock(
             filters=self.d_dim*8, kernel_size=(1, 1), strides=(1, 1), padding='valid',
-            w_init=self.w_init, bn_init=self.bn_init, activation=True
+            w_init=self.w_init, bn_init=self.bn_init, activation=activation
         )
 
         # (4, 4) == 64/16
