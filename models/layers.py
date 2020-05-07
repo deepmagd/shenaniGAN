@@ -35,9 +35,37 @@ class ResidualLayer(layers.Layer):
         x = self.conv2d_3(x)
         return self.bn_3(x, training=training)
 
+class ResidualLayerStage2(layers.Layer):
+
+    def __init__(self, filters, w_init, bn_init):
+        super(ResidualLayerStage2, self).__init__()
+        self.filters = filters
+        self.w_init = w_init
+        self.bn_init = bn_init
+
+    def build(self, input_shape):
+        self.conv2d_1 = Conv2D(filters=self.filters, kernel_size=(4, 4), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=self.w_init)
+        self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
+
+        self.conv2d_2 = Conv2D(filters=self.filters, kernel_size=(4, 4), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=self.w_init)
+        self.bn_2 = BatchNormalization(gamma_initializer=self.bn_init)
+
+    def call(self, x, training=True):
+        inputs = x
+
+        res = self.conv2d_1(x)
+        res = self.bn_1(res, training=training)
+        res = tf.nn.relu(res)
+
+        res = self.conv2d_2(res)
+        res = self.bn_2(res, training=training)
+
+        res = tf.add(inputs, res)
+        return tf.nn.relu(res)
+
 class DeconvBlock(layers.Layer):
 
-    def __init__(self, filters, w_init, bn_init, activation=False):
+    def __init__(self, filters, w_init, bn_init, activation=None):
         super(DeconvBlock, self).__init__()
         self.activation = activation
         self.filters = filters
@@ -53,13 +81,13 @@ class DeconvBlock(layers.Layer):
         x = self.deconv2d(x)
         x = self.conv2d(x)
         x = self.bn(x, training=training)
-        if self.activation:
-            x = tf.nn.relu(x)
+        if self.activation is not None:
+            x = self.activation(x)
         return x
 
 class ConvBlock(layers.Layer):
 
-    def __init__(self, filters, kernel_size, strides, padding, w_init, bn_init, activation=False):
+    def __init__(self, filters, kernel_size, strides, padding, w_init, bn_init, activation=None):
         super(ConvBlock, self).__init__()
         self.activation = activation
         self.filters = filters
@@ -76,8 +104,8 @@ class ConvBlock(layers.Layer):
     def call(self, x, training=True):
         x = self.conv2d(x)
         x = self.bn(x, training=training)
-        if self.activation:
-            x = tf.nn.leaky_relu(x, alpha=0.2)
+        if self.activation is not None:
+            x = self.activation(x)
         return x
 
 class ConditionalAugmentation(layers.Layer):
