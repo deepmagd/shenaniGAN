@@ -1,10 +1,7 @@
 from glob import glob
-import io
 import json
-import numpy as np
 import os
 import pickle
-from PIL import Image
 import re
 import shutil
 import tensorflow as tf

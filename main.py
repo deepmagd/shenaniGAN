@@ -37,6 +37,10 @@ def parse_arguments(args_to_parse):
         '-d', '--dataset-name', help="Name of the dataset to use during training.",
         default=default_settings['dataset'], choices=DATASETS
     )
+    general.add_argument(
+        '--save-every', type=int, default=default_settings['save_every_n_epochs'],
+        help='Save the model every n epochs, regardless of the validation loss'
+    )
 
     data = parser.add_argument_group('Data settings')
     data.add_argument(
@@ -157,6 +161,8 @@ def main(args):
             model=model,
             batch_size=args.batch_size,
             save_location=results_dir,
+            save_every=args.save_every,
+            save_best_after=default_settings['save_best_after_n_epochs'],
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
             noise_size=default_settings['noise_size'],

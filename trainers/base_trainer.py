@@ -5,7 +5,7 @@ from utils.logger import MetricsLogger
 
 class Trainer(object):
     def __init__(self, model, batch_size, save_location,
-                 show_progress_bar=True):
+                 save_every, save_best_after, show_progress_bar=True):
         """ Initialise the model trainer
             Arguments:
             model: models.ConditionalGAN
@@ -16,12 +16,15 @@ class Trainer(object):
                 The directory in which to save all
                 results from training the model.
         """
-        self.show_progress_bar = show_progress_bar
         self.model = model
         self.batch_size = batch_size
         self.save_dir = save_location
+        self.save_every = save_every
+        self.save_best_after = save_best_after
         self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.csv'))
         self.val_logger = MetricsLogger(os.path.join(self.save_dir, 'val.csv'))
+        self.minimum_val_loss = None
+        self.show_progress_bar = show_progress_bar
 
     def __call__(self, train_loader, val_loader, num_epochs):
         """ Trains the model.
@@ -43,7 +46,9 @@ class Trainer(object):
             print(f'Metrics: {val_metrics}')
             self.val_logger(val_metrics)
             # Save
-            self.save_model(epoch_num)
+            if ((epoch_num + 1) % self.save_every == 0) or \
+               ((epoch_num + 1) > self.save_best_after and self.is_best(val_metrics['generator_loss'])):
+                self.save_model(epoch_num)
 
         self.train_logger.close()
         self.val_logger.close()
@@ -56,5 +61,17 @@ class Trainer(object):
         pass
 
     def save_model(self, epoch_num):
-        tf.saved_model.save(self.model.generator, os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator'))
-        tf.saved_model.save(self.model.discriminator, os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator'))
+        tf.saved_model.save(
+            self.model.generator,
+            os.path.join(self.save_dir, f'model_{epoch_num}', 'generator', 'generator')
+        )
+        tf.saved_model.save(
+            self.model.discriminator,
+            os.path.join(self.save_dir, f'model_{epoch_num}', 'discriminator', 'discriminator')
+        )
+
+    def is_best(self, generator_loss):
+        if self.minimum_val_loss is None or self.minimum_val_loss > generator_loss:
+            self.minimum_val_loss = generator_loss
+            return True
+        return False
