@@ -119,7 +119,8 @@ class FlowersWithWordsDataset(StackGANDataset):
                 image_source_dir=os.path.join(self.directory, 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
                 bounding_boxes_path=None,
-                image_dims=(self.height, self.width)
+                image_dims_large=self.image_dims_large,
+                image_dims_small=self.image_dims_small
             )
 
         records_dir = os.path.join(self.directory, 'records')
