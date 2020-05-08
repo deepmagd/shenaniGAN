@@ -7,9 +7,7 @@ from utils.data_helpers import (download_dataset, check_for_xrays, get_record_pa
 from utils.data_helpers import NUM_COLOUR_CHANNELS, extract_flowers_labels
 
 DATASETS_DICT = {
-    "birds": "BirdsDataset",
     "birds-with-text": "BirdsWithWordsDataset",
-    "flowers": "FlowersDataset",
     "flowers-with-text": "FlowersWithWordsDataset",
     "xrays": "XRaysDataset"
 }
@@ -28,87 +26,59 @@ def get_dataset(dataset_name):
         raise Exception('Invalid dataset name {}.'.format(dataset_name))
 
 
-class StackedGANDataset(object):
+class StackGANDataset(object):
     """ Base class for all datasets """
     def __init__(self):
         self.type = None
         self.directory = None
-        self.image_label_pairs = None
-        self.classes = None
-        self.width = None
-        self.height = None
+        self.image_dims_small = (None, None)
+        self.image_dims_large = (None, None)
         self.num_channels = None
+        self.text_embedding_dim = None
 
-    def get_dims(self):
-        return (self.num_channels, self.height, self.width)
-
-    def get_image_label_pairs(self, dataset):
-        image_paths = tf.data.Dataset.list_files(str(self.directory/'*/*'))
-        if dataset == 'birds':
-            self.image_label_pairs = image_paths.map(self.process_path, num_parallel_calls=AUTOTUNE)
-        elif dataset == 'flowers':
-            labels = extract_flowers_labels(os.path.join(self.directory, 'imagelabels.mat'))
-            self.image_label_pairs = [(image_path, label) for image_path, label in zip(image_paths, labels)]
-        else:
-            raise Exception('Unexpected dataset type: {}'.format(dataset))
-
-    def process_path(self, file_path):
-        label = self.get_label(file_path)
-        # Load the raw data from the file as a string
-        img = tf.io.read_file(file_path)
-        img = self.decode_img(img)
-        return img, label
-
-    def get_label(self, file_path):
-        # Convert the path to a list of path components
-        parts = tf.strings.split(file_path, os.path.sep)
-        # The second to last is the class-directory
-        return parts[-2] == self.classes
-
-    def decode_img(self, img):
-        # Convert the compressed string to a 3D uint8 tensor
-        img = tf.image.decode_jpeg(img, channels=NUM_COLOUR_CHANNELS)
-        # Convert to floats in the [0,1] range
-        img = tf.image.convert_image_dtype(img, dtype=tf.float32)
-        # Resize the image to the desired size
-        return tf.image.resize(img, [self.width, self.height])
-
-class BirdsDataset(StackedGANDataset):
-    """ Container for the birds dataset properties. """
-    def __init__(self):
-        super().__init__()
-        self.type = 'images'
-        self.directory = pathlib.Path(os.path.join('data/CUB_200_2011/CUB_200_2011/images'))
-        if not os.path.isdir(self.directory):
-            download_dataset(dataset='birds')
-        self.classes = np.array(
-            [item.name for item in self.directory.glob('*') if os.path.isdir(item.name)]
-        )
-        self.width = 64
-        self.height = 64
-        self.num_channels = 3
-        self.get_image_label_pairs('birds')
-
-
-class BirdsWithWordsDataset(StackedGANDataset):
-    """ Container for the birds dataset which includes word captions """
-    def __init__(self):
-        super().__init__()
-        # The directory to the TFRecords
-        self.type = 'images-with-captions'
-        self.width = 64
-        self.height = 64
-        self.num_channels = 3
-        self.text_embedding_dim = 1024
-
-        # self.classes = None
         self.feature_description = {
-            'image_raw': tf.io.FixedLenFeature([], tf.string),
-            'wrong_image_raw': tf.io.FixedLenFeature([], tf.string),
+            'image_small': tf.io.FixedLenFeature([], tf.string),
+            'image_large': tf.io.FixedLenFeature([], tf.string),
+            'wrong_image_small': tf.io.FixedLenFeature([], tf.string),
+            'wrong_image_large': tf.io.FixedLenFeature([], tf.string),
             'name': tf.io.FixedLenFeature([], tf.string),
             'text': tf.io.FixedLenFeature([], tf.string),
             'label': tf.io.FixedLenFeature([], tf.int64),
         }
+
+    def get_small_dims(self):
+        """ Return in the form (dept, height, width) """
+        return (self.num_channels, self.image_dims_small[1], self.image_dims_small[0])
+
+    def get_large_dims(self):
+        """ Return in the form (dept, height, width) """
+        return (self.num_channels, self.image_dims_large[1], self.image_dims_large[0])
+
+    def parse_dataset(self, subset='train', batch_size=1):
+        """ Parse the raw data from the TFRecords and arrange into a readable form
+            for the trainer object.
+        """
+        if subset not in ['train', 'test']:
+            raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
+        subset_paths = get_record_paths(os.path.join(self.directory, subset))
+        subset_obj = tf.data.TFRecordDataset(subset_paths)
+        mapped_subset_obj = subset_obj.map(self._parse_example)
+        return mapped_subset_obj.batch(batch_size)
+
+    def _parse_example(self, example_proto):
+        # Parse the input tf.Example proto using self.feature_description
+        return tf.io.parse_single_example(example_proto, self.feature_description)
+
+
+class BirdsWithWordsDataset(StackGANDataset):
+    """ Container for the birds dataset which includes word captions """
+    def __init__(self):
+        super().__init__()
+        self.type = 'images-with-captions'
+        self.image_dims_small = (64, 64)
+        self.image_dims_large = (256, 256)
+        self.num_channels = 3
+        self.text_embedding_dim = 1024
 
         self.directory = pathlib.Path(
             os.path.join('data/CUB_200_2011_with_text/')
@@ -120,61 +90,24 @@ class BirdsWithWordsDataset(StackedGANDataset):
                 image_source_dir=os.path.join(self.directory, 'images', 'CUB_200_2011', 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
                 bounding_boxes_path=os.path.join(self.directory, 'images', 'CUB_200_2011'),
-                image_dims=(self.height, self.width)
+                image_dims_large=self.image_dims_large,
+                image_dims_small=self.image_dims_small
             )
 
         records_dir = os.path.join(self.directory, 'records')
         if os.path.isdir(records_dir):
             self.directory = records_dir
 
-    def parse_dataset(self, subset='train', batch_size=1):
-        """ Parse the raw data from the TFRecords and arrange into a readable form
-            for the trainer object.
-        """
-        if subset not in ['train', 'test']:
-            raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
-        subset_paths = get_record_paths(os.path.join(self.directory, subset))
-        subset_obj = tf.data.TFRecordDataset(subset_paths)
-        mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj.batch(batch_size)
 
-    def _parse_example(self, example_proto):
-        # Parse the input tf.Example proto using self.feature_description
-        return tf.io.parse_single_example(example_proto, self.feature_description)
-
-
-class FlowersDataset(StackedGANDataset):
-    """ TODO: Container for the birds dataset properties """
-    def __init__(self):
-        super().__init__()
-        self.type = 'images'
-        self.directory = pathlib.Path(os.path.join('data/flowers/'))
-        if not os.path.isdir(self.directory):
-            download_dataset(dataset='flowers')
-        self.classes = list(set(extract_flowers_labels(os.path.join(self.directory, 'imagelabels.mat'))))
-        self.width = 64  # TODO: Double check that I have this right
-        self.height = 64
-        self.num_channels = 3
-        self.get_image_label_pairs('flowers')
-
-class FlowersWithWordsDataset(StackedGANDataset):
+class FlowersWithWordsDataset(StackGANDataset):
     """ Container for the birds dataset which includes word captions """
     def __init__(self):
         super().__init__()
-        # The directory to the TFRecords
         self.type = 'images-with-captions'
-        self.width = 64
-        self.height = 64
+        self.image_dims_small = (64, 64)
+        self.image_dims_large = (256, 256)
         self.num_channels = 3
         self.text_embedding_dim = 1024
-
-        self.feature_description = {
-            'image_raw': tf.io.FixedLenFeature([], tf.string),
-            'wrong_image_raw': tf.io.FixedLenFeature([], tf.string),
-            'name': tf.io.FixedLenFeature([], tf.string),
-            'text': tf.io.FixedLenFeature([], tf.string),
-            'label': tf.io.FixedLenFeature([], tf.int64),
-        }
 
         self.directory = pathlib.Path(
             os.path.join('data/flowers_with_text/')
@@ -186,46 +119,27 @@ class FlowersWithWordsDataset(StackedGANDataset):
                 image_source_dir=os.path.join(self.directory, 'images'),
                 text_source_dir=os.path.join(self.directory, 'text'),
                 bounding_boxes_path=None,
-                image_dims=(self.height, self.width)
+                image_dims_large=self.image_dims_large,
+                image_dims_small=self.image_dims_small
             )
 
         records_dir = os.path.join(self.directory, 'records')
         if os.path.isdir(records_dir):
             self.directory = records_dir
 
-    def parse_dataset(self, subset='train', batch_size=1):
-        """ Parse the raw data from the TFRecords and arrange into a readable form
-            for the trainer object.
-        """
-        if subset not in ['train', 'test']:
-            raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
-        subset_paths = get_record_paths(os.path.join(self.directory, subset))
-        subset_obj = tf.data.TFRecordDataset(subset_paths)
-        mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj.batch(batch_size)
 
-    def _parse_example(self, example_proto):
-        # Parse the input tf.Example proto using self.feature_description
-        return tf.io.parse_single_example(example_proto, self.feature_description)
-
-class XRaysDataset(StackedGANDataset):
+class XRaysDataset(StackGANDataset):
     """ XXX: Container for the x-rays dataset properties """
     def __init__(self):
         super().__init__()
+        # TODO: Rename valid to test in data download
         self.type = 'images-with-tabular'
         # NOTE: width and height are for the small dataset for now
-        self.width = 390
-        self.height = 320
+        self.image_dims_small = (None, None)
+        self.image_dims_large = (390, 320)
         self.num_channels = 1
         # TODO: Set this
         self.text_embedding_dim = None
-
-        self.feature_description = {
-            'image_raw': tf.io.FixedLenFeature([], tf.string),
-            'name': tf.io.FixedLenFeature([], tf.string),
-            'text': tf.io.FixedLenFeature([], tf.string),
-            'label': tf.io.FixedLenFeature([], tf.int64),
-        }
 
         base_directory = 'data/CheXpert-v1.0-small'
         if not os.path.isdir(os.path.join(base_directory, 'raw')):
@@ -239,19 +153,3 @@ class XRaysDataset(StackedGANDataset):
                 text_source_dir=os.path.join(base_directory, 'raw'),
                 image_dims=(self.height, self.width)
             )
-
-    def parse_dataset(self, subset='train', batch_size=1):
-        """ Parse the raw data from the TFRecords and arrange into a readable form
-            for the trainer object.
-        """
-        if subset not in ['train', 'valid']:
-            raise Exception('Invalid subset type: {}, expected train or valid'.format(subset))
-
-        subset_paths = get_record_paths(os.path.join(self.directory, subset))
-        subset_obj = tf.data.TFRecordDataset(subset_paths)
-        mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj.batch(batch_size)
-
-    def _parse_example(self, example_proto):
-        # Parse the input tf.Example proto using self.feature_description
-        return tf.io.parse_single_example(example_proto, self.feature_description)

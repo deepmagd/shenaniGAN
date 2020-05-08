@@ -8,8 +8,7 @@ import tensorflow as tf
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
 from trainers.trainers import get_trainer
-from utils.data_helpers import sample_real_images, show_image_list
-from utils.datasets import DATASETS, get_dataset
+from utils.datasets import DATASETS
 from utils.logger import LogPlotter
 from utils.utils import extract_epoch_num, get_default_settings, save_options
 from visualise.visualise import compare_generated_to_real
@@ -118,7 +117,7 @@ def main(args):
 
     default_settings = get_default_settings(SETTINGS_FILE)
 
-    train_loader, val_loader, dataset_dims = create_dataloaders(args)
+    train_loader, val_loader, small_image_dims, large_image_dims = create_dataloaders(args)
 
     # Create the model
     # TODO: conditional_emb_size is probably too specific for when we just have a standard GAN
@@ -128,7 +127,7 @@ def main(args):
             args.epoch_num = extract_epoch_num(results_dir)
 
         model = StackGAN1(
-            img_size=dataset_dims,
+            img_size=small_image_dims,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],
@@ -144,7 +143,7 @@ def main(args):
 
     else:
         model = StackGAN1(
-            img_size=dataset_dims,
+            img_size=small_image_dims,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
             reshape_dims=[args.target_size, args.target_size, args.num_filters],

@@ -1,11 +1,8 @@
-from trainers.image_trainer import ImageTrainer
 from trainers.text_to_image_trainer import TextToImageTrainer
 
 
 TRAINERS_DICT = {
-    "birds": "ImageTrainer",
     "birds-with-text": "TextToImageTrainer",
-    "flowers": "ImageTrainer",
     "flowers-with-text": "TextToImageTrainer",
     "xrays": "TextToImageTrainer"
 }
