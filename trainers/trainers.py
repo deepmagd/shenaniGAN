@@ -1,10 +1,10 @@
-from trainers.text_to_image_trainer import TextToImageTrainer
+from trainers.stage_1_trainer import Stage1Trainer
 
 
 TRAINERS_DICT = {
-    "birds-with-text": "TextToImageTrainer",
-    "flowers-with-text": "TextToImageTrainer",
-    "xrays": "TextToImageTrainer"
+    "birds-with-text": "Stage1Trainer",
+    "flowers-with-text": "Stage1Trainer",
+    "xrays": "Stage1Trainer"
 }
 TRAINERS = list(TRAINERS_DICT.keys())
 
