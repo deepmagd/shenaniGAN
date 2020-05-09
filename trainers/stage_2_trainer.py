@@ -5,7 +5,7 @@ from trainers.base_trainer import Trainer
 from utils.data_helpers import tensors_from_sample
 
 
-class Stage1Trainer(Trainer):
+class Stage2Trainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
     def __init__(self, model, batch_size, save_location,
                  save_every, save_best_after, show_progress_bar=True, **kwargs):
@@ -49,7 +49,7 @@ class Stage1Trainer(Trainer):
                     fake_images_small, _, _ = self.stage_1_generator([text_tensor, noise_z], training=False)
 
                     fake_images_large, mean, log_sigma = self.model.generator(
-                        [text_tensor, noise_z, fake_images_small], training=True
+                        [fake_images_small, text_tensor], training=True
                     )
                     assert fake_images_large.shape == image_large.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -124,7 +124,7 @@ class Stage1Trainer(Trainer):
                 fake_images_small, _, _ = self.stage_1_generator([text_tensor, noise_z], training=False)
 
                 fake_images, mean, log_sigma = self.model.generator(
-                    [text_tensor, noise_z, fake_images_small], training=False
+                    [fake_images_small, text_tensor], training=False
                 )
                 assert fake_images.shape == image_large.shape, \
                     'Real ({}) and fakes ({}) images must have the same dimensions'.format(

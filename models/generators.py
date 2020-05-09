@@ -80,7 +80,6 @@ class GeneratorStage1(Generator):
 
         self.tanh = Activation('tanh')
 
-
     def call(self, inputs, training=True):
         embedding, noise = inputs
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
@@ -196,7 +195,6 @@ class GeneratorStage2(Generator):
 
         self.conv2d_2 = Conv2D(filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1))
         self.tanh = Activation('tanh')
-
 
     def call(self, inputs, training=True):
         generated_image, embedding = inputs
