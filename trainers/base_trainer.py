@@ -27,7 +27,7 @@ class Trainer(object):
         self.val_logger = MetricsLogger(os.path.join(self.save_dir, 'val.csv'))
         self.minimum_val_loss = None
         self.show_progress_bar = show_progress_bar
-        self.callbacks = callbacks
+        self.callbacks = callbacks if callbacks is not None else []
 
     def __call__(self, train_loader, val_loader, num_epochs):
         """ Trains the model.
