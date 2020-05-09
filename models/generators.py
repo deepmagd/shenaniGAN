@@ -24,7 +24,7 @@ class Generator(Model):
         """
         super().__init__()
         self.img_size = img_size
-        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
+        self.optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
         # Weight Initialisation Parameters
         self.w_init = w_init

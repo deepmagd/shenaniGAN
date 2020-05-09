@@ -8,6 +8,7 @@ import tensorflow as tf
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1
 from trainers.trainers import get_trainer
+from utils.callbacks import LearningRateDecay
 from utils.datasets import DATASETS
 from utils.logger import LogPlotter
 from utils.utils import extract_epoch_num, get_default_settings, save_options
@@ -142,6 +143,11 @@ def main(args):
         model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
 
     else:
+        lr_decay = LearningRateDecay(
+            decay_factor=default_settings['callbacks']['learning_rate_decay']['decay_factor'],
+            every_n=default_settings['callbacks']['learning_rate_decay']['every_n']
+        )
+
         model = StackGAN1(
             img_size=small_image_dims,
             kernel_size=args.kernel_size,
@@ -164,7 +170,8 @@ def main(args):
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
             noise_size=default_settings['noise_size'],
-            augment=default_settings['augment']
+            augment=default_settings['augment'],
+            callbacks=[lr_decay]
         )
         trainer(train_loader, val_loader, num_epochs=args.num_epochs)
 
