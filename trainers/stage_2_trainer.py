@@ -1,15 +1,14 @@
 import numpy as np
-import tensorflow as tf
 from tqdm import trange
-
+import tensorflow as tf
 from trainers.base_trainer import Trainer
 from utils.data_helpers import tensors_from_sample
 
 
-class TextToImageTrainer(Trainer):
+class Stage2Trainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
-    def __init__(self, model, batch_size, save_location,
-                 save_every, save_best_after, callbacks=None, show_progress_bar=True, **kwargs):
+    def __init__(self, model, batch_size, save_location, save_every,
+                 save_best_after, callbacks=None, show_progress_bar=True, **kwargs):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
@@ -25,6 +24,7 @@ class TextToImageTrainer(Trainer):
         self.num_samples = kwargs.get('num_samples')
         self.noise_size = kwargs.get('noise_size')
         self.augment = kwargs.get('augment')
+        self.stage_1_generator = kwargs.get('stage_1_generator')
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -39,30 +39,42 @@ class TextToImageTrainer(Trainer):
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 batch_size = len(sample['text'].numpy())
-                image_small, wrong_image_small, _, _, text_tensor = tensors_from_sample(
+                _, _, image_large, wrong_image_large, text_tensor = tensors_from_sample(
                     sample, batch_size, text_embedding_size, self.num_samples, self.augment
                 )
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
+                    # Forward pass the stage 1 generator to obtain small fake images
                     noise_z = tf.random.normal((batch_size, self.noise_size))
-                    fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=True)
+                    fake_images_small, _, _ = self.stage_1_generator([text_tensor, noise_z], training=False)
 
-                    assert fake_images.shape == image_small.shape, \
+                    fake_images_large, mean, log_sigma = self.model.generator(
+                        [fake_images_small, text_tensor], training=True
+                    )
+                    assert fake_images_large.shape == image_large.shape, \
                         'Real ({}) and fakes ({}) images must have the same dimensions'.format(
-                            image_small.shape, fake_images.shape
+                            image_large.shape, fake_images_large.shape
                         )
 
-                    real_predictions = tf.squeeze(self.model.discriminator([image_small, text_tensor], training=True))
-                    wrong_predictions = tf.squeeze(self.model.discriminator([wrong_image_small, text_tensor], training=True))
-                    fake_predictions = tf.squeeze(self.model.discriminator([fake_images, text_tensor], training=True))
+                    real_predictions = tf.squeeze(
+                        self.model.discriminator([image_large, text_tensor], training=True)
+                    )
+                    wrong_predictions = tf.squeeze(
+                        self.model.discriminator([wrong_image_large, text_tensor], training=True)
+                    )
+                    fake_predictions = tf.squeeze(
+                        self.model.discriminator([fake_images_large, text_tensor], training=True)
+                    )
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
-                        'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
+                        'Real ({}), wrong ({}) and fake ({}) image predictions must have the same dimensions'.format(
                             real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                         )
 
                     generator_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                    discriminator_loss = self.model.discriminator.loss(real_predictions, wrong_predictions, fake_predictions)
+                    discriminator_loss = self.model.discriminator.loss(
+                        real_predictions, wrong_predictions, fake_predictions
+                    )
 
                 # Update gradients
                 generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
@@ -104,28 +116,40 @@ class TextToImageTrainer(Trainer):
         with trange(len(val_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(val_loader.parsed_subset):
                 batch_size = len(sample['text'].numpy())
-                image_small, wrong_image_small, _, _, text_tensor = tensors_from_sample(
+                _, _, image_large, wrong_image_large, text_tensor = tensors_from_sample(
                     sample, batch_size, text_embedding_size, self.num_samples, self.augment
                 )
+                # Generate fake small images
                 noise_z = tf.random.normal((batch_size, self.noise_size))
-                fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=False)
+                fake_images_small, _, _ = self.stage_1_generator([text_tensor, noise_z], training=False)
 
-                assert fake_images.shape == image_small.shape, \
+                fake_images, mean, log_sigma = self.model.generator(
+                    [fake_images_small, text_tensor], training=False
+                )
+                assert fake_images.shape == image_large.shape, \
                     'Real ({}) and fakes ({}) images must have the same dimensions'.format(
-                        image_small.shape, fake_images.shape
+                        image_large.shape, fake_images.shape
                     )
 
-                real_predictions = tf.squeeze(self.model.discriminator([image_small, text_tensor], training=False))
-                wrong_predictions = tf.squeeze(self.model.discriminator([wrong_image_small, text_tensor], training=False))
-                fake_predictions = tf.squeeze(self.model.discriminator([fake_images, text_tensor], training=False))
+                real_predictions = tf.squeeze(
+                    self.model.discriminator([image_large, text_tensor], training=False)
+                )
+                wrong_predictions = tf.squeeze(
+                    self.model.discriminator([wrong_image_large, text_tensor], training=False)
+                )
+                fake_predictions = tf.squeeze(
+                    self.model.discriminator([fake_images, text_tensor], training=False)
+                )
 
                 assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
-                    'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
+                    'Real ({}), wrong ({}) and fake ({}) image predictions must have the same dimensions'.format(
                         real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                     )
 
                 generator_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                discriminator_loss = self.model.discriminator.loss(real_predictions, wrong_predictions, fake_predictions)
+                discriminator_loss = self.model.discriminator.loss(
+                    real_predictions, wrong_predictions, fake_predictions
+                )
 
                 # Update tqdm
                 t.set_postfix(generator_loss=generator_loss, discriminator_loss=discriminator_loss)
@@ -135,7 +159,7 @@ class TextToImageTrainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                # if batch_idx == 5:
+                # if batch_idx == 1:
                 #     break
 
         return {

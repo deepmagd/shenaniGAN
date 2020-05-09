@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from dataloaders.dataloaders import create_dataloaders
-from models.conditional_gans import StackGAN1
+from models.conditional_gans import StackGAN1, StackGAN2
 from trainers.trainers import get_trainer
 from utils.callbacks import LearningRateDecay
 from utils.datasets import DATASETS
@@ -39,6 +39,10 @@ def parse_arguments(args_to_parse):
     general.add_argument(
         '--save-every', type=int, default=default_settings['save_every_n_epochs'],
         help='Save the model every n epochs, regardless of the validation loss'
+    )
+    general.add_argument(
+        '--stage', type=int, choices=[1, 2], required=True,
+        help='Whether to train stage 1 or 2.'
     )
 
     data = parser.add_argument_group('Data settings')
@@ -77,6 +81,11 @@ def parse_arguments(args_to_parse):
         '--conditional-emb-size', type=int, help='The number of elements in the conditiona embedding',
         default=default_settings['conditional_emb_size']
     )
+    training.add_argument(
+        '-s', '--target-size', type=int, default=default_settings['target_size'],
+        help='The target dimension for the training data. \
+              E.g. --target-size = 256 results in a (256, 256) image'
+    )
 
     evaluation = parser.add_argument_group('Evaluation settings')
     evaluation.add_argument(
@@ -101,53 +110,53 @@ def parse_arguments(args_to_parse):
         '-c', '--images-to-classify', type=int, default=default_settings['num_images_to_classify'],
         help='The number of images to classify and visualise.'
     )
-    training.add_argument(
-        '-s', '--target-size', type=int, default=default_settings['target_size'],
-        help='The target dimension for the training data. \
-              E.g. --target-size = 256 results in a (256, 256) image'
-    )
 
     args = parser.parse_args(args_to_parse)
     args.kernel_size = (args.kernel_size, args.kernel_size)
     return args
 
+def load_model(args, image_dims, results_dir):
+    model = StackGAN1(
+        img_size=image_dims,
+        kernel_size=args.kernel_size,
+        num_filters=args.num_filters,
+        reshape_dims=[args.target_size, args.target_size, args.num_filters],
+        lr_g=args.lr_g,
+        lr_d=args.lr_d,
+        conditional_emb_size=args.conditional_emb_size,
+        w_init=tf.random_normal_initializer(stddev=0.02),
+        bn_init=tf.random_normal_initializer(1., 0.02)
+    )
+    if args.stage == 2:
+        results_dir = results_dir.replace('stage-2', 'stage-1')
+
+    if args.epoch_num == -1:
+        # Find last checkpoint
+        args.epoch_num = extract_epoch_num(results_dir)
+
+    pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
+    model.generator = tf.saved_model.load(os.path.join(pretrained_dir, 'generator', 'generator'))
+    model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
+    return model
 
 def main(args):
-    results_dir = os.path.join(RESULTS_ROOT, args.name)
+    results_dir = os.path.join(RESULTS_ROOT, args.name, f'stage-{args.stage}')
     save_options(options=args, save_dir=results_dir)
 
     default_settings = get_default_settings(SETTINGS_FILE)
 
     train_loader, val_loader, small_image_dims, large_image_dims = create_dataloaders(args)
 
+    lr_decay = LearningRateDecay(
+        decay_factor=default_settings['callbacks']['learning_rate_decay']['decay_factor'],
+        every_n=default_settings['callbacks']['learning_rate_decay']['every_n']
+    )
+
     # Create the model
-    # TODO: conditional_emb_size is probably too specific for when we just have a standard GAN
-    if args.use_pretrained:
-        if args.epoch_num == -1:
-            # Find last checkpoint
-            args.epoch_num = extract_epoch_num(results_dir)
+    if args.stage == 1 and args.use_pretrained:
+        model = load_model(args, small_image_dims, results_dir)
 
-        model = StackGAN1(
-            img_size=small_image_dims,
-            kernel_size=args.kernel_size,
-            num_filters=args.num_filters,
-            reshape_dims=[args.target_size, args.target_size, args.num_filters],
-            lr_g=args.lr_g,
-            lr_d=args.lr_d,
-            conditional_emb_size=args.conditional_emb_size,
-            w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
-        )
-        pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
-        model.generator = tf.saved_model.load(os.path.join(pretrained_dir, 'generator', 'generator'))
-        model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
-
-    else:
-        lr_decay = LearningRateDecay(
-            decay_factor=default_settings['callbacks']['learning_rate_decay']['decay_factor'],
-            every_n=default_settings['callbacks']['learning_rate_decay']['every_n']
-        )
-
+    elif args.stage == 1:
         model = StackGAN1(
             img_size=small_image_dims,
             kernel_size=args.kernel_size,
@@ -160,18 +169,55 @@ def main(args):
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
 
-        trainer_class = get_trainer(args.dataset_name)
+        trainer_class = get_trainer(args.stage)
         trainer = trainer_class(
             model=model,
             batch_size=args.batch_size,
             save_location=results_dir,
             save_every=args.save_every,
             save_best_after=default_settings['save_best_after_n_epochs'],
+            callbacks=[lr_decay],
+            num_embeddings=default_settings['num_embeddings'],
+            num_samples=default_settings['num_samples'],
+            noise_size=default_settings['noise_size'],
+            augment=default_settings['augment']
+        )
+        trainer(train_loader, val_loader, num_epochs=args.num_epochs)
+
+        # Plot metrics
+        plotter = LogPlotter(results_dir)
+        plotter.learning_curve()
+
+    elif args.stage == 2 and args.use_pretrained:
+        raise NotImplementedError('We have not yet provided the ability to load pretrained stage 2 models')
+
+    elif args.stage == 2:
+        model_stage2 = StackGAN2(
+            img_size=small_image_dims,
+            kernel_size=args.kernel_size,
+            num_filters=args.num_filters,
+            reshape_dims=[args.target_size, args.target_size, args.num_filters],
+            lr_g=args.lr_g,
+            lr_d=args.lr_d,
+            conditional_emb_size=args.conditional_emb_size,
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+        model_stage1 = load_model(args, small_image_dims, results_dir)
+
+        trainer_class = get_trainer(args.stage)
+        trainer = trainer_class(
+            model=model_stage2,
+            batch_size=args.batch_size,
+            save_location=results_dir,
+            save_every=args.save_every,
+            save_best_after=default_settings['save_best_after_n_epochs'],
+            callbacks=[lr_decay],
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
             noise_size=default_settings['noise_size'],
             augment=default_settings['augment'],
-            callbacks=[lr_decay]
+            stage_1_generator=model_stage1.generator
         )
         trainer(train_loader, val_loader, num_epochs=args.num_epochs)
 

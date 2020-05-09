@@ -58,8 +58,6 @@ class Trainer(object):
         self.train_logger.close()
         self.val_logger.close()
 
-
-
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
         pass
