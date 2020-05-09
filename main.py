@@ -8,6 +8,7 @@ import tensorflow as tf
 from dataloaders.dataloaders import create_dataloaders
 from models.conditional_gans import StackGAN1, StackGAN2
 from trainers.trainers import get_trainer
+from utils.callbacks import LearningRateDecay
 from utils.datasets import DATASETS
 from utils.logger import LogPlotter
 from utils.utils import extract_epoch_num, get_default_settings, save_options
@@ -146,8 +147,12 @@ def main(args):
 
     train_loader, val_loader, small_image_dims, large_image_dims = create_dataloaders(args)
 
+    lr_decay = LearningRateDecay(
+        decay_factor=default_settings['callbacks']['learning_rate_decay']['decay_factor'],
+        every_n=default_settings['callbacks']['learning_rate_decay']['every_n']
+    )
+
     # Create the model
-    # TODO: conditional_emb_size is probably too specific for when we just have a standard GAN
     if args.stage == 1 and args.use_pretrained:
         model = load_model(args, small_image_dims, results_dir)
 
@@ -171,6 +176,7 @@ def main(args):
             save_location=results_dir,
             save_every=args.save_every,
             save_best_after=default_settings['save_best_after_n_epochs'],
+            callbacks=[lr_decay],
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
             noise_size=default_settings['noise_size'],
@@ -206,6 +212,7 @@ def main(args):
             save_location=results_dir,
             save_every=args.save_every,
             save_best_after=default_settings['save_best_after_n_epochs'],
+            callbacks=[lr_decay],
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
             noise_size=default_settings['noise_size'],

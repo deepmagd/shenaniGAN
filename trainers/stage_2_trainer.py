@@ -7,8 +7,8 @@ from utils.data_helpers import tensors_from_sample
 
 class Stage2Trainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
-    def __init__(self, model, batch_size, save_location,
-                 save_every, save_best_after, show_progress_bar=True, **kwargs):
+    def __init__(self, model, batch_size, save_location, save_every,
+                 save_best_after, callbacks=None, show_progress_bar=True, **kwargs):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
@@ -19,7 +19,7 @@ class Stage2Trainer(Trainer):
                 The directory in which to save all
                 results from training the model.
         """
-        super().__init__(model, batch_size, save_location, save_every, save_best_after, show_progress_bar)
+        super().__init__(model, batch_size, save_location, save_every, save_best_after, callbacks, show_progress_bar)
         self.num_embeddings = kwargs.get('num_embeddings')
         self.num_samples = kwargs.get('num_samples')
         self.noise_size = kwargs.get('noise_size')
@@ -82,10 +82,10 @@ class Stage2Trainer(Trainer):
                     discriminator_loss, self.model.discriminator.trainable_variables
                 )
 
-                self.model.generator.optimiser.apply_gradients(
+                self.model.generator.optimizer.apply_gradients(
                     zip(generator_gradients, self.model.generator.trainable_variables)
                 )
-                self.model.discriminator.optimiser.apply_gradients(
+                self.model.discriminator.optimizer.apply_gradients(
                     zip(discriminator_gradients, self.model.discriminator.trainable_variables)
                 )
                 # Update tqdm
@@ -96,7 +96,7 @@ class Stage2Trainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                # if batch_idx == 5:
+                # if batch_idx == 1:
                 #     break
 
         return {
@@ -159,7 +159,7 @@ class Stage2Trainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                # if batch_idx == 5:
+                # if batch_idx == 1:
                 #     break
 
         return {

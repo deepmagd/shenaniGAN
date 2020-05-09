@@ -23,7 +23,7 @@ class Discriminator(Model):
         self.w_init = w_init
         self.bn_init = bn_init
 
-        self.optimiser = tf.keras.optimizers.Adam(lr, beta_1=0.5)
+        self.optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.5)
 
 class DiscriminatorStage1(Discriminator):
     """ The definition for a network which
