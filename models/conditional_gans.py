@@ -60,29 +60,34 @@ class StackGAN1(ConditionalGAN):
 
 
 class StackGAN2(ConditionalGAN):
-    """ Definition for the stage 1 StackGAN """
-    def __init__(self, img_size, num_latent_dims, kernel_size,
-                 num_filters, reshape_dims):
+    """ Definition for the stage 2 StackGAN """
+    def __init__(self, img_size, kernel_size, num_filters, reshape_dims,
+                 lr_g, lr_d, conditional_emb_size, w_init, bn_init):
 
         generator = GeneratorStage2(
             img_size=img_size,
-            num_latent_dims=num_latent_dims,
             kernel_size=kernel_size,
             num_filters=num_filters,
-            reshape_dims=reshape_dims
+            reshape_dims=reshape_dims,
+            lr=lr_g,
+            conditional_emb_size=conditional_emb_size,
+            w_init=w_init,
+            bn_init=bn_init
         )
 
         discriminator = DiscriminatorStage2(
             img_size=img_size,
             kernel_size=kernel_size,
-            num_filters=num_filters
+            num_filters=num_filters,
+            lr=lr_d,
+            w_init=w_init,
+            bn_init=bn_init
         )
 
         super().__init__(
             generator=generator,
             discriminator=discriminator,
             img_size=img_size,
-            num_latent_dims=num_latent_dims,
             kernel_size=kernel_size,
             num_filters=num_filters,
             reshape_dims=reshape_dims
