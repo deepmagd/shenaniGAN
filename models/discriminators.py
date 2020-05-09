@@ -44,8 +44,7 @@ class DiscriminatorStage1(Discriminator):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
         self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2),
-                             padding='same', kernel_initializer=self.w_init, use_bias=False
-                             )
+                             padding='same', kernel_initializer=self.w_init, use_bias=False)
 
         self.conv_block_1 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation
@@ -126,7 +125,7 @@ class DiscriminatorStage2(Discriminator):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
         self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                             kernel_initializer=self.w_init, use_bias=False, activation=activation)
+                             kernel_initializer=self.w_init, use_bias=False)
 
         self.conv_block_2 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation)
@@ -164,6 +163,7 @@ class DiscriminatorStage2(Discriminator):
         images, embedding = inputs
 
         x = self.conv_1(images)
+        x = tf.nn.leaky_relu(x, alpha=0.2)
         x = self.conv_block_2(x, training=training)
         x = self.conv_block_3(x, training=training)
         x = self.conv_block_4(x, training=training)
