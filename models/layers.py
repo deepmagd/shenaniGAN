@@ -98,7 +98,10 @@ class ConvBlock(layers.Layer):
         self.bn_init = bn_init
 
     def build(self, input_shape):
-        self.conv2d = Conv2D(filters=self.filters, kernel_size=self.kernel_size, strides=self.strides, padding=self.padding, kernel_initializer=self.w_init, use_bias=False)
+        self.conv2d = Conv2D(
+            filters=self.filters, kernel_size=self.kernel_size, strides=self.strides,
+            padding=self.padding, kernel_initializer=self.w_init, use_bias=False
+        )
         self.bn = BatchNormalization(gamma_initializer=self.bn_init)
 
     def call(self, x, training=True):

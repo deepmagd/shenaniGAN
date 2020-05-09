@@ -193,7 +193,7 @@ class GeneratorStage2(Generator):
         self.deconv_block_3 = DeconvBlock(128//2, self.w_init, self.bn_init, activation=tf.nn.relu)
         self.deconv_block_4 = DeconvBlock(128//4, self.w_init, self.bn_init, activation=tf.nn.relu)
 
-        self.conv2d_2 = Conv2D(filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1))
+        self.conv2d_2 = Conv2D(filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1), padding='same')
         self.tanh = Activation('tanh')
 
     def call(self, inputs, training=True):

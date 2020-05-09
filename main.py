@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from dataloaders.dataloaders import create_dataloaders
-from models.conditional_gans import StackGAN1
+from models.conditional_gans import StackGAN1, StackGAN2
 from trainers.trainers import get_trainer
 from utils.datasets import DATASETS
 from utils.logger import LogPlotter
@@ -115,10 +115,6 @@ def parse_arguments(args_to_parse):
     return args
 
 def load_model(args, image_dims, results_dir):
-    if args.epoch_num == -1:
-        # Find last checkpoint
-        args.epoch_num = extract_epoch_num(results_dir)
-
     model = StackGAN1(
         img_size=image_dims,
         kernel_size=args.kernel_size,
@@ -130,6 +126,13 @@ def load_model(args, image_dims, results_dir):
         w_init=tf.random_normal_initializer(stddev=0.02),
         bn_init=tf.random_normal_initializer(1., 0.02)
     )
+    if args.stage == 2:
+        results_dir = results_dir.replace('stage-2', 'stage-1')
+
+    if args.epoch_num == -1:
+        # Find last checkpoint
+        args.epoch_num = extract_epoch_num(results_dir)
+
     pretrained_dir = os.path.join(results_dir, f'model_{args.epoch_num}')
     model.generator = tf.saved_model.load(os.path.join(pretrained_dir, 'generator', 'generator'))
     model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
@@ -180,39 +183,10 @@ def main(args):
         plotter.learning_curve()
 
     elif args.stage == 2 and args.use_pretrained:
-        stage_2_model = StackGAN2(
-            img_size=large_image_dims,
-            kernel_size=args.kernel_size,
-            num_filters=args.num_filters,
-            reshape_dims=[args.target_size, args.target_size, args.num_filters],
-            lr_g=args.lr_g,
-            lr_d=args.lr_d,
-            conditional_emb_size=args.conditional_emb_size,
-            w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02),
-        )
-
-        trainer_class = get_trainer(args.stage)
-        trainer = trainer_class(
-            model=stage_2_model,
-            batch_size=args.batch_size,
-            save_location=results_dir,
-            save_every=args.save_every,
-            save_best_after=default_settings['save_best_after_n_epochs'],
-            num_embeddings=default_settings['num_embeddings'],
-            num_samples=default_settings['num_samples'],
-            noise_size=default_settings['noise_size'],
-            augment=default_settings['augment'],
-            stage_1_generator=None
-        )
-        trainer(train_loader, val_loader, num_epochs=args.num_epochs)
-
-        # Plot metrics
-        plotter = LogPlotter(results_dir)
-        plotter.learning_curve()
+        raise NotImplementedError('We have not yet provided the ability to load pretrained stage 2 models')
 
     elif args.stage == 2:
-        model = StackGAN2(
+        model_stage2 = StackGAN2(
             img_size=small_image_dims,
             kernel_size=args.kernel_size,
             num_filters=args.num_filters,
@@ -223,10 +197,11 @@ def main(args):
             w_init=tf.random_normal_initializer(stddev=0.02),
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
+        model_stage1 = load_model(args, small_image_dims, results_dir)
 
         trainer_class = get_trainer(args.stage)
         trainer = trainer_class(
-            model=model,
+            model=model_stage2,
             batch_size=args.batch_size,
             save_location=results_dir,
             save_every=args.save_every,
@@ -234,7 +209,8 @@ def main(args):
             num_embeddings=default_settings['num_embeddings'],
             num_samples=default_settings['num_samples'],
             noise_size=default_settings['noise_size'],
-            augment=default_settings['augment']
+            augment=default_settings['augment'],
+            stage_1_generator=model_stage1.generator
         )
         trainer(train_loader, val_loader, num_epochs=args.num_epochs)
 
