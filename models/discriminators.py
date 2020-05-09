@@ -67,7 +67,7 @@ class DiscriminatorStage1(Discriminator):
 
         # (4, 4) == 256/64
         self.conv_2 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid",
-                             kernel_initializer=self.w_init
+                             kernel_initializer=self.w_init, use_bias=False
                              )
 
     def call(self, inputs, training=True):
@@ -125,8 +125,8 @@ class DiscriminatorStage2(Discriminator):
     def build(self, input_size):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
-        self.conv_block_1 = ConvBlock(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2), padding='same',
+                             kernel_initializer=self.w_init, use_bias=False, activation=activation)
 
         self.conv_block_2 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation)
@@ -157,13 +157,13 @@ class DiscriminatorStage2(Discriminator):
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation)
 
         # (4, 4) == 256/16
-        self.conv_block_10 = ConvBlock(filters=1, kernel_size=(4, 4), strides=(4, 4), padding='same',
-                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_2 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding='same',
+                             kernel_initializer=self.w_init, use_bias=False)
 
     def call(self, inputs, training=True):
         images, embedding = inputs
 
-        x = self.conv_block_1(images, training=training)
+        x = self.conv_1(images)
         x = self.conv_block_2(x, training=training)
         x = self.conv_block_3(x, training=training)
         x = self.conv_block_4(x, training=training)
@@ -183,7 +183,7 @@ class DiscriminatorStage2(Discriminator):
         x = tf.concat([x, reduced_embedding], 3)
 
         x = self.conv_block_9(x, training=training)
-        x = self.conv_block_10(x, training=training)
+        x = self.conv_2(x)
 
         return x
 
