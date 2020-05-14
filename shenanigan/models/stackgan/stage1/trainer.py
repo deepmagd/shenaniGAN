@@ -83,8 +83,8 @@ class Stage1Trainer(Trainer):
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
 
-                if batch_idx == 1:
-                    break
+                # if batch_idx == 1:
+                #     break
 
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
