@@ -26,7 +26,7 @@ def image_with_tabular(dataset, batch_size):
     test_loader = ImageTextDataLoader(
         dataset_object=dataset,
         batch_size=batch_size,
-        subset='valid'
+        subset='test'
     )
     return train_loader, test_loader,  dataset.get_small_dims(), dataset.get_large_dims()
 

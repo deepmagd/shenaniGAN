@@ -55,14 +55,19 @@ def parse_arguments(args_to_parse):
     return parsed_args
 
 def main(args):
-
+    """ The primary entry point for the script """
     default_settings = get_default_settings(f'shenanigan/models/{args.model}/settings.yaml')
-    train_loader, val_loader, small_image_dims, _ = create_dataloaders(args.dataset_name, default_settings['common']['batch_size'])
+    train_loader, val_loader, small_image_dims, _ = create_dataloaders(
+        args.dataset_name, default_settings['common']['batch_size']
+    )
 
     if args.model == 'stackgan':
         results_dir = os.path.join(RESULTS_ROOT, args.name, f'stage-{args.stage}')
         save_options(options=args, save_dir=results_dir)
-        run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.stage, args.use_pretrained, args.visualise)
+        run_stackgan(
+            train_loader, val_loader, small_image_dims, results_dir,
+            default_settings, args.stage, args.use_pretrained, args.visualise
+        )
     else:
         raise NotImplementedError(f"No implementation for model '{args.model}'")
 

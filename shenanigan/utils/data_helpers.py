@@ -3,6 +3,7 @@ import os
 import pathlib
 import shutil
 import tarfile
+from tqdm import tqdm
 import urllib.request
 import zipfile
 
@@ -143,7 +144,7 @@ def download_captions(GDRIVE_ID: str, text_download_location: str, backup_locati
 
 def check_for_xrays(directory: str):
     """ Check to see if the xray dataset has been downloaded at all.
-        Raise an exception if it hasn't. If it has, move it to raw.
+        Raise an exception if it hasn't. If it has, move it to raw and rename valid to test.
     """
     train_location = os.path.join(directory, 'train')
     valid_location = os.path.join(directory, 'valid')
@@ -158,6 +159,15 @@ def check_for_xrays(directory: str):
     shutil.move(f'{train_location}.csv', raw_location)
     shutil.move(f'{valid_location}.csv', raw_location)
 
+    mkdir(os.path.join(raw_location, 'test'))
+    shutil.move(
+        src=os.path.join(raw_location, 'valid.csv'),
+        dst=os.path.join(raw_location, 'test.csv')
+    )
+    shutil.move(
+        src=os.path.join(raw_location, 'valid'),
+        dst=os.path.join(raw_location, 'test')
+    )
 
 def create_image_caption_tfrecords(tfrecords_dir: str, image_source_dir: str, text_source_dir: str,
                                    bounding_boxes_path: str, image_dims_large: tuple, image_dims_small: tuple):
@@ -229,7 +239,10 @@ def extract_bounding_boxes_from_file(image_filenames: str, base_path: str) -> di
     return bb_map
 
 def get_wrong_images(large_images: list, small_images: list, labels: list) -> tuple:
-    """
+    """ Generate two corresponding lists where the image order has been shuffled
+        so that they are no longer in the correct order with the text and are not
+        in the same label class. As a result we have "wrong" images for the
+        corresponding text.
     """
     labels = np.array(labels)
     large_images = np.array(large_images)
@@ -250,26 +263,49 @@ def get_wrong_images(large_images: list, small_images: list, labels: list) -> tu
     small_images = np.array(small_images)
     return large_images[wrong_idxs].tolist(), small_images[wrong_idxs].tolist()
 
-def create_image_tabular_tfrecords(tfrecords_dir: str, image_source_dir: str, text_source_dir: str, image_dims: tuple):
+def create_image_tabular_tfrecords(tfrecords_dir: str, image_source_dir: str, text_source_dir: str,
+                                   bounding_boxes_path: str, image_dims_large: tuple, image_dims_small: tuple):
     """ Create the TFRecords dataset for image-tabular pairs """
-    for subset in ['train', 'valid']:
+    for subset in ['train', 'test']:
         image_prefix = f'CheXpert-v1.0-small/{subset}/'
         # Tabular encoding
-        print('Creating tabular encoding')
+        print('Creating tabular encoding ...')
         tabular_df = load_tabular_data(os.path.join(image_source_dir, f'{subset}.csv'))
-        encoded_tabular_df = encode_tabular_data(tabular_df, image_prefix)
         encoded_tabular_data, image_paths = extract_tabular_as_bytes_lists(
-            encoded_tabular_df,
+            encoded_tabular_df=encode_tabular_data(tabular_df, image_prefix),
             prefix=os.path.join('data', 'CheXpert-v1.0-small', 'raw', subset)
         )
-        # Convert to bytes
-        byte_images = get_byte_images(image_paths=image_paths, image_dims=image_dims)
+        # NOTE: Since we do not have labels, I shall uniquely label all patients
+        dummy_labels = range(len(encoded_tabular_data))
+        print('Reading and cropping images ...')
+        # NOTE: Ideally we will have a default bb_map returned, but for now we have to skip
+        bb_map = extract_image_bounding_boxes(image_filenames=image_paths, base_path=bounding_boxes_path)
+        if bb_map is None:
+            images_large, images_small = get_byte_images(
+                image_paths=image_paths,
+                large_image_dims=image_dims_large,
+                small_image_dims=image_dims_small
+            )
+        else:
+            images_large, images_small = get_byte_images(
+                image_paths=image_paths,
+                large_image_dims=image_dims_large,
+                small_image_dims=image_dims_small,
+                bounding_boxes=bb_map,
+                preprocessing='crop'
+            )
+        print("Generating wrong images ...")
+        wrong_images_large, wrong_images_small = get_wrong_images(
+            large_images=images_large,
+            small_images=images_small,
+            labels=dummy_labels
+        )
         # Arrange and write to file
-        print('Writing to TFRecords')
-        dummy_list = [0] * len(image_paths)
-        shard_iterator = zip(*[image_paths, dummy_list, encoded_tabular_data, byte_images])
+        print('Writing to TFRecords ,,,')
+        shard_iterator = zip(*[image_paths, images_small, images_large, wrong_images_small,
+                               wrong_images_large, encoded_tabular_data, dummy_labels])
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
-        print('Complete')
+        print(f'Complete for {subset} set')
 
 
 def get_byte_images(image_paths: list, large_image_dims: tuple,
@@ -285,7 +321,7 @@ def get_byte_images(image_paths: list, large_image_dims: tuple,
 
     large_image_list = []
     small_image_list = []
-    for image_path in image_paths:
+    for image_path in tqdm(image_paths):
         new_img = get_image(image_path, large_image_dims, bounding_boxes, preprocessing)
         byte_image = image_to_bytes(new_img)
         large_image_list.append(byte_image)

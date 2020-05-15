@@ -135,13 +135,12 @@ class FlowersWithWordsDataset(StackGANDataset):
 
 
 class XRaysDataset(StackGANDataset):
-    """ XXX: Container for the x-rays dataset properties """
     def __init__(self):
         super().__init__()
         # TODO: Rename valid to test in data download
         self.type = 'images-with-tabular'
         # NOTE: width and height are for the small dataset for now
-        self.image_dims_small = (None, None)
+        self.image_dims_small = (64, 64)
         self.image_dims_large = (390, 320)
         self.num_channels = 1
         # TODO: Set this
@@ -157,5 +156,7 @@ class XRaysDataset(StackGANDataset):
                 tfrecords_dir=self.directory,
                 image_source_dir=os.path.join(base_directory, 'raw'),
                 text_source_dir=os.path.join(base_directory, 'raw'),
-                image_dims=(self.height, self.width)
+                bounding_boxes_path=None,
+                image_dims_large=self.image_dims_large,
+                image_dims_small=self.image_dims_small
             )
