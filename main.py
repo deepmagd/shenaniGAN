@@ -68,7 +68,7 @@ def main(args):
         save_options(options=args, save_dir=results_dir)
         run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.stage, args.use_pretrained, args.visualise, args.continue_training)
     elif args.model == 'inception':
-        run_inception(args.dataset_name, default_settings)
+        run_inception(args.name, args.dataset_name, default_settings)
     else:
         raise NotImplementedError(f"No implementation for model '{args.model}'")
 

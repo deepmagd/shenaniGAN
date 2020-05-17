@@ -2,6 +2,8 @@ import tensorflow as tf
 
 from shenanigan.models.inception.model import build
 from shenanigan.utils.data_helpers import get_record_paths
+from shenanigan.utils.utils import mkdir
+
 
 def _parse_function(proto, classes):
     f = {
@@ -28,7 +30,7 @@ def _get_record_paths(root_path):
     paths = get_record_paths(root_path)
     return paths, len(paths)
 
-def run(dataset_name, settings):
+def run(experiment_name, dataset_name, settings):
 
     if dataset_name == 'birds-with-text':
         train_paths, num_train_samples = _get_record_paths("data/CUB_200_2011_with_text/records/train/")
@@ -66,3 +68,7 @@ def run(dataset_name, settings):
         validation_data=valid_loader,
         validation_steps=num_test_samples//settings[dataset_name]['batch_size']
     )
+
+    save_path = f"results/{experiment_name}/inception"
+    mkdir(save_path)
+    model.save(os.path.join(save_path, "model"))
