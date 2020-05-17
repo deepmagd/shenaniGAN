@@ -1,0 +1,10 @@
+birds-with-text:
+  batch_size: 64
+  buffer_size: 640
+  num_classes: 200
+  learning_rate: 0.00005
+  epochs: 100
+  image_shape:
+    H: 256
+    W: 256
+    C: 3

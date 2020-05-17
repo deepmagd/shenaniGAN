@@ -9,6 +9,7 @@ from shenanigan.dataloaders import create_dataloaders
 from shenanigan.models.stackgan import run_stackgan
 from shenanigan.utils import get_default_settings, save_options
 from shenanigan.utils.datasets import DATASETS
+from shenanigan.models.inception import run_inception
 
 RESULTS_ROOT = 'results'
 SEED = 1234
@@ -16,7 +17,7 @@ SEED = 1234
 tf.random.set_seed(SEED)
 np.random.seed(SEED)
 
-MODELS = ['stackgan']
+MODELS = ['stackgan', 'inception']
 
 def parse_arguments(args_to_parse):
     """ Parse CLI arguments """
@@ -51,7 +52,7 @@ def parse_arguments(args_to_parse):
 
     stackgan = parser.add_argument_group('StackGAN settings')
     stackgan.add_argument(
-        '-s', '--stage', type=int, choices=[1, 2], required=True,
+        '-s', '--stage', type=int, choices=[1, 2], required=False,
         help='Whether to train stage 1 or 2.'
     )
 
@@ -59,14 +60,15 @@ def parse_arguments(args_to_parse):
     return parsed_args
 
 def main(args):
-
     default_settings = get_default_settings(f'shenanigan/models/{args.model}/settings.yaml')
-    train_loader, val_loader, small_image_dims, _ = create_dataloaders(args.dataset_name, default_settings['common']['batch_size'])
 
     if args.model == 'stackgan':
+        train_loader, val_loader, small_image_dims, _ = create_dataloaders(args.dataset_name, default_settings['common']['batch_size'])
         results_dir = os.path.join(RESULTS_ROOT, args.name, f'stage-{args.stage}')
         save_options(options=args, save_dir=results_dir)
         run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.stage, args.use_pretrained, args.visualise, args.continue_training)
+    elif args.model == 'inception':
+        run_inception(args.dataset_name, default_settings)
     else:
         raise NotImplementedError(f"No implementation for model '{args.model}'")
 
