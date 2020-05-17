@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 
 from shenanigan.models.inception.model import build

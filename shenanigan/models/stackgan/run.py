@@ -8,6 +8,7 @@ from shenanigan.utils.logger import LogPlotter
 from shenanigan.visualise import compare_generated_to_real
 
 from . import StackGAN1, StackGAN2
+from .evaluate import evaluate as eval_fxn
 from .utils import get_trainer
 
 
@@ -32,7 +33,7 @@ def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
     model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
     return model
 
-def run(train_loader, val_loader, small_image_dims, results_dir, settings, stage, use_pretrained=False, visualise=False, continue_training=False):
+def run(train_loader, val_loader, small_image_dims, results_dir, settings, experiment_name, stage, use_pretrained=False, visualise=False, evaluate=False, continue_training=False):
     lr_decay = LearningRateDecay(
         decay_factor=settings['callbacks']['learning_rate_decay']['decay_factor'],
         every_n=settings['callbacks']['learning_rate_decay']['every_n']
@@ -104,6 +105,16 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, stage
         # Plot metrics
         plotter = LogPlotter(results_dir)
         plotter.learning_curve()
+
+    if evaluate:
+        eval_fxn(
+            model=model,
+            dataloader=val_loader,
+            experiment_name=experiment_name,
+            num_samples=settings['stage2']['num_samples'],
+            augment=True,
+            noise_size=settings['stage1']['noise_size']
+        )
 
     if visualise:
         # TODO: Check if the model is in eval mode
