@@ -31,7 +31,7 @@ class Trainer(object):
         self.continue_training = continue_training
 
         self.ckpt = tf.train.Checkpoint(
-            step=tf.Variable(1),
+            step=tf.Variable(0),
             discriminator=self.model.discriminator,
             generator=self.model.generator,
             g_optimizer=self.model.generator.optimizer,
