@@ -9,7 +9,7 @@ from shenanigan.utils.data_helpers import tensors_from_sample
 class Stage2Trainer(Trainer):
     """ Trainer which feeds in text as input to the GAN to generate images """
     def __init__(self, model, batch_size, save_location, save_every,
-                 save_best_after, callbacks=None, show_progress_bar=True, **kwargs):
+                 save_best_after, callbacks=None, continue_training=False, show_progress_bar=True, **kwargs):
         """ Initialise a model trainer for iamge data.
             Arguments:
             model: models.ConditionalGAN
@@ -20,7 +20,7 @@ class Stage2Trainer(Trainer):
                 The directory in which to save all
                 results from training the model.
         """
-        super().__init__(model, batch_size, save_location, save_every, save_best_after, callbacks, show_progress_bar)
+        super().__init__(model, batch_size, save_location, save_every, save_best_after, callbacks, continue_training, show_progress_bar)
         self.num_samples = kwargs.get('num_samples')
         self.noise_size = kwargs.get('noise_size')
         self.augment = kwargs.get('augment')

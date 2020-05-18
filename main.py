@@ -44,6 +44,10 @@ def parse_arguments(args_to_parse):
         '--visualise', action='store_true', default=False,
         help='Run visualisations after loading / training the model'
     )
+    general.add_argument(
+        '--continue-training', action='store_true', default=False,
+        help='Continue training the model from the latest checkpoint'
+    )
 
     stackgan = parser.add_argument_group('StackGAN settings')
     stackgan.add_argument(
@@ -62,7 +66,7 @@ def main(args):
     if args.model == 'stackgan':
         results_dir = os.path.join(RESULTS_ROOT, args.name, f'stage-{args.stage}')
         save_options(options=args, save_dir=results_dir)
-        run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.stage, args.use_pretrained, args.visualise)
+        run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.stage, args.use_pretrained, args.visualise, args.continue_training)
     else:
         raise NotImplementedError(f"No implementation for model '{args.model}'")
 
