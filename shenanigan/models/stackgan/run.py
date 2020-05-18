@@ -32,7 +32,7 @@ def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
     model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
     return model
 
-def run(train_loader, val_loader, small_image_dims, results_dir, settings, stage, use_pretrained=False, visualise=False):
+def run(train_loader, val_loader, small_image_dims, results_dir, settings, stage, use_pretrained=False, visualise=False, continue_training=False):
     lr_decay = LearningRateDecay(
         decay_factor=settings['callbacks']['learning_rate_decay']['decay_factor'],
         every_n=settings['callbacks']['learning_rate_decay']['every_n']
@@ -60,6 +60,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, stage
             save_every=settings['stage1']['save_every_n_epochs'],
             save_best_after=settings['stage1']['save_best_after_n_epochs'],
             callbacks=[lr_decay],
+            continue_training=continue_training,
             num_samples=settings['stage1']['num_samples'],
             noise_size=settings['stage1']['noise_size'],
             augment=settings['stage1']['augment']
@@ -92,6 +93,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, stage
             save_every=settings['stage2']['save_every_n_epochs'],
             save_best_after=settings['stage2']['save_best_after_n_epochs'],
             callbacks=[lr_decay],
+            continue_training=continue_training,
             num_samples=settings['stage2']['num_samples'],
             noise_size=settings['stage1']['noise_size'],
             augment=settings['stage2']['augment'],
