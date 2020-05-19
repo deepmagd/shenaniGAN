@@ -8,8 +8,8 @@ from shenanigan.utils.utils import mkdir, remove_file
 
 class MetricsLogger(object):
     """ Define an object to handle all metric logging """
-    def __init__(self, path):
-        if os.path.exists(path):
+    def __init__(self, path, continue_training=False):
+        if os.path.exists(path) and not continue_training:
             os.remove(path)
         self.logger = open(path, 'a+')
         self.columns = None

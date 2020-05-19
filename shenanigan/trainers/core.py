@@ -23,8 +23,8 @@ class Trainer(object):
         self.save_dir = save_location
         self.save_every = save_every
         self.save_best_after = save_best_after
-        self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.csv'))
-        self.val_logger = MetricsLogger(os.path.join(self.save_dir, 'val.csv'))
+        self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.csv'), continue_training)
+        self.val_logger = MetricsLogger(os.path.join(self.save_dir, 'val.csv'), continue_training)
         self.minimum_val_loss = None
         self.show_progress_bar = show_progress_bar
         self.callbacks = callbacks if callbacks is not None else []
@@ -58,12 +58,12 @@ class Trainer(object):
         for epoch_num in range(num_epochs):
             # Train
             train_metrics = self.train_epoch(train_loader, epoch_num)
-            train_metrics['epoch'] = epoch_num
+            train_metrics['epoch'] = int(self.ckpt.step)
             print(f'Metrics: {train_metrics}')
             self.train_logger(train_metrics)
             # Validation
             val_metrics = self.val_epoch(val_loader, epoch_num)
-            val_metrics['epoch'] = epoch_num
+            val_metrics['epoch'] = int(self.ckpt.step)
             print(f'Metrics: {val_metrics}')
             self.val_logger(val_metrics)
             # Save
