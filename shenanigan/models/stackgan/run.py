@@ -109,7 +109,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
     if stage == 1 and evaluate:
         raise NotImplementedError('Evaluation for stage 1 is not implemented')
 
-    if stage == 2 and evaluate:
+    # NOTE cannot get here because cannot load pretrained stage 2 yet
+    if evaluate and stage == 2:
         eval_fxn(
             model=model,
             dataloader=val_loader,
