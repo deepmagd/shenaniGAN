@@ -48,6 +48,8 @@ def parse_arguments(args_to_parse):
     general.add_argument(
         '--continue-training', action='store_true', default=False,
         help='Continue training the model from the latest checkpoint'
+    )
+    general.add_argument(
         '--evaluate', action='store_true', default=False,
         help='Run evaluation metrics'
     )
