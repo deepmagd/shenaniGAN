@@ -106,7 +106,10 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         plotter = LogPlotter(results_dir)
         plotter.learning_curve()
 
-    if evaluate:
+    if stage == 1 and evaluate:
+        raise NotImplementedError('Evaluation for stage 1 is not implemented')
+
+    if stage == 2 and evaluate:
         eval_fxn(
             model=model,
             dataloader=val_loader,
