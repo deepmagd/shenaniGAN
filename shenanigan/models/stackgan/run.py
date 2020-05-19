@@ -112,7 +112,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
     # NOTE cannot get here because cannot load pretrained stage 2 yet
     if evaluate and stage == 2:
         eval_fxn(
-            model=model,
+            stage_1_generator=model_stage1.generator,
+            stage_2_generator=model_stage2.generator,
             dataloader=val_loader,
             experiment_name=experiment_name,
             num_samples=settings['stage2']['num_samples'],
