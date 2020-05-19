@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy.special import softmax
 from tensorflow.keras.applications.inception_v3 import preprocess_input
@@ -5,7 +6,9 @@ from tensorflow.keras.models import load_model
 
 class InceptionScore(object):
     def __init__(self, experiment_name: str, n_split: int = 10, eps: float = 1E-16):
-        self.model_path = f"results/{experiment_name}/inception/model"
+        base_path = os.path.join('results', experiment_name)
+        self.model_path = os.path.join(base_path, 'inception', 'model')
+        self.save_path = os.path.join(base_path, 'inception_score.csv')
         self.n_split = n_split
         self.eps = eps
         self.model = self._load_model()
@@ -14,6 +17,11 @@ class InceptionScore(object):
     def _load_model(self):
         return load_model(self.model_path)
 
+    def _save_scores(self, mean: float, std: float):
+        with open(self.save_path, 'w+') as fd:
+            write_str = f'{mean},{std}'
+            fd.write(write_str)
+
     def predict_on_batch(self, images: np.ndarray):
         processed = np.asarray((images + 1) * 255. / 2, np.uint8)
         processed = preprocess_input(processed)
@@ -21,7 +29,7 @@ class InceptionScore(object):
         yhat = softmax(yhat, axis=1)
         self.predictions += yhat.tolist()
 
-    def score(self):
+    def score(self, save: bool = False):
         """
         adapted from: https://machinelearningmastery.com/how-to-implement-the-inception-score-from-scratch-for-evaluating-generated-images/
         """
@@ -38,4 +46,8 @@ class InceptionScore(object):
             avg_kl_d = np.mean(sum_kl_d)
             is_score = np.exp(avg_kl_d)
             scores.append(is_score)
-        return np.mean(scores), np.std(scores)
+        is_mean = np.mean(scores)
+        is_std = np.std(scores)
+        if save:
+            self._save_scores(is_mean, is_std)
+        return is_mean, is_std
