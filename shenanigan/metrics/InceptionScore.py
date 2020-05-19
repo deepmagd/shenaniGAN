@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
 from scipy.special import softmax
 from tensorflow.keras.applications.inception_v3 import preprocess_input
 from tensorflow.keras.models import load_model
+
 
 class InceptionScore(object):
     def __init__(self, experiment_name: str, n_split: int = 10, eps: float = 1E-16):

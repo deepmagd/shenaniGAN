@@ -1,11 +1,11 @@
 import os
 
 import tensorflow as tf
+from tensorflow.keras.applications.inception_v3 import preprocess_input
 
 from shenanigan.models.inception.model import build
 from shenanigan.utils.data_helpers import get_record_paths
 from shenanigan.utils.utils import mkdir
-
 
 def _parse_function(proto, classes):
     f = {
@@ -18,7 +18,8 @@ def _parse_function(proto, classes):
         'label': tf.io.FixedLenFeature([], tf.int64),
     }
     parsed_features = tf.io.parse_single_example(proto, f)
-    img = tf.io.decode_image(parsed_features['image_large'], dtype=tf.float32)
+    img = tf.io.decode_image(parsed_features['image_large'], dtype=tf.float32) * 255
+    img = preprocess_input(img)
     label = tf.one_hot(parsed_features['label'], depth=classes)
     return img, label
 
