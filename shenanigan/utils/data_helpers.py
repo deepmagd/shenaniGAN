@@ -460,19 +460,17 @@ def extract_image_with_text(sample: dict, index: int, embedding_size: int,
         extracted_fields.append(image)
         extracted_fields.append(wrong_image)
 
-    txt = np.frombuffer(
-        sample['text'].numpy()[index], dtype=np.float32
-    ).reshape(-1, embedding_size)
+    txt = tf.reshape(sample['text'][index], (-1, embedding_size))
     emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
-    extracted_fields.append(np.mean(txt[emb_idxs, :], axis=0))
+    extracted_fields.append(tf.math.reduce_mean(tf.gather(txt, emb_idxs), axis=0))
 
     return extracted_fields
 
 def extract_images(sample: dict, index: int, size: str):
     """ NOTE: If include_wrong == False, then we return `None` in place """
     if size in ['small', 'large']:
-        image = Image.open(io.BytesIO(sample[f'image_{size}'].numpy()[index]))
-        wrong_image = Image.open(io.BytesIO(sample[f'wrong_image_{size}'].numpy()[index]))
+        image = sample[f'image_{size}'][index]
+        wrong_image = sample[f'wrong_image_{size}'][index]
         return image, wrong_image
     else:
         raise Exception(f'There are only two sizes: small and large. Received: {size}')
@@ -491,11 +489,11 @@ def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int,
             embedding_size=text_embedding_size,
             num_embeddings_to_sample=num_samples
         )
-        image_small = np.asarray(image_small, dtype='float32')
-        wrong_image_small = np.asarray(wrong_image_small, dtype='float32')
-        image_large = np.asarray(image_large, dtype='float32')
-        wrong_image_large = np.asarray(wrong_image_large, dtype='float32')
-        text = np.asarray(text, dtype='float32')
+        image_small = tf.cast(image_small, dtype=tf.float32)
+        wrong_image_small = tf.cast(wrong_image_small, dtype=tf.float32)
+        image_large = tf.cast(image_large, dtype=tf.float32)
+        wrong_image_large = tf.cast(wrong_image_large, dtype=tf.float32)
+        text = tf.cast(text, dtype=tf.float32)
 
         if augment:
             image_small = transform_image(image_small)
@@ -509,11 +507,11 @@ def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int,
         wrong_image_large_tensor.append(wrong_image_large)
         text_tensor.append(text)
 
-    image_small_tensor = np.asarray(image_small_tensor, dtype='float32')
-    wrong_image_small_tensor = np.asarray(wrong_image_small_tensor, dtype='float32')
-    image_large_tensor = np.asarray(image_large_tensor, dtype='float32')
-    wrong_image_large_tensor = np.asarray(wrong_image_large_tensor, dtype='float32')
-    text_tensor = np.asarray(text_tensor, dtype='float32')
+    image_small_tensor = tf.convert_to_tensor(image_small_tensor, dtype=tf.float32)
+    wrong_image_small_tensor = tf.convert_to_tensor(wrong_image_small_tensor, dtype=tf.float32)
+    image_large_tensor = tf.convert_to_tensor(image_large_tensor, dtype=tf.float32)
+    wrong_image_large_tensor = tf.convert_to_tensor(wrong_image_large_tensor, dtype=tf.float32)
+    text_tensor = tf.convert_to_tensor(text_tensor, dtype=tf.float32)
 
     assert image_small_tensor.shape == wrong_image_small_tensor.shape, \
         'Small real ({}) and wrong ({}) images must have the same dimensions'.format(
