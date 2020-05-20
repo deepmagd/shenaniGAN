@@ -68,13 +68,18 @@ class StackGANDataset(object):
             raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
-        mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj.batch(batch_size)
+        mapped_subset_obj = subset_obj.map(self._parse_example, num_parallel_calls=16)
+        return mapped_subset_obj.batch(batch_size).prefetch(batch_size//10)
 
     def _parse_example(self, example_proto):
         # Parse the input tf.Example proto using self.feature_description
-        return tf.io.parse_single_example(example_proto, self.feature_description)
-
+        parsed_features = tf.io.parse_single_example(example_proto, self.feature_description)
+        parsed_features['image_small'] = tf.io.decode_image(parsed_features['image_small'], dtype=tf.float32) * 255
+        parsed_features['image_large'] = tf.io.decode_image(parsed_features['image_large'], dtype=tf.float32) * 255
+        parsed_features['wrong_image_small'] = tf.io.decode_image(parsed_features['wrong_image_small'], dtype=tf.float32) * 255
+        parsed_features['wrong_image_large'] = tf.io.decode_image(parsed_features['wrong_image_large'], dtype=tf.float32) * 255
+        parsed_features['text'] = tf.io.decode_raw(parsed_features['text'], out_type=tf.float32)
+        return parsed_features
 
 class BirdsWithWordsDataset(StackGANDataset):
     """ Container for the birds dataset which includes word captions """
