@@ -75,9 +75,6 @@ class Trainer(object):
                 print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
             self.run_callbacks(epoch_num)
 
-        self.train_logger.close()
-        self.val_logger.close()
-
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
         pass

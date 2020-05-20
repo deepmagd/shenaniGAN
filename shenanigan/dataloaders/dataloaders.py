@@ -28,7 +28,7 @@ def image_with_tabular(dataset, batch_size):
         batch_size=batch_size,
         subset='valid'
     )
-    return train_loader, test_loader,  dataset.get_small_dims(), dataset.get_large_dims()
+    return train_loader, test_loader, dataset.get_small_dims(), dataset.get_large_dims()
 
 def image_with_captions_loaders(dataset, batch_size):
     """ Read, prepare, and present the TFRecord data """
