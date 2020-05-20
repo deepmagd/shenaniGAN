@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from shenanigan.metrics.InceptionScore import InceptionScore
+from shenanigan.metrics.inception_score import InceptionScore
 from shenanigan.utils.data_helpers import tensors_from_sample
 
 
