@@ -12,6 +12,7 @@ class MetricsLogger(object):
         if os.path.exists(path) and not continue_training:
             os.remove(path)
         self.path = path
+        self.continue_training = continue_training
         self.columns = None
 
     def __call__(self, metrics_dict):
@@ -20,7 +21,8 @@ class MetricsLogger(object):
             if self.columns is None:
                 # First time, log the metric names
                 self.columns = list(metrics_dict.keys())
-                logger.write(','.join(self.columns) + '\n')
+                if not self.continue_training:
+                    logger.write(','.join(self.columns) + '\n')
 
             text_line = ','.join([str(metrics_dict[metric]) for metric in self.columns])
             logger.write(f'{text_line}\n')
