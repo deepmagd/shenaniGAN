@@ -46,10 +46,6 @@ def parse_arguments(args_to_parse):
         help='Run visualisations after loading / training the model'
     )
     general.add_argument(
-        '--continue-training', action='store_true', default=False,
-        help='Continue training the model from the latest checkpoint'
-    )
-    general.add_argument(
         '--evaluate', action='store_true', default=False,
         help='Run evaluation metrics'
     )
@@ -70,7 +66,7 @@ def main(args):
         train_loader, val_loader, small_image_dims, _ = create_dataloaders(args.dataset_name, default_settings['common']['batch_size'])
         results_dir = os.path.join(RESULTS_ROOT, args.name, f'stage-{args.stage}')
         save_options(options=args, save_dir=results_dir)
-        run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.name, args.stage, args.use_pretrained, args.visualise, args.evaluate, args.continue_training)
+        run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.name, args.stage, args.use_pretrained, args.visualise, args.evaluate)
     elif args.model == 'inception':
         run_inception(args.name, args.dataset_name, default_settings)
     else:
