@@ -8,11 +8,11 @@ from shenanigan.utils.utils import mkdir, remove_file
 
 class MetricsLogger(object):
     """ Define an object to handle all metric logging """
-    def __init__(self, path, continue_training=False):
-        if os.path.exists(path) and not continue_training:
+    def __init__(self, path, use_pretrained=False):
+        if os.path.exists(path) and not use_pretrained:
             os.remove(path)
         self.path = path
-        self.continue_training = continue_training
+        self.use_pretrained = use_pretrained
         self.columns = None
 
     def __call__(self, metrics_dict):
@@ -21,7 +21,7 @@ class MetricsLogger(object):
             if self.columns is None:
                 # First time, log the metric names
                 self.columns = list(metrics_dict.keys())
-                if not self.continue_training:
+                if not self.use_pretrained:
                     logger.write(','.join(self.columns) + '\n')
 
             text_line = ','.join([str(metrics_dict[metric]) for metric in self.columns])
