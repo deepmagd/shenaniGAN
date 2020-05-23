@@ -6,6 +6,7 @@ from shenanigan.callbacks import LearningRateDecay
 from shenanigan.utils import extract_epoch_num
 from shenanigan.utils.logger import LogPlotter
 from shenanigan.visualise import compare_generated_to_real
+from shenanigan.utils.model_helpers import Checkpointer
 
 from . import StackGAN1, StackGAN2
 from .evaluate import evaluate as eval_fxn
@@ -33,17 +34,13 @@ def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
     model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
     return model
 
-def run(train_loader, val_loader, small_image_dims, results_dir, settings, experiment_name, stage, use_pretrained=False, visualise=False, evaluate=False, continue_training=False):
+def run(train_loader, val_loader, small_image_dims, results_dir, settings, experiment_name, stage, use_pretrained=False, visualise=False, evaluate=False):
     lr_decay = LearningRateDecay(
         decay_factor=settings['callbacks']['learning_rate_decay']['decay_factor'],
         every_n=settings['callbacks']['learning_rate_decay']['every_n']
     )
 
-    # Create the model
-    if stage == 1 and use_pretrained:
-        model = load_model(settings, small_image_dims, results_dir, stage, settings['stage1']['epoch_num'])
-
-    elif stage == 1:
+    if stage == 1:
         model = StackGAN1(
             img_size=small_image_dims,
             lr_g=settings['stage1']['generator']['learning_rate'],
@@ -61,7 +58,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             save_every=settings['stage1']['save_every_n_epochs'],
             save_best_after=settings['stage1']['save_best_after_n_epochs'],
             callbacks=[lr_decay],
-            continue_training=continue_training,
+            use_pretrained=use_pretrained,
             num_samples=settings['stage1']['num_samples'],
             noise_size=settings['stage1']['noise_size'],
             augment=settings['stage1']['augment']
@@ -72,10 +69,24 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         plotter = LogPlotter(results_dir)
         plotter.learning_curve()
 
-    elif stage == 2 and use_pretrained:
-        raise NotImplementedError('We have not yet provided the ability to load pretrained stage 2 models')
-
     elif stage == 2:
+        model_stage1 = StackGAN1(
+            img_size=small_image_dims,
+            lr_g=settings['stage1']['generator']['learning_rate'],
+            lr_d=settings['stage1']['discriminator']['learning_rate'],
+            conditional_emb_size=settings['stage1']['conditional_emb_size'],
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+        checkpointer = Checkpointer(
+            model=model_stage1,
+            save_dir=results_dir.replace('stage-2', 'stage-1')
+        )
+        checkpointer.restore(
+            use_pretrained=True,
+            evaluate=True
+        )
+
         model_stage2 = StackGAN2(
             img_size=small_image_dims,
             lr_g=settings['stage2']['generator']['learning_rate'],
@@ -84,7 +95,6 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             w_init=tf.random_normal_initializer(stddev=0.02),
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
-        model_stage1 = load_model(settings, small_image_dims, results_dir, stage, settings['stage1']['epoch_num'])
 
         trainer_class = get_trainer(stage)
         trainer = trainer_class(
@@ -94,7 +104,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             save_every=settings['stage2']['save_every_n_epochs'],
             save_best_after=settings['stage2']['save_best_after_n_epochs'],
             callbacks=[lr_decay],
-            continue_training=continue_training,
+            use_pretrained=use_pretrained,
             num_samples=settings['stage2']['num_samples'],
             noise_size=settings['stage1']['noise_size'],
             augment=settings['stage2']['augment'],
@@ -109,8 +119,41 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
     if stage == 1 and evaluate:
         raise NotImplementedError('Evaluation for stage 1 is not implemented')
 
-    # NOTE cannot get here because cannot load pretrained stage 2 yet
     if evaluate and stage == 2:
+        model_stage1 = StackGAN1(
+            img_size=small_image_dims,
+            lr_g=settings['stage1']['generator']['learning_rate'],
+            lr_d=settings['stage1']['discriminator']['learning_rate'],
+            conditional_emb_size=settings['stage1']['conditional_emb_size'],
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+        checkpointer_stage1 = Checkpointer(
+            model=model_stage1,
+            save_dir=results_dir.replace('stage-2', 'stage-1')
+        )
+        checkpointer_stage1.restore(
+            use_pretrained=True,
+            evaluate=True
+        )
+
+        model_stage2 = StackGAN2(
+            img_size=small_image_dims,
+            lr_g=settings['stage2']['generator']['learning_rate'],
+            lr_d=settings['stage2']['discriminator']['learning_rate'],
+            conditional_emb_size=settings['stage2']['conditional_emb_size'],
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+        checkpointer_stage2 = Checkpointer(
+            model=model_stage2,
+            save_dir=results_dir
+        )
+        checkpointer_stage2.restore(
+            use_pretrained=True,
+            evaluate=True
+        )
+
         eval_fxn(
             stage_1_generator=model_stage1.generator,
             stage_2_generator=model_stage2.generator,
