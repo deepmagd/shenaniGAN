@@ -462,6 +462,8 @@ def extract_image_with_text(sample: dict, index: int, embedding_size: int,
 
     txt = tf.reshape(sample['text'][index], (-1, embedding_size))
     emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
+    print(f'emb_idxs: {emb_idxs}')
+    print(f'tf.gather(txt, emb_idxs): {tf.gather(txt, emb_idxs)}')
     extracted_fields.append(tf.math.reduce_mean(tf.gather(txt, emb_idxs), axis=0))
 
     return extracted_fields

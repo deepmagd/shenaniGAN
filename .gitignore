@@ -109,3 +109,6 @@ results/
 
 # Ignore vscode preferences
 .vscode
+
+# Ignore any notebooks
+*.ipynb
