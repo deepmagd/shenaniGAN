@@ -146,7 +146,7 @@ class GeneratorStage2(Generator):
         return loss, kl_loss
 
     def kl_loss(self, mean, log_sigma):
-        loss = -log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
+        loss = .5 * (-log_sigma - 1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
         loss = tf.reduce_mean(loss)
         return loss
 
