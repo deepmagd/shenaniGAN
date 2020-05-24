@@ -29,6 +29,7 @@ class Stage1Trainer(Trainer):
         """ Training operations for a single epoch """
         acc_generator_loss = 0
         acc_discriminator_loss = 0
+        acc_kl_loss = 0
         text_embedding_size = train_loader.dataset_object.text_embedding_dim
         kwargs = dict(
             desc="Epoch {}".format(epoch_num),
@@ -60,7 +61,7 @@ class Stage1Trainer(Trainer):
                             real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                         )
 
-                    generator_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
+                    generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
                     discriminator_loss = self.model.discriminator.loss(real_predictions, wrong_predictions, fake_predictions)
 
                 # Update gradients
@@ -76,24 +77,27 @@ class Stage1Trainer(Trainer):
                     zip(discriminator_gradients, self.model.discriminator.trainable_variables)
                 )
                 # Update tqdm
-                t.set_postfix(generator_loss=float(generator_loss), discriminator_loss=float(discriminator_loss))
+                t.set_postfix(kl_loss=float(kl_loss), generator_loss=float(generator_loss), discriminator_loss=float(discriminator_loss))
                 t.update()
 
                 # Accumulate losses over all samples
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
+                acc_kl_loss += kl_loss
 
                 # if batch_idx == 1:
                 #     break
 
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
-            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
+            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
+            'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1)
         }
 
     def val_epoch(self, val_loader, epoch_num):
         acc_generator_loss = 0
         acc_discriminator_loss = 0
+        acc_kl_loss = 0
         text_embedding_size = val_loader.dataset_object.text_embedding_dim
         kwargs = dict(
             desc="Epoch {}".format(epoch_num),
@@ -123,21 +127,23 @@ class Stage1Trainer(Trainer):
                         real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                     )
 
-                generator_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
+                generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
                 discriminator_loss = self.model.discriminator.loss(real_predictions, wrong_predictions, fake_predictions)
 
                 # Update tqdm
-                t.set_postfix(generator_loss=float(generator_loss), discriminator_loss=float(discriminator_loss))
+                t.set_postfix(kl_loss=float(kl_loss), generator_loss=float(generator_loss), discriminator_loss=float(discriminator_loss))
                 t.update()
 
                 # Accumulate losses over all samples
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
+                acc_kl_loss += kl_loss
 
                 # if batch_idx == 1:
                 #     break
 
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
-            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1)
+            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
+            'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1)
         }
