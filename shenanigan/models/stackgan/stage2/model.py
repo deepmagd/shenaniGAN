@@ -141,11 +141,12 @@ class GeneratorStage2(Generator):
             tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=tf.ones_like(predictions_on_fake), logits=predictions_on_fake
             ))
-        loss = loss + kl_coeff * self.kl_loss(mean, log_sigma)
-        return loss
+        kl_loss = self.kl_loss(mean, log_sigma)
+        loss = loss + kl_coeff * kl_loss
+        return loss, kl_loss
 
     def kl_loss(self, mean, log_sigma):
-        loss = .5 * (-log_sigma - 1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
+        loss = -log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
         loss = tf.reduce_mean(loss)
         return loss
 
