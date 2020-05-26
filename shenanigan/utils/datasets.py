@@ -86,8 +86,8 @@ class BirdsWithWordsDataset(StackGANDataset):
     def __init__(self):
         super().__init__()
         self.type = 'images-with-captions'
-        self.image_dims_small = (64, 64)
-        self.image_dims_large = (256, 256)
+        self.image_dims_small = (76, 76)
+        self.image_dims_large = (304, 304)
         self.num_channels = 3
         self.text_embedding_dim = 1024
 

@@ -18,6 +18,10 @@ from shenanigan.utils.utils import (format_file_name, mkdir, normalise,
 
 NUM_COLOUR_CHANNELS = 3
 
+IMAGE_SIZE_CONVERSION = {
+    76 : 64,
+    304 : 256
+}
 
 def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
@@ -446,6 +450,23 @@ def transform_image(img):
     """ Apply a sequence of tranforms to an image.
         Currently just normalisation.
     """
+    img = tf.image.random_flip_left_right(img)
+
+    if img.shape[0] not in IMAGE_SIZE_CONVERSION:
+        raise RuntimeError(f'Unsupported image size of {img.shape[0]}')
+
+    if len(img.shape) == 2:
+        img = tf.image.random_crop(
+            value=img,
+            size=(IMAGE_SIZE_CONVERSION[img.shape[0]], IMAGE_SIZE_CONVERSION[img.shape[1]])
+        )
+    elif len(img.shape) == 3:
+        img = tf.image.random_crop(
+            value=img,
+            size=(IMAGE_SIZE_CONVERSION[img.shape[0]], IMAGE_SIZE_CONVERSION[img.shape[1]], img.shape[2])
+        )
+    else:
+        raise RuntimeError(f'Unsupported number of image channels {img.shape}')
     return img * (2./255) - 1.
 
 def extract_image_with_text(sample: dict, index: int, embedding_size: int,
