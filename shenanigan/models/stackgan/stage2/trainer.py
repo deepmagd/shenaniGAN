@@ -20,7 +20,8 @@ class Stage2Trainer(Trainer):
                 The directory in which to save all
                 results from training the model.
         """
-        super().__init__(model, batch_size, save_location, save_every, save_best_after, callbacks, use_pretrained, show_progress_bar)
+        super().__init__(model, batch_size, save_location, save_every, save_best_after,
+                         callbacks, use_pretrained, show_progress_bar)
         self.num_samples = kwargs.get('num_samples')
         self.noise_size = kwargs.get('noise_size')
         self.augment = kwargs.get('augment')
@@ -40,8 +41,8 @@ class Stage2Trainer(Trainer):
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 batch_size = len(sample['text'].numpy())
-                _, _, image_large, wrong_image_large, text_tensor = tensors_from_sample(
-                    sample, batch_size, text_embedding_size, self.num_samples, self.augment
+                image_large, wrong_image_large, text_tensor = tensors_from_sample(
+                    sample, batch_size, text_embedding_size, self.num_samples, self.augment, img_size='large'
                 )
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
@@ -119,8 +120,8 @@ class Stage2Trainer(Trainer):
         with trange(len(val_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(val_loader.parsed_subset):
                 batch_size = len(sample['text'].numpy())
-                _, _, image_large, wrong_image_large, text_tensor = tensors_from_sample(
-                    sample, batch_size, text_embedding_size, self.num_samples, self.augment
+                image_large, wrong_image_large, text_tensor = tensors_from_sample(
+                    sample, batch_size, text_embedding_size, self.num_samples, self.augment, img_size='large'
                 )
                 # Generate fake small images
                 noise_z = tf.random.normal((batch_size, self.noise_size))
