@@ -40,7 +40,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         every_n=settings['callbacks']['learning_rate_decay']['every_n']
     )
 
-    if stage == 1:
+    if stage == 1 and evaluate and visualise:
         model = StackGAN1(
             img_size=small_image_dims,
             lr_g=settings['stage1']['generator']['learning_rate'],
@@ -49,27 +49,25 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             w_init=tf.random_normal_initializer(stddev=0.02),
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
-
-        trainer_class = get_trainer(stage)
-        trainer = trainer_class(
+        checkpointer = Checkpointer(
             model=model,
-            batch_size=settings['common']['batch_size'],
-            save_location=results_dir,
-            save_every=settings['stage1']['save_every_n_epochs'],
-            save_best_after=settings['stage1']['save_best_after_n_epochs'],
-            callbacks=[lr_decay],
-            use_pretrained=use_pretrained,
-            num_samples=settings['stage1']['num_samples'],
-            noise_size=settings['stage1']['noise_size'],
-            augment=settings['stage1']['augment']
+            save_dir=results_dir.replace('stage-2', 'stage-1')
         )
-        trainer(train_loader, val_loader, num_epochs=settings['stage1']['num_epochs'])
+        checkpointer.restore(
+            use_pretrained=True,
+            evaluate=True
+        )
+        compare_generated_to_real(
+            dataloader=train_loader,
+            num_images=settings['visualisation']['images_to_generate'],
+            noise_size=settings['stage1']['noise_size'],
+            model=model,
+            save_location=os.path.join(results_dir, 'viz'),
+            img_size='small'
+        )
 
-        # Plot metrics
-        plotter = LogPlotter(results_dir)
-        plotter.learning_curve()
+    elif stage == 2 and evaluate and visualise:
 
-    elif stage == 2:
         model_stage1 = StackGAN1(
             img_size=small_image_dims,
             lr_g=settings['stage1']['generator']['learning_rate'],
@@ -78,11 +76,11 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             w_init=tf.random_normal_initializer(stddev=0.02),
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
-        checkpointer = Checkpointer(
+        checkpointer_stage1 = Checkpointer(
             model=model_stage1,
             save_dir=results_dir.replace('stage-2', 'stage-1')
         )
-        checkpointer.restore(
+        checkpointer_stage1.restore(
             use_pretrained=True,
             evaluate=True
         )
@@ -95,31 +93,27 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             w_init=tf.random_normal_initializer(stddev=0.02),
             bn_init=tf.random_normal_initializer(1., 0.02)
         )
-
-        trainer_class = get_trainer(stage)
-        trainer = trainer_class(
+        checkpointer_stage2 = Checkpointer(
             model=model_stage2,
-            batch_size=settings['common']['batch_size'],
-            save_location=results_dir,
-            save_every=settings['stage2']['save_every_n_epochs'],
-            save_best_after=settings['stage2']['save_best_after_n_epochs'],
-            callbacks=[lr_decay],
-            use_pretrained=use_pretrained,
-            num_samples=settings['stage2']['num_samples'],
-            noise_size=settings['stage1']['noise_size'],
-            augment=settings['stage2']['augment'],
-            stage_1_generator=model_stage1.generator
+            save_dir=results_dir
         )
-        trainer(train_loader, val_loader, num_epochs=settings['stage2']['num_epochs'])
+        checkpointer_stage2.restore(
+            use_pretrained=True,
+            evaluate=True
+        )
+        compare_generated_to_real(
+            dataloader=train_loader,
+            num_images=settings['visualisation']['images_to_generate'],
+            noise_size=settings['stage1']['noise_size'],
+            model=model,
+            save_location=os.path.join(results_dir, 'viz'),
+            img_size='large'
+        )
 
-        # Plot metrics
-        plotter = LogPlotter(results_dir)
-        plotter.learning_curve()
-
-    if stage == 1 and evaluate:
+    elif stage == 1 and evaluate:
         raise NotImplementedError('Evaluation for stage 1 is not implemented')
 
-    if evaluate and stage == 2:
+    elif stage == 2 and evaluate:
         model_stage1 = StackGAN1(
             img_size=small_image_dims,
             lr_g=settings['stage1']['generator']['learning_rate'],
@@ -164,13 +158,75 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             noise_size=settings['stage1']['noise_size']
         )
 
-    if visualise:
-        # TODO: Check if the model is in eval mode
-        # Visualise fake images from training set
-        compare_generated_to_real(
-            dataloader=train_loader,
-            num_images=settings['visualisation']['images_to_generate'],
-            noise_size=settings['stage1']['noise_size'],
-            model=model,
-            save_location=os.path.join(results_dir, 'viz')
+    elif stage == 1:
+        model = StackGAN1(
+            img_size=small_image_dims,
+            lr_g=settings['stage1']['generator']['learning_rate'],
+            lr_d=settings['stage1']['discriminator']['learning_rate'],
+            conditional_emb_size=settings['stage1']['conditional_emb_size'],
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
         )
+
+        trainer_class = get_trainer(stage)
+        trainer = trainer_class(
+            model=model,
+            batch_size=settings['common']['batch_size'],
+            save_location=results_dir,
+            save_every=settings['stage1']['save_every_n_epochs'],
+            save_best_after=settings['stage1']['save_best_after_n_epochs'],
+            callbacks=[lr_decay],
+            use_pretrained=use_pretrained,
+            num_samples=settings['stage1']['num_samples'],
+            noise_size=settings['stage1']['noise_size'],
+            augment=settings['stage1']['augment']
+        )
+        trainer(train_loader, val_loader, num_epochs=settings[f'stage1']['num_epochs'])
+        plotter = LogPlotter(results_dir)
+        plotter.learning_curve()
+
+    elif stage == 2:
+        model_stage1 = StackGAN1(
+            img_size=small_image_dims,
+            lr_g=settings['stage1']['generator']['learning_rate'],
+            lr_d=settings['stage1']['discriminator']['learning_rate'],
+            conditional_emb_size=settings['stage1']['conditional_emb_size'],
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+        checkpointer = Checkpointer(
+            model=model_stage1,
+            save_dir=results_dir.replace('stage-2', 'stage-1')
+        )
+        checkpointer.restore(
+            use_pretrained=True,
+            evaluate=True
+        )
+
+        model_stage2 = StackGAN2(
+            img_size=small_image_dims,
+            lr_g=settings['stage2']['generator']['learning_rate'],
+            lr_d=settings['stage2']['discriminator']['learning_rate'],
+            conditional_emb_size=settings['stage2']['conditional_emb_size'],
+            w_init=tf.random_normal_initializer(stddev=0.02),
+            bn_init=tf.random_normal_initializer(1., 0.02)
+        )
+
+        trainer_class = get_trainer(stage)
+        trainer = trainer_class(
+            model=model_stage2,
+            batch_size=settings['common']['batch_size'],
+            save_location=results_dir,
+            save_every=settings['stage2']['save_every_n_epochs'],
+            save_best_after=settings['stage2']['save_best_after_n_epochs'],
+            callbacks=[lr_decay],
+            use_pretrained=use_pretrained,
+            num_samples=settings['stage2']['num_samples'],
+            noise_size=settings['stage1']['noise_size'],
+            augment=settings['stage2']['augment'],
+            stage_1_generator=model_stage1.generator
+        )
+
+        trainer(train_loader, val_loader, num_epochs=settings[f'stage2']['num_epochs'])
+        plotter = LogPlotter(results_dir)
+        plotter.learning_curve()
