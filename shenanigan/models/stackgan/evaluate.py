@@ -9,8 +9,8 @@ def evaluate(stage_1_generator, stage_2_generator, dataloader, experiment_name, 
 
     for _, sample in enumerate(dataloader.parsed_subset):
         batch_size = len(sample['text'].numpy())
-        _, _, _, _, text_tensor = tensors_from_sample(
-            sample, batch_size, dataloader.dataset_object.text_embedding_dim, num_samples, augment
+        _, _, text_tensor = tensors_from_sample(
+            sample, batch_size, dataloader.dataset_object.text_embedding_dim, num_samples, augment, img_size='small'
         )
         noise_z = tf.random.normal((batch_size, noise_size))
         fake_images_small, _, _ = stage_1_generator([text_tensor, noise_z], training=False)

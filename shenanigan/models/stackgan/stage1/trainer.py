@@ -39,8 +39,8 @@ class Stage1Trainer(Trainer):
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
                 batch_size = len(sample['text'].numpy())
-                image_small, wrong_image_small, _, _, text_tensor = tensors_from_sample(
-                    sample, batch_size, text_embedding_size, self.num_samples, self.augment
+                image_small, wrong_image_small, text_tensor = tensors_from_sample(
+                    sample, batch_size, text_embedding_size, self.num_samples, self.augment, img_size='small'
                 )
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
@@ -107,8 +107,8 @@ class Stage1Trainer(Trainer):
         with trange(len(val_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(val_loader.parsed_subset):
                 batch_size = len(sample['text'].numpy())
-                image_small, wrong_image_small, _, _, text_tensor = tensors_from_sample(
-                    sample, batch_size, text_embedding_size, self.num_samples, self.augment
+                image_small, wrong_image_small, text_tensor = tensors_from_sample(
+                    sample, batch_size, text_embedding_size, self.num_samples, self.augment, img_size='small'
                 )
                 noise_z = tf.random.normal((batch_size, self.noise_size))
                 fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=False)

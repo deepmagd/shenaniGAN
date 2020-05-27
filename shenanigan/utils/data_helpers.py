@@ -470,22 +470,13 @@ def transform_image(img):
     return img * (2./255) - 1.
 
 def extract_image_with_text(sample: dict, index: int, embedding_size: int,
-                            num_embeddings_to_sample: int):
-    """ Return a list of the extracted field from the sample. These tend to take the form:
-        (image_size1, wrong_image_size1, image_size2, wrong_image_size2, ...., text)
-        where wrong images could be `None`
-    """
-    extracted_fields = []
-    for size in ['small', 'large']:
-        image, wrong_image = extract_images(sample=sample, index=index, size=size)
-        extracted_fields.append(image)
-        extracted_fields.append(wrong_image)
-
+                            num_embeddings_to_sample: int, img_size: str):
+    """ Return the image, wrong image, and sampled text embeddings """
+    image, wrong_image = extract_images(sample=sample, index=index, size=img_size)
     txt = tf.reshape(sample['text'][index], (-1, embedding_size))
     emb_idxs = np.random.choice(txt.shape[0], size=num_embeddings_to_sample, replace=False)
-    extracted_fields.append(tf.math.reduce_mean(tf.gather(txt, emb_idxs), axis=0))
-
-    return extracted_fields
+    sampled_txt_embeddings = tf.math.reduce_mean(tf.gather(txt, emb_idxs), axis=0)
+    return image, wrong_image, sampled_txt_embeddings
 
 def extract_images(sample: dict, index: int, size: str):
     """ NOTE: If include_wrong == False, then we return `None` in place """
@@ -496,50 +487,38 @@ def extract_images(sample: dict, index: int, size: str):
     else:
         raise Exception(f'There are only two sizes: small and large. Received: {size}')
 
-def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int, num_samples: int, augment: bool):
+def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int,
+                        num_samples: int, augment: bool, img_size: str):
     """ Extract and format the input samples such that they are ready to be fed into the model """
-    image_small_tensor = []
-    wrong_image_small_tensor = []
-    image_large_tensor = []
-    wrong_image_large_tensor = []
+    image_tensor = []
+    wrong_image_tensor = []
     text_tensor = []
     for i in range(batch_size):
-        image_small, wrong_image_small, image_large, wrong_image_large, text = extract_image_with_text(
+        image, wrong_image, text = extract_image_with_text(
             sample=sample,
             index=i,
             embedding_size=text_embedding_size,
-            num_embeddings_to_sample=num_samples
+            num_embeddings_to_sample=num_samples,
+            img_size=img_size
         )
-        image_small = tf.cast(image_small, dtype=tf.float32)
-        wrong_image_small = tf.cast(wrong_image_small, dtype=tf.float32)
-        image_large = tf.cast(image_large, dtype=tf.float32)
-        wrong_image_large = tf.cast(wrong_image_large, dtype=tf.float32)
+        image = tf.cast(image, dtype=tf.float32)
+        wrong_image = tf.cast(wrong_image, dtype=tf.float32)
         text = tf.cast(text, dtype=tf.float32)
 
         if augment:
-            image_small = transform_image(image_small)
-            wrong_image_small = transform_image(wrong_image_small)
-            image_large = transform_image(image_large)
-            wrong_image_large = transform_image(wrong_image_large)
+            image = transform_image(image)
+            wrong_image = transform_image(wrong_image)
 
-        image_small_tensor.append(image_small)
-        wrong_image_small_tensor.append(wrong_image_small)
-        image_large_tensor.append(image_large)
-        wrong_image_large_tensor.append(wrong_image_large)
+        image_tensor.append(image)
+        wrong_image_tensor.append(wrong_image)
         text_tensor.append(text)
 
-    image_small_tensor = tf.convert_to_tensor(image_small_tensor, dtype=tf.float32)
-    wrong_image_small_tensor = tf.convert_to_tensor(wrong_image_small_tensor, dtype=tf.float32)
-    image_large_tensor = tf.convert_to_tensor(image_large_tensor, dtype=tf.float32)
-    wrong_image_large_tensor = tf.convert_to_tensor(wrong_image_large_tensor, dtype=tf.float32)
+    image_tensor = tf.convert_to_tensor(image_tensor, dtype=tf.float32)
+    wrong_image_tensor = tf.convert_to_tensor(wrong_image_tensor, dtype=tf.float32)
     text_tensor = tf.convert_to_tensor(text_tensor, dtype=tf.float32)
 
-    assert image_small_tensor.shape == wrong_image_small_tensor.shape, \
+    assert image_tensor.shape == wrong_image_tensor.shape, \
         'Small real ({}) and wrong ({}) images must have the same dimensions'.format(
-            image_small_tensor.shape, image_small_tensor.shape
+            image_tensor.shape, wrong_image_tensor.shape
         )
-    assert image_large_tensor.shape == wrong_image_large_tensor.shape, \
-        'Large real ({}) and wrong ({}) images must have the same dimensions'.format(
-            image_large_tensor.shape, wrong_image_large_tensor.shape
-        )
-    return image_small_tensor, wrong_image_small_tensor, image_large_tensor, wrong_image_large_tensor, text_tensor
+    return image_tensor, wrong_image_tensor, text_tensor
