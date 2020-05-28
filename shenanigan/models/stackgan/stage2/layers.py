@@ -11,10 +11,10 @@ class ResidualLayerStage2(layers.Layer):
         self.bn_init = bn_init
 
     def build(self, input_shape):
-        self.conv2d_1 = Conv2D(filters=self.filters, kernel_size=(4, 4), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=self.w_init)
+        self.conv2d_1 = Conv2D(filters=self.filters, kernel_size=(4, 4), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
 
-        self.conv2d_2 = Conv2D(filters=self.filters, kernel_size=(4, 4), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=self.w_init)
+        self.conv2d_2 = Conv2D(filters=self.filters, kernel_size=(4, 4), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
         self.bn_2 = BatchNormalization(gamma_initializer=self.bn_init)
 
     def call(self, x, training=True):
