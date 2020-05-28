@@ -171,7 +171,7 @@ class DiscriminatorStage2(Discriminator):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
         self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                             kernel_initializer=self.w_init, use_bias=False)
+                             kernel_initializer=self.w_init)
 
         self.conv_block_2 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation)
@@ -203,7 +203,7 @@ class DiscriminatorStage2(Discriminator):
 
         # (4, 4) == 256/16
         self.conv_2 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding='same',
-                             kernel_initializer=self.w_init, use_bias=False)
+                             kernel_initializer=self.w_init)
 
     def call(self, inputs, training=True):
         images, embedding = inputs

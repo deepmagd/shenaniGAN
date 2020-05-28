@@ -70,11 +70,11 @@ class GeneratorStage1(Generator):
 
         self.deconv2d_4 = Conv2DTranspose(
             self.num_output_channels, kernel_size=(4, 4), strides=(2, 2),
-            padding='same', kernel_initializer=self.w_init, use_bias=False
+            padding='same', kernel_initializer=self.w_init
         )
         self.conv2d_4 = Conv2D(
             filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1),
-            padding='same', kernel_initializer=self.w_init, use_bias=False
+            padding='same', kernel_initializer=self.w_init
         )
 
         self.tanh = Activation('tanh')
@@ -122,7 +122,7 @@ class GeneratorStage1(Generator):
         return loss, kl_loss
 
     def kl_loss(self, mean, log_sigma):
-        loss = -log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
+        loss = -log_sigma + .5 * (-1 + tf.math.exp(2. * log_sigma) + tf.math.square(mean))
         loss = tf.reduce_mean(loss)
         return loss
 
@@ -146,7 +146,7 @@ class DiscriminatorStage1(Discriminator):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
         self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2),
-                             padding='same', kernel_initializer=self.w_init, use_bias=False)
+                             padding='same', kernel_initializer=self.w_init)
 
         self.conv_block_1 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation
@@ -168,7 +168,7 @@ class DiscriminatorStage1(Discriminator):
 
         # (4, 4) == 256/64
         self.conv_2 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid",
-                             kernel_initializer=self.w_init, use_bias=False
+                             kernel_initializer=self.w_init
                              )
 
     def call(self, inputs, training=True):
