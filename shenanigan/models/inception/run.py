@@ -25,7 +25,7 @@ def _parse_function(proto, classes):
 
 def load_dataset(input_path, batch_size, shuffle_buffer, classes):
     dataset = tf.data.TFRecordDataset(input_path)
-    dataset = dataset.map(lambda x: _parse_function(x, classes), num_parallel_calls=16)
+    dataset = dataset.map(lambda x: _parse_function(x, classes))
     dataset = dataset.shuffle(shuffle_buffer).batch(batch_size).prefetch(5)
     return dataset
 

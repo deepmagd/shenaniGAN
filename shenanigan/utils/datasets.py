@@ -68,7 +68,7 @@ class StackGANDataset(object):
             raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
-        mapped_subset_obj = subset_obj.map(self._parse_example, num_parallel_calls=16)
+        mapped_subset_obj = subset_obj.map(self._parse_example)
         return mapped_subset_obj.batch(batch_size).prefetch(batch_size//10)
 
     def _parse_example(self, example_proto):
