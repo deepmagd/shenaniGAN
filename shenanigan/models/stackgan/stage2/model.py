@@ -194,7 +194,7 @@ class DiscriminatorStage2(Discriminator):
         self.conv_block_8 = ConvBlock(filters=self.d_dim*8, kernel_size=(4, 4), strides=(1, 1), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init)
 
-        self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init)
+        self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init, activation)
 
         self.dense_embed = Dense(units=self.conditional_emb_size)
 

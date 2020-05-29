@@ -59,11 +59,23 @@ class GeneratorStage1(Generator):
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
 
-        self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
+        self.res_block_1 = ResidualLayer(
+            filters_in=128*2,
+            filters_out=128*8,
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu
+        )
 
         self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init)
 
-        self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
+        self.res_block_2 = ResidualLayer(
+            filters_in=128,
+            filters_out=128*4,
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu
+        )
 
         self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=tf.nn.relu)
         self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=tf.nn.relu)
@@ -158,7 +170,13 @@ class DiscriminatorStage1(Discriminator):
                                       w_init=self.w_init, bn_init=self.bn_init
                                       )
 
-        self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init)
+        self.res_block = ResidualLayer(
+            filters_in=self.d_dim*2,
+            filters_out=self.d_dim*8,
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation
+        )
 
         self.dense_embed = Dense(units=self.conditional_emb_size)
 
