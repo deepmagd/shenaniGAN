@@ -26,10 +26,10 @@ class Checkpointer(object):
             if self.ckpt_manager.latest_checkpoint:
                 print("Restored from {}".format(self.ckpt_manager.latest_checkpoint))
             else:
-                print("Initializing model from sratch")
+                print("Initializing model from scratch")
         else:
             rmdir(self.checkpoint_dir)
-            print("Initializing model from sratch")
+            print("Initializing model from scratch")
 
     def save(self):
         return self.ckpt_manager.save()
