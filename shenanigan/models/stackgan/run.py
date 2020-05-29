@@ -181,7 +181,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             noise_size=settings['stage1']['noise_size'],
             augment=settings['stage1']['augment']
         )
-        trainer(train_loader, val_loader, num_epochs=settings[f'stage1']['num_epochs'])
+        trainer(train_loader, val_loader, num_epochs=settings['stage1']['num_epochs'])
         plotter = LogPlotter(results_dir)
         plotter.learning_curve()
 
