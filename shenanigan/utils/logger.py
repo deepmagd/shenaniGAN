@@ -11,32 +11,22 @@ class MetricsLogger(object):
             os.remove(path)
         self.path = path
         self.use_pretrained = use_pretrained
-        self.columns = None
-        self.previous_epoch = self._set_previous_epoch()
+        # self.epoch_history = self._set_epoch_history()
 
     def __call__(self, metrics_dict):
         """ Log metrics to file """
-        assert self.previous_epoch != metrics_dict['epoch'], \
-            'The new epoch should not be the same as the previous epoch'
-        with open(self.path, "a+") as logger:
-            if self.columns is None:
-                # First time, log the metric names
-                self.columns = list(metrics_dict.keys())
-                if not self.use_pretrained:
-                    logger.write(','.join(self.columns) + '\n')
-                    self.previous_epoch = metrics_dict['epoch']
-
-            text_line = ','.join([str(metrics_dict[metric]) for metric in self.columns])
-            logger.write(f'{text_line}\n')
-            self.previous_epoch = metrics_dict['epoch']
-
-    def _set_previous_epoch(self):
-        if not self.use_pretrained:
-            remove_file(self.path)
-            return None
+        if not self.use_pretrained and metrics_dict['epoch'] == 1:
+            # First time, create the metrics file
+            new_metrics_df = pd.DataFrame(metrics_dict, index=[0])
+            new_metrics_df.to_csv(self.path, index=False)
         else:
-            metric_df = pd.read_csv(self.path)
-            return metric_df['epoch'].max()
+            # For all epochs after, check that we do not have duplicates and append
+            metric_history_df = pd.read_csv(self.path)
+            new_metrics_df = pd.DataFrame(metrics_dict, index=[metric_history_df.shape[0]])
+            metric_history_df = metric_history_df[metric_history_df['epoch'] != metrics_dict['epoch']]
+            metric_history_df = metric_history_df.append(new_metrics_df)
+            remove_file(self.path)
+            metric_history_df.to_csv(self.path, index=False)
 
 
 class LogPlotter(object):
