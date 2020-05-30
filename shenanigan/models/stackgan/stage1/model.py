@@ -205,4 +205,4 @@ class DiscriminatorStage1(Discriminator):
         wrong_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_wrong), logits=predictions_on_wrong))
         fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake))
         total_loss = real_loss + (wrong_loss + fake_loss) / 2
-        return total_loss
+        return total_loss, real_loss, wrong_loss, fake_loss

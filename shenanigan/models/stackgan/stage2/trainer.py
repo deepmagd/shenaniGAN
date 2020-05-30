@@ -32,6 +32,9 @@ class Stage2Trainer(Trainer):
         acc_generator_loss = 0
         acc_discriminator_loss = 0
         acc_kl_loss = 0
+        acc_disc_real_loss = 0
+        acc_disc_wrong_loss = 0
+        acc_disc_fake_loss = 0
         text_embedding_size = train_loader.dataset_object.text_embedding_dim
         kwargs = dict(
             desc="Epoch {}".format(epoch_num),
@@ -74,7 +77,7 @@ class Stage2Trainer(Trainer):
                         )
 
                     generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                    discriminator_loss = self.model.discriminator.loss(
+                    discriminator_loss, disc_real_loss, disc_wrong_loss, disc_fake_loss = self.model.discriminator.loss(
                         real_predictions, wrong_predictions, fake_predictions
                     )
 
@@ -91,13 +94,24 @@ class Stage2Trainer(Trainer):
                     zip(discriminator_gradients, self.model.discriminator.trainable_variables)
                 )
                 # Update tqdm
-                t.set_postfix(kl_loss=float(kl_loss), generator_loss=float(generator_loss), discriminator_loss=float(discriminator_loss))
+                t.set_postfix(
+                    kl_loss=float(kl_loss),
+                    generator_loss=float(generator_loss),
+                    discriminator_loss=float(discriminator_loss),
+                    disc_real_loss=float(disc_real_loss),
+                    disc_wrong_loss=float(disc_wrong_loss),
+                    disc_fake_loss=float(disc_fake_loss)
+                )
                 t.update()
 
                 # Accumulate losses over all samples
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
                 acc_kl_loss += kl_loss
+                acc_disc_real_loss += disc_real_loss
+                acc_disc_wrong_loss += disc_wrong_loss
+                acc_disc_fake_loss += disc_fake_loss
+
                 # if batch_idx == 1:
                 #     break
 
@@ -105,12 +119,18 @@ class Stage2Trainer(Trainer):
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
             'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
+            'discriminator_real_loss': np.asscalar(acc_disc_real_loss.numpy()) / (batch_idx + 1),
+            'discriminator_wrong_loss': np.asscalar(acc_disc_wrong_loss.numpy()) / (batch_idx + 1),
+            'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1)
         }
 
     def val_epoch(self, val_loader, epoch_num):
         acc_generator_loss = 0
         acc_discriminator_loss = 0
         acc_kl_loss = 0
+        acc_disc_real_loss = 0
+        acc_disc_wrong_loss = 0
+        acc_disc_fake_loss = 0
         text_embedding_size = val_loader.dataset_object.text_embedding_dim
         kwargs = dict(
             desc="Epoch {}".format(epoch_num),
@@ -151,23 +171,37 @@ class Stage2Trainer(Trainer):
                     )
 
                 generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                discriminator_loss = self.model.discriminator.loss(
+                discriminator_loss, disc_real_loss, disc_wrong_loss, disc_fake_loss = self.model.discriminator.loss(
                     real_predictions, wrong_predictions, fake_predictions
                 )
 
                 # Update tqdm
-                t.set_postfix(kl_loss=float(kl_loss), generator_loss=float(generator_loss), discriminator_loss=float(discriminator_loss))
+                t.set_postfix(
+                    kl_loss=float(kl_loss),
+                    generator_loss=float(generator_loss),
+                    discriminator_loss=float(discriminator_loss),
+                    disc_real_loss=float(disc_real_loss),
+                    disc_wrong_loss=float(disc_wrong_loss),
+                    disc_fake_loss=float(disc_fake_loss)
+                )
                 t.update()
 
                 # Accumulate losses over all samples
                 acc_generator_loss += generator_loss
                 acc_discriminator_loss += discriminator_loss
                 acc_kl_loss += kl_loss
+                acc_disc_real_loss += disc_real_loss
+                acc_disc_wrong_loss += disc_wrong_loss
+                acc_disc_fake_loss += disc_fake_loss
+
                 # if batch_idx == 1:
                 #     break
 
         return {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
-            'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1)
+            'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
+            'discriminator_real_loss': np.asscalar(acc_disc_real_loss.numpy()) / (batch_idx + 1),
+            'discriminator_wrong_loss': np.asscalar(acc_disc_wrong_loss.numpy()) / (batch_idx + 1),
+            'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1)
         }

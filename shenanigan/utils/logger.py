@@ -1,8 +1,6 @@
 import os
-
 import pandas as pd
 import seaborn as sns
-
 from shenanigan.utils.utils import mkdir, remove_file
 
 
@@ -13,19 +11,23 @@ class MetricsLogger(object):
             os.remove(path)
         self.path = path
         self.use_pretrained = use_pretrained
-        self.columns = None
+        # self.epoch_history = self._set_epoch_history()
 
     def __call__(self, metrics_dict):
         """ Log metrics to file """
-        with open(self.path, "a+") as logger:
-            if self.columns is None:
-                # First time, log the metric names
-                self.columns = list(metrics_dict.keys())
-                if not self.use_pretrained:
-                    logger.write(','.join(self.columns) + '\n')
+        if not self.use_pretrained and metrics_dict['epoch'] == 1:
+            # First time, create the metrics file
+            new_metrics_df = pd.DataFrame(metrics_dict, index=[0])
+            new_metrics_df.to_csv(self.path, index=False)
+        else:
+            # For all epochs after, check that we do not have duplicates and append
+            metric_history_df = pd.read_csv(self.path)
+            new_metrics_df = pd.DataFrame(metrics_dict, index=[metric_history_df.shape[0]])
+            metric_history_df = metric_history_df[metric_history_df['epoch'] != metrics_dict['epoch']]
+            metric_history_df = metric_history_df.append(new_metrics_df)
+            remove_file(self.path)
+            metric_history_df.to_csv(self.path, index=False)
 
-            text_line = ','.join([str(metrics_dict[metric]) for metric in self.columns])
-            logger.write(f'{text_line}\n')
 
 class LogPlotter(object):
     """ Generate plots from logs """
@@ -36,7 +38,7 @@ class LogPlotter(object):
 
     def _generate_learning_curve(self, method):
         log_path = os.path.join(self.root_path, f'{method}.csv')
-        metric_df = metric_df = pd.read_csv(log_path)
+        metric_df = pd.read_csv(log_path)
         metric_df = pd.melt(metric_df, 'epoch', value_name='loss')
         sns_plot = sns.lineplot(x='epoch', y='loss', hue='variable', data=metric_df)
 
