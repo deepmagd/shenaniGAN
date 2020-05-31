@@ -5,7 +5,7 @@ from shenanigan.utils import rmdir
 
 
 class Checkpointer(object):
-    def __init__(self, model: tf.keras.Model, save_dir: str, max_keep: int = 3):
+    def __init__(self, model: tf.keras.Model, save_dir: str, max_keep: int = None):
         self.ckpt = tf.train.Checkpoint(
             step=tf.Variable(0),
             discriminator=model.discriminator,
@@ -32,7 +32,7 @@ class Checkpointer(object):
             print("Initializing model from scratch")
 
     def save(self):
-        return self.ckpt_manager.save()
+        return self.ckpt_manager.save(checkpoint_number=self.get_epoch_num())
 
     def get_epoch_num(self):
         return int(self.ckpt.step)
