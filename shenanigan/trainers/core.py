@@ -74,7 +74,7 @@ class Trainer(object):
             self.save_best_checkpointer.update_loss(train_metrics[self.tracking_metric])
             self.save_every_checkpointer.update_loss(train_metrics[self.tracking_metric])
             # Save
-            if ((self.save_every_checkpointer.get_epoch_num() + 1) % self.save_every) == 0:
+            if ((self.save_every_checkpointer.get_epoch_num()) % self.save_every) == 0:
                 save_path = self.save_every_checkpointer.save()
                 print("Saved checkpoint for step {}: {}".format(int(self.save_every_checkpointer.get_epoch_num()), save_path))
             if self.is_best(train_metrics['generator_loss']): # NOTE this should be validation but using train for now
