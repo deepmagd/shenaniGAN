@@ -40,6 +40,9 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         every_n=settings['callbacks']['learning_rate_decay']['every_n']
     )
 
+    # use best when doing inference
+    checkpoint_dir = os.path.join(results_dir, 'ckpts_best')
+
     if stage == 1 and evaluate and visualise:
         model = StackGAN1(
             img_size=small_image_dims,
@@ -51,7 +54,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         )
         checkpointer = Checkpointer(
             model=model,
-            save_dir=results_dir.replace('stage-2', 'stage-1')
+            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
+            max_keep=None
         )
         checkpointer.restore(
             use_pretrained=True,
@@ -78,7 +82,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         )
         checkpointer_stage1 = Checkpointer(
             model=model_stage1,
-            save_dir=results_dir.replace('stage-2', 'stage-1')
+            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
+            max_keep=None
         )
         checkpointer_stage1.restore(
             use_pretrained=True,
@@ -95,7 +100,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         )
         checkpointer_stage2 = Checkpointer(
             model=model_stage2,
-            save_dir=results_dir
+            save_dir=checkpoint_dir,
+            max_keep=None
         )
         checkpointer_stage2.restore(
             use_pretrained=True,
@@ -124,7 +130,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         )
         checkpointer_stage1 = Checkpointer(
             model=model_stage1,
-            save_dir=results_dir.replace('stage-2', 'stage-1')
+            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
+            max_keep=None
         )
         checkpointer_stage1.restore(
             use_pretrained=True,
@@ -141,7 +148,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         )
         checkpointer_stage2 = Checkpointer(
             model=model_stage2,
-            save_dir=results_dir
+            save_dir=checkpoint_dir,
+            max_keep=None
         )
         checkpointer_stage2.restore(
             use_pretrained=True,
@@ -196,7 +204,8 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
         )
         checkpointer = Checkpointer(
             model=model_stage1,
-            save_dir=results_dir.replace('stage-2', 'stage-1')
+            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
+            max_keep=None
         )
         checkpointer.restore(
             use_pretrained=True,
