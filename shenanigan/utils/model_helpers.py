@@ -11,9 +11,10 @@ class Checkpointer(object):
             discriminator=model.discriminator,
             generator=model.generator,
             g_optimizer=model.generator.optimizer,
-            d_optimizer=model.discriminator.optimizer
+            d_optimizer=model.discriminator.optimizer,
+            loss=tf.Variable(1E06) # some large number
         )
-        self.checkpoint_dir = os.path.join(save_dir, 'ckpts')
+        self.checkpoint_dir = save_dir
         self.ckpt_manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_dir, max_to_keep=max_keep)
 
     def restore(self, use_pretrained: bool = False, evaluate: bool = False):
@@ -37,5 +38,11 @@ class Checkpointer(object):
     def get_epoch_num(self):
         return int(self.ckpt.step)
 
+    def get_loss(self):
+        return float(self.ckpt.loss)
+
     def increment_epoch(self):
         self.ckpt.step.assign_add(1)
+
+    def update_loss(self, loss):
+        self.ckpt.loss.assign(loss)
