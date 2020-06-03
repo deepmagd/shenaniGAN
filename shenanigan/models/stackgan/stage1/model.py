@@ -59,22 +59,34 @@ class GeneratorStage1(Generator):
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
         self.reshape_layer = Reshape([4, 4, 128*8])
 
-        self.res_block_1 = ResidualLayer(128*2, 128*8, self.w_init, self.bn_init)
+        self.res_block_1 = ResidualLayer(
+            filters_in=128*2,
+            filters_out=128*8,
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu
+        )
 
         self.deconv_block_1 = DeconvBlock(128*4, self.w_init, self.bn_init)
 
-        self.res_block_2 = ResidualLayer(128, 128*4, self.w_init, self.bn_init)
+        self.res_block_2 = ResidualLayer(
+            filters_in=128,
+            filters_out=128*4,
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu
+        )
 
         self.deconv_block_2 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=tf.nn.relu)
         self.deconv_block_3 = DeconvBlock(128, self.w_init, self.bn_init, activation=tf.nn.relu)
 
         self.deconv2d_4 = Conv2DTranspose(
             self.num_output_channels, kernel_size=(4, 4), strides=(2, 2),
-            padding='same', kernel_initializer=self.w_init, use_bias=False
+            padding='same', kernel_initializer=self.w_init
         )
         self.conv2d_4 = Conv2D(
             filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1),
-            padding='same', kernel_initializer=self.w_init, use_bias=False
+            padding='same', kernel_initializer=self.w_init
         )
 
         self.tanh = Activation('tanh')
@@ -122,7 +134,7 @@ class GeneratorStage1(Generator):
         return loss, kl_loss
 
     def kl_loss(self, mean, log_sigma):
-        loss = -log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
+        loss = -log_sigma + .5 * (-1 + tf.math.exp(2. * log_sigma) + tf.math.square(mean))
         loss = tf.reduce_mean(loss)
         return loss
 
@@ -146,7 +158,7 @@ class DiscriminatorStage1(Discriminator):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
         self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2),
-                             padding='same', kernel_initializer=self.w_init, use_bias=False)
+                             padding='same', kernel_initializer=self.w_init)
 
         self.conv_block_1 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
                                       w_init=self.w_init, bn_init=self.bn_init, activation=activation
@@ -158,7 +170,13 @@ class DiscriminatorStage1(Discriminator):
                                       w_init=self.w_init, bn_init=self.bn_init
                                       )
 
-        self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init)
+        self.res_block = ResidualLayer(
+            filters_in=self.d_dim*2,
+            filters_out=self.d_dim*8,
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation
+        )
 
         self.dense_embed = Dense(units=self.conditional_emb_size)
 
@@ -168,7 +186,7 @@ class DiscriminatorStage1(Discriminator):
 
         # (4, 4) == 256/64
         self.conv_2 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding="valid",
-                             kernel_initializer=self.w_init, use_bias=False
+                             kernel_initializer=self.w_init
                              )
 
     def call(self, inputs, training=True):
@@ -201,7 +219,7 @@ class DiscriminatorStage1(Discriminator):
                 predictions_on_real : Tensor
                 predictions_on_fake : Tensor
         """
-        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(predictions_on_real), logits=predictions_on_real))
+        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.fill(predictions_on_real.shape, 0.9), logits=predictions_on_real))
         wrong_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_wrong), logits=predictions_on_wrong))
         fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(predictions_on_fake), logits=predictions_on_fake))
         total_loss = real_loss + (wrong_loss + fake_loss) / 2

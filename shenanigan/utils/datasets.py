@@ -68,8 +68,8 @@ class StackGANDataset(object):
             raise Exception('Invalid subset type: {}, expected train or test'.format(subset))
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
-        mapped_subset_obj = subset_obj.map(self._parse_example)
-        return mapped_subset_obj.batch(batch_size)
+        mapped_subset_obj = subset_obj.map(self._parse_example, num_parallel_calls=8)
+        return mapped_subset_obj.batch(batch_size).prefetch(batch_size//10)
 
     def _parse_example(self, example_proto):
         # Parse the input tf.Example proto using self.feature_description
@@ -115,8 +115,8 @@ class FlowersWithWordsDataset(StackGANDataset):
     def __init__(self):
         super().__init__()
         self.type = 'images-with-captions'
-        self.image_dims_small = (64, 64)
-        self.image_dims_large = (256, 256)
+        self.image_dims_small = (76, 76)
+        self.image_dims_large = (304, 304)
         self.num_channels = 3
         self.text_embedding_dim = 1024
 

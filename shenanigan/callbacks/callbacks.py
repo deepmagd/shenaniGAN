@@ -29,4 +29,5 @@ class LearningRateDecay(object):
 
         if ((epoch_num + 1) % self.every_n) == 0:
             new_lr = model.optimizer.lr * self.decay_factor
+            print(f'Updating model learning rate {float(model.optimizer.lr):.8f} --> {new_lr:.8f}')
             model.optimizer.lr.assign(new_lr)

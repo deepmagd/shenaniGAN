@@ -12,8 +12,8 @@ class DeconvBlock(layers.Layer):
         self.bn_init = bn_init
 
     def build(self, inout_shape):
-        self.deconv2d = Conv2DTranspose(self.filters, kernel_size=(4, 4), strides=(2, 2), padding='same', use_bias=False, kernel_initializer=self.w_init)
-        self.conv2d = Conv2D(filters=self.filters, kernel_size=(3, 3), strides=(1, 1), padding='same', use_bias=False, kernel_initializer=self.w_init)
+        self.deconv2d = Conv2DTranspose(self.filters, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=self.w_init)
+        self.conv2d = Conv2D(filters=self.filters, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
         self.bn = BatchNormalization(gamma_initializer=self.bn_init)
 
     def call(self, x, training=True):
@@ -39,7 +39,7 @@ class ConvBlock(layers.Layer):
     def build(self, input_shape):
         self.conv2d = Conv2D(
             filters=self.filters, kernel_size=self.kernel_size, strides=self.strides,
-            padding=self.padding, kernel_initializer=self.w_init, use_bias=False
+            padding=self.padding, kernel_initializer=self.w_init
         )
         self.bn = BatchNormalization(gamma_initializer=self.bn_init)
 
