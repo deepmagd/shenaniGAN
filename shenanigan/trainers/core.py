@@ -26,11 +26,22 @@ class Trainer(object):
         self.save_best_after = save_best_after
         self.train_logger = MetricsLogger(os.path.join(self.save_dir, 'train.csv'), use_pretrained)
         self.val_logger = MetricsLogger(os.path.join(self.save_dir, 'val.csv'), use_pretrained)
-        self.minimum_val_loss = None
         self.show_progress_bar = show_progress_bar
         self.callbacks = callbacks if callbacks is not None else []
         self.use_pretrained = use_pretrained
-        self.checkpointer = Checkpointer(self.model, self.save_dir)
+        self.minimum_loss = None
+        # NOTE using generator loss for now, should be validation though
+        self.tracking_metric = 'generator_loss'
+        self.save_best_checkpointer = Checkpointer(
+            model=self.model,
+            save_dir=os.path.join(self.save_dir, 'ckpts_best'),
+            max_keep=3
+        )
+        self.save_every_checkpointer = Checkpointer(
+            model=self.model,
+            save_dir=os.path.join(self.save_dir, 'ckpts_every'),
+            max_keep=20
+        )
 
     def __call__(self, train_loader, val_loader, num_epochs):
         """ Trains the model.
@@ -40,26 +51,36 @@ class Trainer(object):
             num_epochs: int
                 Number of epochs to train the model for.
         """
-        self.checkpointer.restore(use_pretrained=self.use_pretrained)
+        # NOTE the order is important, initialise model with save every as this is likely the last model saved
+        self.save_best_checkpointer.restore(use_pretrained=self.use_pretrained)
+        self.save_every_checkpointer.restore(use_pretrained=self.use_pretrained)
+
+        self.minimum_loss = self.save_best_checkpointer.get_loss()
 
         for _ in range(num_epochs):
             # Train
-            self.checkpointer.increment_epoch()
-            train_metrics = self.train_epoch(train_loader, self.checkpointer.get_epoch_num())
-            train_metrics['epoch'] = int(self.checkpointer.get_epoch_num())
+            self.save_every_checkpointer.increment_epoch()
+            self.save_best_checkpointer.increment_epoch()
+            train_metrics = self.train_epoch(train_loader, self.save_every_checkpointer.get_epoch_num())
+            train_metrics['epoch'] = int(self.save_every_checkpointer.get_epoch_num())
             print(f'Metrics: {train_metrics}')
             self.train_logger(train_metrics)
             # Validation
-            val_metrics = self.val_epoch(val_loader, self.checkpointer.get_epoch_num())
-            val_metrics['epoch'] = int(self.checkpointer.get_epoch_num())
+            val_metrics = self.val_epoch(val_loader, self.save_every_checkpointer.get_epoch_num())
+            val_metrics['epoch'] = int(self.save_every_checkpointer.get_epoch_num())
             print(f'Metrics: {val_metrics}')
             self.val_logger(val_metrics)
+            # update loss
+            self.save_best_checkpointer.update_loss(train_metrics[self.tracking_metric])
+            self.save_every_checkpointer.update_loss(train_metrics[self.tracking_metric])
             # Save
-            if ((self.checkpointer.get_epoch_num() + 1) % self.save_every == 0) or \
-               ((self.checkpointer.get_epoch_num() + 1) > self.save_best_after and self.is_best(val_metrics['generator_loss'])):
-                save_path = self.checkpointer.save()
-                print("Saved checkpoint for step {}: {}".format(int(self.checkpointer.get_epoch_num()), save_path))
-            self.run_callbacks(self.checkpointer.get_epoch_num())
+            if ((self.save_every_checkpointer.get_epoch_num()) % self.save_every) == 0:
+                save_path = self.save_every_checkpointer.save()
+                print("Saved checkpoint for step {}: {}".format(int(self.save_every_checkpointer.get_epoch_num()), save_path))
+            if self.is_best(train_metrics['generator_loss']): # NOTE this should be validation but using train for now
+                save_path = self.save_best_checkpointer.save()
+                print("Saved best checkpoint for step {}: {}".format(int(self.save_best_checkpointer.get_epoch_num()), save_path))
+            self.run_callbacks(self.save_every_checkpointer.get_epoch_num())
 
     def train_epoch(self, train_loader, epoch_num):
         """ Training operations for a single epoch """
@@ -68,9 +89,9 @@ class Trainer(object):
     def val_epoch(self, val_loader, epoch_num):
         pass
 
-    def is_best(self, generator_loss):
-        if self.minimum_val_loss is None or self.minimum_val_loss > generator_loss:
-            self.minimum_val_loss = generator_loss
+    def is_best(self, current_loss):
+        if current_loss < self.minimum_loss:
+            self.minimum_loss = current_loss
             return True
         return False
 
