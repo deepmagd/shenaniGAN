@@ -42,7 +42,7 @@ class ConditionalAugmentation(layers.Layer):
         self.conditional_emb_size = conditional_emb_size
         self.w_init = w_init
 
-    def build(self, inout_shape):
+    def build(self, input_shape):
         self.dense_mean = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
         self.dense_sigma = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
 
