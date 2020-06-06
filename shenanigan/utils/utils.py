@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 import re
+from sklearn.metrics import precision_recall_fscore_support
 import shutil
 import tensorflow as tf
 import yaml
@@ -119,3 +120,20 @@ def extract_epoch_num(results_dir):
         raise Exception(f"No candidate models found in '{results_dir}'")
     only_checkpoint_dirs = [int(re.search(r'\d+', candidate_dir.split('/')[-2])[0]) for candidate_dir in candidate_dirs]
     return max(only_checkpoint_dirs)
+
+def all_confusion_metics(real_preds, wrong_preds, fake_preds):
+    all_confusion_metrics = {}
+    all_confusion_metrics.update(
+        confusion_metics(preds=tf.math.sigmoid(real_preds) > 0.5, labels=tf.ones_like(real_preds), name='real')
+    )
+    all_confusion_metrics.update(
+        confusion_metics(preds=tf.math.sigmoid(wrong_preds) > 0.5, labels=tf.zeros_like(wrong_preds), name='wrong')
+    )
+    all_confusion_metrics.update(
+        confusion_metics(preds=tf.math.sigmoid(fake_preds) > 0.5, labels=tf.zeros_like(fake_preds), name='fake')
+    )
+    return all_confusion_metrics
+
+def confusion_metics(preds, labels, name):
+    precision, recall, f1, support = precision_recall_fscore_support(preds, labels, average='binary')
+    return {f'{name}_precision': precision, f'{name}_recall': recall, f'{name}_f1': f1}

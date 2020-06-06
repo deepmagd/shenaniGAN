@@ -4,6 +4,7 @@ from tqdm import trange
 
 from shenanigan.trainers import Trainer
 from shenanigan.utils.data_helpers import tensors_from_sample
+from shenanigan.utils.utils import all_confusion_metics
 
 
 class Stage1Trainer(Trainer):
@@ -34,6 +35,9 @@ class Stage1Trainer(Trainer):
         acc_disc_real_loss = 0
         acc_disc_wrong_loss = 0
         acc_disc_fake_loss = 0
+        all_real_predictions = []
+        all_wrong_predictions = []
+        all_fake_predictions = []
         text_embedding_size = train_loader.dataset_object.text_embedding_dim
         kwargs = dict(
             desc="Epoch {}".format(epoch_num),
@@ -101,10 +105,14 @@ class Stage1Trainer(Trainer):
                 acc_disc_wrong_loss += disc_wrong_loss
                 acc_disc_fake_loss += disc_fake_loss
 
+                all_real_predictions.append(real_predictions)
+                all_wrong_predictions.append(wrong_predictions)
+                all_fake_predictions.append(fake_predictions)
+
                 # if batch_idx == 1:
                 #     break
 
-        return {
+        loss_metrics = {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
             'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
@@ -113,6 +121,15 @@ class Stage1Trainer(Trainer):
             'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1)
         }
 
+        confusion_metrics = all_confusion_metics(
+            tf.concat(all_real_predictions, axis=0),
+            tf.concat(all_wrong_predictions, axis=0),
+            tf.concat(all_fake_predictions, axis=0)
+        )
+        loss_metrics.update(confusion_metrics)
+
+        return loss_metrics
+
     def val_epoch(self, val_loader, epoch_num):
         acc_generator_loss = 0
         acc_discriminator_loss = 0
@@ -120,6 +137,9 @@ class Stage1Trainer(Trainer):
         acc_disc_real_loss = 0
         acc_disc_wrong_loss = 0
         acc_disc_fake_loss = 0
+        all_real_predictions = []
+        all_wrong_predictions = []
+        all_fake_predictions = []
         text_embedding_size = val_loader.dataset_object.text_embedding_dim
         kwargs = dict(
             desc="Epoch {}".format(epoch_num),
@@ -173,10 +193,14 @@ class Stage1Trainer(Trainer):
                 acc_disc_wrong_loss += disc_wrong_loss
                 acc_disc_fake_loss += disc_fake_loss
 
+                all_real_predictions.append(real_predictions)
+                all_wrong_predictions.append(wrong_predictions)
+                all_fake_predictions.append(fake_predictions)
+
                 # if batch_idx == 1:
                 #     break
 
-        return {
+        loss_metrics = {
             'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
             'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
             'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
@@ -184,3 +208,12 @@ class Stage1Trainer(Trainer):
             'discriminator_wrong_loss': np.asscalar(acc_disc_wrong_loss.numpy()) / (batch_idx + 1),
             'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1)
         }
+
+        confusion_metrics = all_confusion_metics(
+            tf.concat(all_real_predictions, axis=0),
+            tf.concat(all_wrong_predictions, axis=0),
+            tf.concat(all_fake_predictions, axis=0)
+        )
+        loss_metrics.update(confusion_metrics)
+
+        return loss_metrics
