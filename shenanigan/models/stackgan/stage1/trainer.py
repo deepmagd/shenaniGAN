@@ -69,7 +69,7 @@ class Stage1Trainer(Trainer):
                     kl_loss = sum(self.model.generator.losses)
                     generator_loss += kl_loss
 
-                    disc_real_loss = self.model.discriminator.loss(tf.ones_like(real_predictions), real_predictions)
+                    disc_real_loss = self.model.discriminator.loss(tf.fill(real_predictions.shape, 0.9), real_predictions)
                     disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
                     disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
 
