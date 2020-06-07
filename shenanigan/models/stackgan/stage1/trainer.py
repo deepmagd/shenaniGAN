@@ -69,22 +69,27 @@ class Stage1Trainer(Trainer):
                             real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                         )
 
-                    generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                    discriminator_loss, disc_real_loss, disc_wrong_loss, disc_fake_loss = self.model.discriminator.loss(
-                        real_predictions, wrong_predictions, fake_predictions
-                    )
+                    generator_loss = self.model.generator.loss(tf.ones_like(fake_predictions), fake_predictions)
+                    kl_loss = sum(self.model.generator.losses)
+                    generator_loss += kl_loss
+
+                    disc_real_loss = self.model.discriminator.loss(tf.fill(real_predictions.shape, 0.9), real_predictions)
+                    disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
+                    disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
+
+                    discriminator_loss = disc_real_loss + 0.5*disc_wrong_loss + 0.5*disc_fake_loss
 
                 # Update gradients
-                generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
+                generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_weights)
                 discriminator_gradients = discriminator_tape.gradient(
-                    discriminator_loss, self.model.discriminator.trainable_variables
+                    discriminator_loss, self.model.discriminator.trainable_weights
                 )
 
                 self.model.generator.optimizer.apply_gradients(
-                    zip(generator_gradients, self.model.generator.trainable_variables)
+                    zip(generator_gradients, self.model.generator.trainable_weights)
                 )
                 self.model.discriminator.optimizer.apply_gradients(
-                    zip(discriminator_gradients, self.model.discriminator.trainable_variables)
+                    zip(discriminator_gradients, self.model.discriminator.trainable_weights)
                 )
                 # Update tqdm
                 t.set_postfix(
@@ -169,10 +174,15 @@ class Stage1Trainer(Trainer):
                         real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                     )
 
-                generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                discriminator_loss, disc_real_loss, disc_wrong_loss, disc_fake_loss = self.model.discriminator.loss(
-                    real_predictions, wrong_predictions, fake_predictions
-                )
+                generator_loss = self.model.generator.loss(tf.ones_like(fake_predictions), fake_predictions)
+                kl_loss = sum(self.model.generator.losses)
+                generator_loss += kl_loss
+
+                disc_real_loss = self.model.discriminator.loss(tf.ones_like(real_predictions), real_predictions)
+                disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
+                disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
+
+                discriminator_loss = disc_real_loss + 0.5*disc_wrong_loss + 0.5*disc_fake_loss
 
                 # Update tqdm
                 t.set_postfix(

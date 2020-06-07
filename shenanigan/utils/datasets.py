@@ -69,7 +69,7 @@ class StackGANDataset(object):
         subset_paths = get_record_paths(os.path.join(self.directory, subset))
         subset_obj = tf.data.TFRecordDataset(subset_paths)
         mapped_subset_obj = subset_obj.map(self._parse_example, num_parallel_calls=8)
-        return mapped_subset_obj.batch(batch_size).prefetch(batch_size//10)
+        return mapped_subset_obj.shuffle(buffer_size=batch_size*16).batch(batch_size).prefetch(batch_size//10)
 
     def _parse_example(self, example_proto):
         # Parse the input tf.Example proto using self.feature_description
