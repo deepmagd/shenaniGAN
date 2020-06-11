@@ -60,9 +60,9 @@ class Stage1Trainer(Trainer):
                             image_small.shape, fake_images.shape
                         )
 
-                    real_predictions = tf.squeeze(self.model.discriminator([image_small, text_tensor], training=True))
-                    wrong_predictions = tf.squeeze(self.model.discriminator([wrong_image_small, text_tensor], training=True))
-                    fake_predictions = tf.squeeze(self.model.discriminator([fake_images, text_tensor], training=True))
+                    real_predictions = self.model.discriminator([image_small, text_tensor], training=True)
+                    wrong_predictions = self.model.discriminator([wrong_image_small, text_tensor], training=True)
+                    fake_predictions = self.model.discriminator([fake_images, text_tensor], training=True)
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                         'Predictions for real ({}), wrong ({}), and fake ({}) images must have the same dimensions'.format(
@@ -126,12 +126,12 @@ class Stage1Trainer(Trainer):
             'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1)
         }
 
-        confusion_metrics = all_confusion_metics(
-            tf.concat(all_real_predictions, axis=0),
-            tf.concat(all_wrong_predictions, axis=0),
-            tf.concat(all_fake_predictions, axis=0)
-        )
-        loss_metrics.update(confusion_metrics)
+        # confusion_metrics = all_confusion_metics(
+        #     tf.concat(all_real_predictions, axis=0),
+        #     tf.concat(all_wrong_predictions, axis=0),
+        #     tf.concat(all_fake_predictions, axis=0)
+        # )
+        # loss_metrics.update(confusion_metrics)
 
         return loss_metrics
 
@@ -165,9 +165,9 @@ class Stage1Trainer(Trainer):
                         image_small.shape, fake_images.shape
                     )
 
-                real_predictions = tf.squeeze(self.model.discriminator([image_small, text_tensor], training=False))
-                wrong_predictions = tf.squeeze(self.model.discriminator([wrong_image_small, text_tensor], training=False))
-                fake_predictions = tf.squeeze(self.model.discriminator([fake_images, text_tensor], training=False))
+                real_predictions = self.model.discriminator([image_small, text_tensor], training=False)
+                wrong_predictions = self.model.discriminator([wrong_image_small, text_tensor], training=False)
+                fake_predictions = self.model.discriminator([fake_images, text_tensor], training=False)
 
                 assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                     'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
@@ -219,11 +219,11 @@ class Stage1Trainer(Trainer):
             'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1)
         }
 
-        confusion_metrics = all_confusion_metics(
-            tf.concat(all_real_predictions, axis=0),
-            tf.concat(all_wrong_predictions, axis=0),
-            tf.concat(all_fake_predictions, axis=0)
-        )
-        loss_metrics.update(confusion_metrics)
+        # confusion_metrics = all_confusion_metics(
+        #     tf.concat(all_real_predictions, axis=0),
+        #     tf.concat(all_wrong_predictions, axis=0),
+        #     tf.concat(all_fake_predictions, axis=0)
+        # )
+        # loss_metrics.update(confusion_metrics)
 
         return loss_metrics
