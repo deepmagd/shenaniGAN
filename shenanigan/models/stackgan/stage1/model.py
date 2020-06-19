@@ -4,8 +4,9 @@ from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
 
 from shenanigan.layers import ConvBlock, DeconvBlock
 from shenanigan.models import ConditionalGAN, Discriminator, Generator
-from shenanigan.models.stackgan.layers import (ConditionalAugmentation,
-                                               ResidualLayer)
+from shenanigan.models.stackgan.layers import ConditionalAugmentation, ResidualLayer
+from shenanigan.utils.utils import  kl_loss
+
 
 class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
@@ -121,14 +122,10 @@ class GeneratorStage1(Generator):
 
         x = self.tanh(x)
 
-        self.add_loss(self.kl_coeff*self.kl_loss(mean, log_sigma))
+        self.add_loss(self.kl_coeff * kl_loss(mean, log_sigma))
 
         return x, mean, log_sigma
 
-    def kl_loss(self, mean, log_sigma):
-        loss = -log_sigma + .5 * (-1 + tf.math.exp(2. * log_sigma) + tf.math.square(mean))
-        loss = tf.reduce_mean(loss)
-        return loss
 
 class DiscriminatorStage1(Discriminator):
     """ The definition for a network which

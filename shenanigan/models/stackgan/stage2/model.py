@@ -6,6 +6,7 @@ from shenanigan.models import ConditionalGAN, Discriminator, Generator
 from shenanigan.models.stackgan.layers import (ConditionalAugmentation,
                                                ResidualLayer)
 from shenanigan.models.stackgan.stage2.layers import ResidualLayerStage2
+from shenanigan.utils.utils import kl_loss
 
 
 class StackGAN2(ConditionalGAN):
@@ -141,14 +142,9 @@ class GeneratorStage2(Generator):
             tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=tf.ones_like(predictions_on_fake), logits=predictions_on_fake
             ))
-        kl_loss = self.kl_loss(mean, log_sigma)
+        kl_loss = kl_loss(mean, log_sigma)
         loss = loss + kl_coeff * kl_loss
         return loss, kl_loss
-
-    def kl_loss(self, mean, log_sigma):
-        loss = -log_sigma + .5 * (-1 + tf.exp(2. * log_sigma) + tf.math.square(mean))
-        loss = tf.reduce_mean(loss)
-        return loss
 
 
 class DiscriminatorStage2(Discriminator):
