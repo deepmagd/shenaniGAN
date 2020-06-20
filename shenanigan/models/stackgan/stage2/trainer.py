@@ -53,7 +53,7 @@ class Stage2Trainer(Trainer):
                     noise_z = tf.random.normal((batch_size, self.noise_size))
                     fake_images_small, _, _ = self.stage_1_generator([text_tensor, noise_z], training=False)
 
-                    fake_images_large, mean, log_sigma = self.model.generator(
+                    fake_images_large = self.model.generator(
                         [fake_images_small, text_tensor], training=True
                     )
                     assert fake_images_large.shape == image_large.shape, \
@@ -61,25 +61,24 @@ class Stage2Trainer(Trainer):
                             image_large.shape, fake_images_large.shape
                         )
 
-                    real_predictions = tf.squeeze(
-                        self.model.discriminator([image_large, text_tensor], training=True)
-                    )
-                    wrong_predictions = tf.squeeze(
-                        self.model.discriminator([wrong_image_large, text_tensor], training=True)
-                    )
-                    fake_predictions = tf.squeeze(
-                        self.model.discriminator([fake_images_large, text_tensor], training=True)
-                    )
+                    real_predictions = self.model.discriminator([image_large, text_tensor], training=True)
+                    wrong_predictions = self.model.discriminator([wrong_image_large, text_tensor], training=True)
+                    fake_predictions = self.model.discriminator([fake_images_large, text_tensor], training=True)
 
                     assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                         'Real ({}), wrong ({}) and fake ({}) image predictions must have the same dimensions'.format(
                             real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                         )
 
-                    generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                    discriminator_loss, disc_real_loss, disc_wrong_loss, disc_fake_loss = self.model.discriminator.loss(
-                        real_predictions, wrong_predictions, fake_predictions
-                    )
+                    generator_loss = self.model.generator.loss(tf.ones_like(fake_predictions), fake_predictions)
+                    kl_loss = sum(self.model.generator.losses)
+                    generator_loss += kl_loss
+
+                    disc_real_loss = self.model.discriminator.loss(tf.fill(real_predictions.shape, 0.9), real_predictions)
+                    disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
+                    disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
+
+                    discriminator_loss = disc_real_loss + 0.5*disc_wrong_loss + 0.5*disc_fake_loss
 
                 # Update gradients
                 generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_variables)
@@ -147,7 +146,7 @@ class Stage2Trainer(Trainer):
                 noise_z = tf.random.normal((batch_size, self.noise_size))
                 fake_images_small, _, _ = self.stage_1_generator([text_tensor, noise_z], training=False)
 
-                fake_images, mean, log_sigma = self.model.generator(
+                fake_images = self.model.generator(
                     [fake_images_small, text_tensor], training=False
                 )
                 assert fake_images.shape == image_large.shape, \
@@ -155,25 +154,24 @@ class Stage2Trainer(Trainer):
                         image_large.shape, fake_images.shape
                     )
 
-                real_predictions = tf.squeeze(
-                    self.model.discriminator([image_large, text_tensor], training=False)
-                )
-                wrong_predictions = tf.squeeze(
-                    self.model.discriminator([wrong_image_large, text_tensor], training=False)
-                )
-                fake_predictions = tf.squeeze(
-                    self.model.discriminator([fake_images, text_tensor], training=False)
-                )
+                real_predictions = self.model.discriminator([image_large, text_tensor], training=False)
+                wrong_predictions = self.model.discriminator([wrong_image_large, text_tensor], training=False)
+                fake_predictions = self.model.discriminator([fake_images, text_tensor], training=False)
 
                 assert real_predictions.shape == wrong_predictions.shape == fake_predictions.shape, \
                     'Real ({}), wrong ({}) and fake ({}) image predictions must have the same dimensions'.format(
                         real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
                     )
 
-                generator_loss, kl_loss = self.model.generator.loss(fake_predictions, mean, log_sigma)
-                discriminator_loss, disc_real_loss, disc_wrong_loss, disc_fake_loss = self.model.discriminator.loss(
-                    real_predictions, wrong_predictions, fake_predictions
-                )
+                generator_loss = self.model.generator.loss(tf.ones_like(fake_predictions), fake_predictions)
+                kl_loss = sum(self.model.generator.losses)
+                generator_loss += kl_loss
+
+                disc_real_loss = self.model.discriminator.loss(tf.ones_like(real_predictions), real_predictions)
+                disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
+                disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
+
+                discriminator_loss = disc_real_loss + 0.5*disc_wrong_loss + 0.5*disc_fake_loss
 
                 # Update tqdm
                 t.set_postfix(
