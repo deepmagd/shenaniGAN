@@ -41,7 +41,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
     )
 
     # use best when doing inference
-    checkpoint_dir = os.path.join(results_dir, 'ckpts_best')
+    checkpoint_dir = os.path.join(results_dir, 'ckpts_every')
 
     if stage == 1 and evaluate and visualise:
         model = StackGAN1(
