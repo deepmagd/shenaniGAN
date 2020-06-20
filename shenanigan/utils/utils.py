@@ -60,6 +60,11 @@ def sample_normal(mean, log_var):
     epsilon = tf.random.normal(tf.shape(mean))  # TODO is shape the correct thing to use here?
     return mean + std * epsilon
 
+def kl_loss(mean, log_sigma):
+    loss = -log_sigma + .5 * (-1 + tf.math.exp(2. * log_sigma) + tf.math.square(mean))
+    loss = tf.reduce_mean(loss)
+    return loss
+
 def product_list(num_list):
     """ A helper function to simply find the
         product of all elements in the list.
