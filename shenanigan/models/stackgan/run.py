@@ -111,9 +111,10 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             dataloader=train_loader,
             num_images=settings['visualisation']['images_to_generate'],
             noise_size=settings['stage1']['noise_size'],
-            model=model,
+            model=model_stage1,
             save_location=os.path.join(results_dir, 'viz'),
-            img_size='large'
+            img_size='large',
+            subsequent_model=model_stage2
         )
 
     elif stage == 1 and evaluate:
