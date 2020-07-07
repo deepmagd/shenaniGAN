@@ -6,6 +6,7 @@ from shenanigan.utils.utils import mkdir, remove_file
 
 class MetricsLogger(object):
     """ Define an object to handle all metric logging """
+
     def __init__(self, path, use_pretrained=False):
         if os.path.exists(path) and not use_pretrained:
             os.remove(path)
@@ -31,6 +32,7 @@ class MetricsLogger(object):
 
 class LogPlotter(object):
     """ Generate plots from logs """
+
     def __init__(self, root_path):
         self.root_path = root_path
         self.plot_dir = os.path.join(self.root_path, 'plots')

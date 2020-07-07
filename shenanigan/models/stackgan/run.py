@@ -20,7 +20,7 @@ def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
         lr_d=settings['stage1']['discriminator']['learning_rate'],
         conditional_emb_size=settings['stage1']['conditional_emb_size'],
         w_init=tf.random_normal_initializer(stddev=0.02),
-        bn_init=tf.random_normal_initializer(1., 0.02)
+        bn_init=tf.random_normal_initializer(1.0, 0.02),
     )
     if stage == 2:
         results_dir = results_dir.replace('stage-2', 'stage-1')
@@ -34,10 +34,22 @@ def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
     model.discriminator = tf.saved_model.load(os.path.join(pretrained_dir, 'discriminator', 'discriminator'))
     return model
 
-def run(train_loader, val_loader, small_image_dims, results_dir, settings, experiment_name, stage, use_pretrained=False, visualise=False, evaluate=False):
+
+def run(
+    train_loader,
+    val_loader,
+    small_image_dims,
+    results_dir,
+    settings,
+    experiment_name,
+    stage,
+    use_pretrained=False,
+    visualise=False,
+    evaluate=False,
+):
     lr_decay = LearningRateDecay(
         decay_factor=settings['callbacks']['learning_rate_decay']['decay_factor'],
-        every_n=settings['callbacks']['learning_rate_decay']['every_n']
+        every_n=settings['callbacks']['learning_rate_decay']['every_n'],
     )
 
     # use best when doing inference
@@ -50,24 +62,17 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage1']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage1']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
-        checkpointer = Checkpointer(
-            model=model,
-            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
-            max_keep=None
-        )
-        checkpointer.restore(
-            use_pretrained=True,
-            evaluate=True
-        )
+        checkpointer = Checkpointer(model=model, save_dir=checkpoint_dir.replace('stage-2', 'stage-1'), max_keep=None)
+        checkpointer.restore(use_pretrained=True, evaluate=True)
         compare_generated_to_real(
             dataloader=train_loader,
             num_images=settings['visualisation']['images_to_generate'],
             noise_size=settings['stage1']['noise_size'],
             model=model,
             save_location=os.path.join(results_dir, 'viz'),
-            img_size='small'
+            img_size='small',
         )
 
     elif stage == 2 and evaluate and visualise:
@@ -78,17 +83,12 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage1']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage1']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
         checkpointer_stage1 = Checkpointer(
-            model=model_stage1,
-            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
-            max_keep=None
+            model=model_stage1, save_dir=checkpoint_dir.replace('stage-2', 'stage-1'), max_keep=None
         )
-        checkpointer_stage1.restore(
-            use_pretrained=True,
-            evaluate=True
-        )
+        checkpointer_stage1.restore(use_pretrained=True, evaluate=True)
 
         model_stage2 = StackGAN2(
             img_size=small_image_dims,
@@ -96,17 +96,10 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage2']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage2']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
-        checkpointer_stage2 = Checkpointer(
-            model=model_stage2,
-            save_dir=checkpoint_dir,
-            max_keep=None
-        )
-        checkpointer_stage2.restore(
-            use_pretrained=True,
-            evaluate=True
-        )
+        checkpointer_stage2 = Checkpointer(model=model_stage2, save_dir=checkpoint_dir, max_keep=None)
+        checkpointer_stage2.restore(use_pretrained=True, evaluate=True)
         compare_generated_to_real(
             dataloader=train_loader,
             num_images=settings['visualisation']['images_to_generate'],
@@ -114,7 +107,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             model=model_stage1,
             save_location=os.path.join(results_dir, 'viz'),
             img_size='large',
-            subsequent_model=model_stage2
+            subsequent_model=model_stage2,
         )
 
     elif stage == 1 and evaluate:
@@ -127,17 +120,12 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage1']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage1']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
         checkpointer_stage1 = Checkpointer(
-            model=model_stage1,
-            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
-            max_keep=None
+            model=model_stage1, save_dir=checkpoint_dir.replace('stage-2', 'stage-1'), max_keep=None
         )
-        checkpointer_stage1.restore(
-            use_pretrained=True,
-            evaluate=True
-        )
+        checkpointer_stage1.restore(use_pretrained=True, evaluate=True)
 
         model_stage2 = StackGAN2(
             img_size=small_image_dims,
@@ -145,17 +133,10 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage2']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage2']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
-        checkpointer_stage2 = Checkpointer(
-            model=model_stage2,
-            save_dir=checkpoint_dir,
-            max_keep=None
-        )
-        checkpointer_stage2.restore(
-            use_pretrained=True,
-            evaluate=True
-        )
+        checkpointer_stage2 = Checkpointer(model=model_stage2, save_dir=checkpoint_dir, max_keep=None)
+        checkpointer_stage2.restore(use_pretrained=True, evaluate=True)
 
         eval_fxn(
             stage_1_generator=model_stage1.generator,
@@ -164,7 +145,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             experiment_name=experiment_name,
             num_samples=settings['stage2']['num_samples'],
             augment=True,
-            noise_size=settings['stage1']['noise_size']
+            noise_size=settings['stage1']['noise_size'],
         )
 
     elif stage == 1:
@@ -174,7 +155,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage1']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage1']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
 
         trainer_class = get_trainer(stage)
@@ -188,7 +169,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             use_pretrained=use_pretrained,
             num_samples=settings['stage1']['num_samples'],
             noise_size=settings['stage1']['noise_size'],
-            augment=settings['stage1']['augment']
+            augment=settings['stage1']['augment'],
         )
         trainer(train_loader, val_loader, num_epochs=settings['stage1']['num_epochs'])
         plotter = LogPlotter(results_dir)
@@ -201,17 +182,12 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage1']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage1']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
         checkpointer = Checkpointer(
-            model=model_stage1,
-            save_dir=checkpoint_dir.replace('stage-2', 'stage-1'),
-            max_keep=None
+            model=model_stage1, save_dir=checkpoint_dir.replace('stage-2', 'stage-1'), max_keep=None
         )
-        checkpointer.restore(
-            use_pretrained=True,
-            evaluate=True
-        )
+        checkpointer.restore(use_pretrained=True, evaluate=True)
 
         model_stage2 = StackGAN2(
             img_size=small_image_dims,
@@ -219,7 +195,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             lr_d=settings['stage2']['discriminator']['learning_rate'],
             conditional_emb_size=settings['stage2']['conditional_emb_size'],
             w_init=tf.random_normal_initializer(stddev=0.02),
-            bn_init=tf.random_normal_initializer(1., 0.02)
+            bn_init=tf.random_normal_initializer(1.0, 0.02),
         )
 
         trainer_class = get_trainer(stage)
@@ -234,7 +210,7 @@ def run(train_loader, val_loader, small_image_dims, results_dir, settings, exper
             num_samples=settings['stage2']['num_samples'],
             noise_size=settings['stage1']['noise_size'],
             augment=settings['stage2']['augment'],
-            stage_1_generator=model_stage1.generator
+            stage_1_generator=model_stage1.generator,
         )
 
         trainer(train_loader, val_loader, num_epochs=settings[f'stage2']['num_epochs'])

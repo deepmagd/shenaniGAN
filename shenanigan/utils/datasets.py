@@ -20,7 +20,7 @@ DATASETS_DICT = {
 DATASETS = list(DATASETS_DICT.keys())
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-def get_dataset(dataset_name: str):
+def get_dataset(dataset_name: str) -> StackGANDataset:
     """ Get the dataset object which contains information
         about the properties of the dataset
     """

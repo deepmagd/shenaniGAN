@@ -1,10 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras import layers
-from tensorflow.keras.layers import (BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dense)
+from tensorflow.keras.layers import BatchNormalization, Conv2D, Conv2DTranspose, Dense
+
 
 class ResidualLayer(layers.Layer):
-
     def __init__(self, filters_in, filters_out, w_init, bn_init, activation):
         super(ResidualLayer, self).__init__()
         self.filters_in = filters_in
@@ -14,13 +13,19 @@ class ResidualLayer(layers.Layer):
         self.activation = activation
 
     def build(self, input_shape):
-        self.conv2d_1 = Conv2D(filters=self.filters_in, kernel_size=(1, 1), strides=(1, 1), padding='valid', kernel_initializer=self.w_init)
+        self.conv2d_1 = Conv2D(
+            filters=self.filters_in, kernel_size=(1, 1), strides=(1, 1), padding='valid', kernel_initializer=self.w_init
+        )
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
 
-        self.conv2d_2 = Conv2D(filters=self.filters_in, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
+        self.conv2d_2 = Conv2D(
+            filters=self.filters_in, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
+        )
         self.bn_2 = BatchNormalization(gamma_initializer=self.bn_init)
 
-        self.conv2d_3 = Conv2D(filters=self.filters_out, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init)
+        self.conv2d_3 = Conv2D(
+            filters=self.filters_out, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
+        )
         self.bn_3 = BatchNormalization(gamma_initializer=self.bn_init)
 
     def call(self, x, training=True):
@@ -35,8 +40,8 @@ class ResidualLayer(layers.Layer):
         x = self.conv2d_3(x)
         return self.bn_3(x, training=training)
 
-class ConditionalAugmentation(layers.Layer):
 
+class ConditionalAugmentation(layers.Layer):
     def __init__(self, conditional_emb_size, w_init):
         super(ConditionalAugmentation, self).__init__()
         self.conditional_emb_size = conditional_emb_size

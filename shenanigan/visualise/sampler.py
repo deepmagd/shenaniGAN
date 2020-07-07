@@ -1,13 +1,15 @@
-from random import randint
-
-import numpy as np
-
 from shenanigan.utils.data_helpers import extract_image_with_text
+
+from random import randint
+import numpy as np
+import tensorflow as tf
+from typing import Callable
+
 
 NUM_EMBEDDINGS_TO_SAMPLE = 4
 
 
-def sample_data(data_loader, num_samples, img_size):
+def sample_data(data_loader, num_samples: int, img_size):
     sample_list = []
     sample_fn = select_sample_fn(data_loader)
     for sample_idx in range(num_samples):
@@ -15,7 +17,7 @@ def sample_data(data_loader, num_samples, img_size):
     return sample_list
 
 
-def select_sample_fn(data_loader):
+def select_sample_fn(data_loader) -> Callable:
     """ A function to determine which sampling function to select """
     if data_loader.dataset_object.type == 'images-with-captions':
         return sample_small_img_with_captions
@@ -23,7 +25,7 @@ def select_sample_fn(data_loader):
         raise NotImplementedError(f'Sampling dataset stype: {data_loader.dataset_object.type} is not ready yet')
 
 
-def sample_small_img_with_captions(data_loader, img_size):
+def sample_small_img_with_captions(data_loader, img_size: str) -> Tuple[tf.Tensor, tf.Tensor]:
     """ A function which samples from the images-with-captions dataset.
         We return the image and caption (embedding) as a tuple
     """
