@@ -20,7 +20,7 @@ DATASETS_DICT = {
 DATASETS = list(DATASETS_DICT.keys())
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-def get_dataset(dataset_name):
+def get_dataset(dataset_name: str):
     """ Get the dataset object which contains information
         about the properties of the dataset
     """
@@ -60,7 +60,7 @@ class StackGANDataset(object):
         """ Return in the form (dept, height, width) """
         return (self.num_channels, self.image_dims_large[1], self.image_dims_large[0])
 
-    def parse_dataset(self, subset='train', batch_size=1):
+    def parse_dataset(self, subset: str = 'train', batch_size: int = 1):
         """ Parse the raw data from the TFRecords and arrange into a readable form
             for the trainer object.
         """

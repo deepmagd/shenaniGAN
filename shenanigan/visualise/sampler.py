@@ -14,12 +14,14 @@ def sample_data(data_loader, num_samples, img_size):
         sample_list.append(sample_fn(data_loader, img_size))
     return sample_list
 
+
 def select_sample_fn(data_loader):
     """ A function to determine which sampling function to select """
     if data_loader.dataset_object.type == 'images-with-captions':
         return sample_small_img_with_captions
     else:
         raise NotImplementedError(f'Sampling dataset stype: {data_loader.dataset_object.type} is not ready yet')
+
 
 def sample_small_img_with_captions(data_loader, img_size):
     """ A function which samples from the images-with-captions dataset.
@@ -33,7 +35,7 @@ def sample_small_img_with_captions(data_loader, img_size):
         index=random_idx,
         embedding_size=1024,
         num_embeddings_to_sample=NUM_EMBEDDINGS_TO_SAMPLE,
-        img_size=img_size
+        img_size=img_size,
     )
 
     if len(text.shape) == 1:

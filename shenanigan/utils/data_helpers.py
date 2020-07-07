@@ -3,6 +3,7 @@ import os
 import pathlib
 import shutil
 import tarfile
+from typing import Any, List, Dict, Tuple, Optional
 import urllib.request
 import zipfile
 
@@ -13,21 +14,19 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 from PIL import Image
 from scipy.io import loadmat
 
-from shenanigan.utils.utils import (format_file_name, mkdir, normalise,
-                                    read_pickle)
+from shenanigan.utils.utils import format_file_name, mkdir, normalise, read_pickle
 
 NUM_COLOUR_CHANNELS = 3
 
-IMAGE_SIZE_CONVERSION = {
-    76 : 64,
-    304 : 256
-}
+IMAGE_SIZE_CONVERSION = {76: 64, 304: 256}
+
 
 def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
     if not isinstance(value, list):
         value = [value]
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
@@ -37,11 +36,13 @@ def _bytes_feature(value):
         value = [value]
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
+
 def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-def get_record_paths(root_dir):
+
+def get_record_paths(root_dir: str) -> List[str]:
     """ For a given root directory, find all TFRecords in that structure """
     record_path_names = []
     for root, _, record_names in os.walk(root_dir):
@@ -50,6 +51,7 @@ def get_record_paths(root_dir):
                 record_path_name = os.path.join(root, record_name)
                 record_path_names.append(record_path_name)
     return record_path_names
+
 
 def download_dataset(dataset: str):
     if dataset == 'birds-with-text':
@@ -63,6 +65,7 @@ def download_dataset(dataset: str):
         raise Exception('Please first download the CheXpert dataset')
     else:
         raise NotImplementedError
+
 
 def download_cub():
     """ Download the birds dataset (CUB-200-2011) and text """
@@ -89,8 +92,9 @@ def download_cub():
         GDRIVE_ID='0B3y_msrWZaXLT1BZdVdycDY5TEE',
         text_download_location='data/birds.zip',
         backup_location='data/backup/birds.zip',
-        res_subdir='CUB_200_2011_with_text'
+        res_subdir='CUB_200_2011_with_text',
     )
+
 
 def download_flowers():
     """ Download the flowers dataset """
@@ -118,8 +122,9 @@ def download_flowers():
         GDRIVE_ID='0B3y_msrWZaXLaUc0UXpmcnhaVmM',
         text_download_location='data/flowers.zip',
         backup_location='data/backup/flowers.zip',
-        res_subdir='flowers_with_text'
+        res_subdir='flowers_with_text',
     )
+
 
 def download_captions(GDRIVE_ID: str, text_download_location: str, backup_location: str, res_subdir: str):
     """ The Download and processing for the captions / text part of the dataset """
@@ -132,9 +137,7 @@ def download_captions(GDRIVE_ID: str, text_download_location: str, backup_locati
             zipfd.extractall('data/')
     else:
         print('Downloading text from Google Drive ID: {}'.format(GDRIVE_ID))
-        gdd.download_file_from_google_drive(file_id=GDRIVE_ID,
-                                            dest_path=text_download_location,
-                                            unzip=True)
+        gdd.download_file_from_google_drive(file_id=GDRIVE_ID, dest_path=text_download_location, unzip=True)
         mkdir('data/backup')
         shutil.copy(text_download_location, backup_location)
 
@@ -144,6 +147,7 @@ def download_captions(GDRIVE_ID: str, text_download_location: str, backup_locati
     else:
         raise Exception('Expected to find directory {}, but it does not exist'.format(extracted_text_dir))
     os.remove(text_download_location)
+
 
 def check_for_xrays(directory: str):
     """ Check to see if the xray dataset has been downloaded at all.
@@ -163,8 +167,14 @@ def check_for_xrays(directory: str):
     shutil.move(f'{valid_location}.csv', raw_location)
 
 
-def create_image_caption_tfrecords(tfrecords_dir: str, image_source_dir: str, text_source_dir: str,
-                                   bounding_boxes_path: str, image_dims_large: tuple, image_dims_small: tuple):
+def create_image_caption_tfrecords(
+    tfrecords_dir: str,
+    image_source_dir: str,
+    text_source_dir: str,
+    bounding_boxes_path: str,
+    image_dims_large: Tuple[int, int],
+    image_dims_small: Tuple[int, int],
+):
     """ Create the TFRecords dataset for image-caption pairs
         Arguments:
             tfrecords_dir: str
@@ -186,9 +196,7 @@ def create_image_caption_tfrecords(tfrecords_dir: str, image_source_dir: str, te
         # NOTE: Ideally we will have a default bb_map returned, but for now we have to skip
         if bb_map is None:
             images_large, images_small = get_byte_images(
-                image_paths=file_names,
-                large_image_dims=image_dims_large,
-                small_image_dims=image_dims_small
+                image_paths=file_names, large_image_dims=image_dims_large, small_image_dims=image_dims_small
             )
         else:
             images_large, images_small = get_byte_images(
@@ -196,19 +204,19 @@ def create_image_caption_tfrecords(tfrecords_dir: str, image_source_dir: str, te
                 large_image_dims=image_dims_large,
                 small_image_dims=image_dims_small,
                 bounding_boxes=bb_map,
-                preprocessing='crop'
+                preprocessing='crop',
             )
         wrong_images_large, wrong_images_small = get_wrong_images(
-            large_images=images_large,
-            small_images=images_small,
-            labels=labels
+            large_images=images_large, small_images=images_small, labels=labels
         )
         # Arrange and write to file
-        shard_iterator = zip(*[file_names, images_small, images_large, wrong_images_small,
-                               wrong_images_large, text_embeddings, labels])
+        shard_iterator = zip(
+            *[file_names, images_small, images_large, wrong_images_small, wrong_images_large, text_embeddings, labels]
+        )
         write_records_to_file(shard_iterator, subset, tfrecords_dir)
 
-def extract_image_bounding_boxes(image_filenames: list, base_path: str):
+
+def extract_image_bounding_boxes(image_filenames: list, base_path: str) -> Optional[Dict]:
     """ Returns a map of filename to bounding box in format [x-top, y-top, w, h]
         If no path is provided (None), then simply return None.
     """
@@ -218,19 +226,24 @@ def extract_image_bounding_boxes(image_filenames: list, base_path: str):
     else:
         return extract_bounding_boxes_from_file(image_filenames, base_path)
 
-def extract_bounding_boxes_from_file(image_filenames: str, base_path: str) -> dict:
+
+def extract_bounding_boxes_from_file(image_filenames: str, base_path: str) -> Dict[str, Tuple]:
     bb_df = pd.read_csv(
-        os.path.join(base_path, 'bounding_boxes.txt'),
-        names=['idx', 'x', 'y', 'w', 'h'], sep=" "
+        os.path.join(base_path, 'bounding_boxes.txt'), names=['idx', 'x', 'y', 'w', 'h'], sep=" "
     ).astype(int)
     imgs_df = pd.read_csv(os.path.join(base_path, 'images.txt'), names=['idx', 'filename'], sep=" ")
     combined_df = imgs_df.merge(bb_df, how='left', on='idx')
     bb_map = {}
     for idx, fn in enumerate(image_filenames):
-        bb_map[fn] = combined_df[
-            combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])
-        ].iloc[:, 2:].values.squeeze().astype(int).tolist()
+        bb_map[fn] = (
+            combined_df[combined_df['filename'] == "/".join(fn.decode('utf-8').split('/')[-2:])]
+            .iloc[:, 2:]
+            .values.squeeze()
+            .astype(int)
+            .tolist()
+        )
     return bb_map
+
 
 def get_wrong_images(large_images: list, small_images: list, labels: list) -> tuple:
     """
@@ -241,11 +254,11 @@ def get_wrong_images(large_images: list, small_images: list, labels: list) -> tu
     np.random.shuffle(wrong_idxs)
 
     error_counter = 0
-    while (sum(labels == labels[wrong_idxs]) > 0):
-        if (error_counter == 100):
+    while sum(labels == labels[wrong_idxs]) > 0:
+        if error_counter == 100:
             raise Exception("Too many iterations in producing 'wrong' images, assuming will not converge")
         collisions = labels == labels[wrong_idxs]
-        if (sum(collisions) == 1):  # can allow for one duplicate
+        if sum(collisions) == 1:  # can allow for one duplicate
             wrong_idxs[collisions] = np.random.randint(0, len(labels))
         else:
             wrong_idxs[collisions] = np.random.choice(wrong_idxs[collisions], sum(collisions), replace=False)
@@ -253,6 +266,7 @@ def get_wrong_images(large_images: list, small_images: list, labels: list) -> tu
 
     small_images = np.array(small_images)
     return large_images[wrong_idxs].tolist(), small_images[wrong_idxs].tolist()
+
 
 def create_image_tabular_tfrecords(tfrecords_dir: str, image_source_dir: str, text_source_dir: str, image_dims: tuple):
     """ Create the TFRecords dataset for image-tabular pairs """
@@ -263,8 +277,7 @@ def create_image_tabular_tfrecords(tfrecords_dir: str, image_source_dir: str, te
         tabular_df = load_tabular_data(os.path.join(image_source_dir, f'{subset}.csv'))
         encoded_tabular_df = encode_tabular_data(tabular_df, image_prefix)
         encoded_tabular_data, image_paths = extract_tabular_as_bytes_lists(
-            encoded_tabular_df,
-            prefix=os.path.join('data', 'CheXpert-v1.0-small', 'raw', subset)
+            encoded_tabular_df, prefix=os.path.join('data', 'CheXpert-v1.0-small', 'raw', subset)
         )
         # Convert to bytes
         byte_images = get_byte_images(image_paths=image_paths, image_dims=image_dims)
@@ -276,8 +289,13 @@ def create_image_tabular_tfrecords(tfrecords_dir: str, image_source_dir: str, te
         print('Complete')
 
 
-def get_byte_images(image_paths: list, large_image_dims: tuple,
-                    small_image_dims: tuple, preprocessing: str = 'pad', **kwargs):
+def get_byte_images(
+    image_paths: List[str],
+    large_image_dims: Tuple[int, int],
+    small_image_dims: Tuple[int, int],
+    preprocessing: str = 'pad',
+    **kwargs,
+) -> Tuple[List[bytes], List[bytes]]:
     """ Generate a list of byte representations of each image
 
         if preprocessing == 'crop'
@@ -300,30 +318,31 @@ def get_byte_images(image_paths: list, large_image_dims: tuple,
 
     return large_image_list, small_image_list
 
-def image_to_bytes(img):
+
+def image_to_bytes(img: Image) -> bytes:
     img_buffer = io.BytesIO()
     img.save(img_buffer, format='PNG')
     byte_image = img_buffer.getvalue()
     return byte_image
 
-def get_image(image_path: str, image_dims: tuple, bounding_boxes: dict, preprocessing: str = 'pad'):
+
+def get_image(image_path: str, image_dims: tuple, bounding_boxes: dict, preprocessing: str = 'pad') -> Image:
     image = Image.open(image_path, 'r')
     if len(image.size) == 2:
         image = image.convert("RGB")
     if preprocessing == 'pad':
         old_size = image.size[:2]
-        ratio = max(image_dims)/max(old_size)
-        new_size = tuple([int(x*ratio) for x in old_size])
+        ratio = max(image_dims) / max(old_size)
+        new_size = tuple([int(x * ratio) for x in old_size])
         image = image.resize(new_size, Image.BICUBIC)
         new_img = Image.new('RGB', image_dims)
-        new_img.paste(image, ((image_dims[0]-new_size[0])//2,
-                              (image_dims[1]-new_size[1])//2))
+        new_img.paste(image, ((image_dims[0] - new_size[0]) // 2, (image_dims[1] - new_size[1]) // 2))
     elif preprocessing == 'crop':
         img = np.array(image)
         bb = bounding_boxes[image_path]
-        cx = int(bb[0]+bb[2]/2)
-        cy = int(bb[1]+bb[3]/2)
-        crop_size = int(max(bb[2], bb[3])*0.75)
+        cx = int(bb[0] + bb[2] / 2)
+        cy = int(bb[1] + bb[3] / 2)
+        crop_size = int(max(bb[2], bb[3]) * 0.75)
         y1 = max(0, cy - crop_size)
         y2 = min(img.shape[0], cy + crop_size)
         x1 = max(0, cx - crop_size)
@@ -335,7 +354,10 @@ def get_image(image_path: str, image_dims: tuple, bounding_boxes: dict, preproce
         raise Exception(f"No method available for preprpcessing flag '{preprocessing}' when loading byte images")
     return new_img
 
-def read_text_subset(subset, source_dir='data/CUB_200_2011_with_text/text'):
+
+def read_text_subset(
+    subset: str, source_dir: str = 'data/CUB_200_2011_with_text/text'
+) -> Tuple[List[str], List[int], List]:
     """ Read the pretrained embedding caption text for the birds and flowers datasets
         as encoded using a pretrained char-CNN-RNN network from:
         https://arxiv.org/abs/1605.05396
@@ -351,7 +373,8 @@ def read_text_subset(subset, source_dir='data/CUB_200_2011_with_text/text'):
 
     return file_names, class_info, char_CNN_RNN_embeddings
 
-def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
+
+def write_records_to_file(example_iterable, subset_name: str, tfrecords_dir: str):
     """ Save the TFRecord dataset with each example in its own TFRecord file.
         Arguments:
             example_iterable: zip object (iterable)
@@ -361,8 +384,10 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
             tfrecords_dir: str
                 Directory in which the save the TFRecords
     """
-    for i, (file_name, image_small, image_large, wrong_image_small,
-            wrong_image_large, text_embedding, label) in enumerate(example_iterable):
+    for (
+        i,
+        (file_name, image_small, image_large, wrong_image_small, wrong_image_large, text_embedding, label),
+    ) in enumerate(example_iterable):
         example = tf.train.Example(
             features=tf.train.Features(
                 feature={
@@ -372,7 +397,7 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
                     'wrong_image_large': _bytes_feature(wrong_image_large),
                     'name': _bytes_feature(file_name),
                     'text': _bytes_feature(text_embedding),
-                    'label': _int64_feature(label)
+                    'label': _int64_feature(label),
                 }
             )
         )
@@ -384,17 +409,18 @@ def write_records_to_file(example_iterable, subset_name, tfrecords_dir):
             serialised_example = example.SerializeToString()
             writer.write(serialised_example)
 
-def load_tabular_data(tabular_xray_path):
+
+def load_tabular_data(tabular_xray_path: str) -> pd.DataFrame:
     """ Load tabular data and fill all NaN's with a string nan """
     tab_xray_df = pd.read_csv(tabular_xray_path).fillna('nan')
     return tab_xray_df
 
-def build_encoding_map(column):
+
+def build_encoding_map(column: pd.DataFrame) -> Dict[Any, int]:
     """ Build a dictionary which maps each unique item to a categorical integer
         Arguments:
-            column: pd.DataFrame
-                A column from a Pandas dataframe containing the information
-                relating to a single input feature.
+            A column from a Pandas dataframe containing the information
+            relating to a single input feature.
     """
     encoding_map = {}
     unique_value_list = column.unique().tolist()
@@ -402,7 +428,8 @@ def build_encoding_map(column):
         encoding_map[unique_value] = idx
     return encoding_map
 
-def encode_tabular_data(tab_xray_df, image_path_prefix):
+
+def encode_tabular_data(tab_xray_df: pd.DataFrame, image_path_prefix: str) -> pd.DataFrame:
     """ Encode the tabular data so that it is represented in one-hot
         encoding for categorical variables, and normalised for continious
         variables
@@ -423,10 +450,12 @@ def encode_tabular_data(tab_xray_df, image_path_prefix):
     encoded_df['Path'] = encoded_df['Path'].apply(lambda x: remove_prefix(x, prefix=image_path_prefix))
     return encoded_df
 
-def remove_prefix(name, prefix):
-    return name[len(prefix):]
 
-def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
+def remove_prefix(name: str, prefix: str):
+    return name[len(prefix) :]
+
+
+def extract_tabular_as_bytes_lists(encoded_tabular_df: pd.DataFrame, prefix: str) -> Tuple[List[bytes], List[str]]:
     """ Extract the image paths and feature data from the DataFrame.
         These are converted to bytes and returned as separate lists.
     """
@@ -436,17 +465,20 @@ def extract_tabular_as_bytes_lists(encoded_tabular_df, prefix):
     encoded_tabular_lists = [sample.tobytes() for sample in encoded_tabular_lists]
     return encoded_tabular_lists, image_paths
 
-def extract_flowers_labels(path: str):
+
+def extract_flowers_labels(path: str) -> List[int]:
     return loadmat(path)['labels'][0, :].tolist()
 
-def extract_flowers_data_split(path: str):
+
+def extract_flowers_data_split(path: str) -> Tuple[List[int], List[int], List[int]]:
     data = loadmat(path)
     train_ids = data['trnid'][0, :].tolist()
     val_ids = data['valid'][0, :].tolist()
     test_ids = data['tstid'][0, :].tolist()
     return train_ids, val_ids, test_ids
 
-def transform_image(img):
+
+def transform_image(img: tf.Tensor) -> tf.Tensor:
     """ Apply a sequence of tranforms to an image.
         Currently just normalisation.
     """
@@ -457,20 +489,20 @@ def transform_image(img):
 
     if len(img.shape) == 2:
         img = tf.image.random_crop(
-            value=img,
-            size=(IMAGE_SIZE_CONVERSION[img.shape[0]], IMAGE_SIZE_CONVERSION[img.shape[1]])
+            value=img, size=(IMAGE_SIZE_CONVERSION[img.shape[0]], IMAGE_SIZE_CONVERSION[img.shape[1]])
         )
     elif len(img.shape) == 3:
         img = tf.image.random_crop(
-            value=img,
-            size=(IMAGE_SIZE_CONVERSION[img.shape[0]], IMAGE_SIZE_CONVERSION[img.shape[1]], img.shape[2])
+            value=img, size=(IMAGE_SIZE_CONVERSION[img.shape[0]], IMAGE_SIZE_CONVERSION[img.shape[1]], img.shape[2])
         )
     else:
         raise RuntimeError(f'Unsupported number of image channels {img.shape}')
-    return img * (2./255) - 1.
+    return img * (2.0 / 255) - 1.0
 
-def extract_image_with_text(sample: dict, index: int, embedding_size: int,
-                            num_embeddings_to_sample: int, img_size: str):
+
+def extract_image_with_text(
+    sample: Dict[str, tf.Tensor], index: int, embedding_size: int, num_embeddings_to_sample: int, img_size: str
+) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
     """ Return the image, wrong image, and sampled text embeddings """
     image, wrong_image = extract_images(sample=sample, index=index, size=img_size)
     txt = tf.reshape(sample['text'][index], (-1, embedding_size))
@@ -478,7 +510,8 @@ def extract_image_with_text(sample: dict, index: int, embedding_size: int,
     sampled_txt_embeddings = tf.math.reduce_mean(tf.gather(txt, emb_idxs), axis=0)
     return image, wrong_image, sampled_txt_embeddings
 
-def extract_images(sample: dict, index: int, size: str):
+
+def extract_images(sample: Dict[str, tf.Tensor], index: int, size: str) -> Tuple[tf.Tensor, tf.Tensor]:
     """ NOTE: If include_wrong == False, then we return `None` in place """
     if size in ['small', 'large']:
         image = sample[f'image_{size}'][index]
@@ -487,8 +520,15 @@ def extract_images(sample: dict, index: int, size: str):
     else:
         raise Exception(f'There are only two sizes: small and large. Received: {size}')
 
-def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int,
-                        num_samples: int, augment: bool, img_size: str):
+
+def tensors_from_sample(
+    sample: Dict[str, tf.Tensor],
+    batch_size: int,
+    text_embedding_size: int,
+    num_samples: int,
+    augment: bool,
+    img_size: str,
+) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
     """ Extract and format the input samples such that they are ready to be fed into the model """
     image_tensor = []
     wrong_image_tensor = []
@@ -499,7 +539,7 @@ def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int,
             index=i,
             embedding_size=text_embedding_size,
             num_embeddings_to_sample=num_samples,
-            img_size=img_size
+            img_size=img_size,
         )
         image = tf.cast(image, dtype=tf.float32)
         wrong_image = tf.cast(wrong_image, dtype=tf.float32)
@@ -517,8 +557,9 @@ def tensors_from_sample(sample: dict, batch_size: int, text_embedding_size: int,
     wrong_image_tensor = tf.convert_to_tensor(wrong_image_tensor, dtype=tf.float32)
     text_tensor = tf.convert_to_tensor(text_tensor, dtype=tf.float32)
 
-    assert image_tensor.shape == wrong_image_tensor.shape, \
-        'Small real ({}) and wrong ({}) images must have the same dimensions'.format(
-            image_tensor.shape, wrong_image_tensor.shape
-        )
+    assert (
+        image_tensor.shape == wrong_image_tensor.shape
+    ), 'Small real ({}) and wrong ({}) images must have the same dimensions'.format(
+        image_tensor.shape, wrong_image_tensor.shape
+    )
     return image_tensor, wrong_image_tensor, text_tensor
