@@ -19,6 +19,7 @@ np.random.seed(SEED)
 
 MODELS = ['stackgan', 'inception']
 
+
 def parse_arguments(args_to_parse):
     """ Parse CLI arguments """
 
@@ -26,47 +27,49 @@ def parse_arguments(args_to_parse):
     parser = argparse.ArgumentParser(description=descr)
 
     general = parser.add_argument_group('General settings')
+    general.add_argument('name', type=str, help="The name of the model - used for saving and loading.")
+    general.add_argument('-m', '--model', type=str, help="Which model architecture to use.", choices=MODELS)
     general.add_argument(
-        'name', type=str, help="The name of the model - used for saving and loading."
+        '-d', '--dataset-name', type=str, help="Name of the dataset to use during training.", choices=DATASETS
     )
     general.add_argument(
-        '-m', '--model', type=str, help="Which model architecture to use.",
-        choices=MODELS
+        '--use-pretrained', action='store_true', default=False, help='Load a pretrained model for inference'
     )
     general.add_argument(
-        '-d', '--dataset-name', type=str, help="Name of the dataset to use during training.",
-        choices=DATASETS
+        '--visualise', action='store_true', default=False, help='Run visualisations after loading / training the model'
     )
-    general.add_argument(
-        '--use-pretrained', action='store_true', default=False,
-        help='Load a pretrained model for inference'
-    )
-    general.add_argument(
-        '--visualise', action='store_true', default=False,
-        help='Run visualisations after loading / training the model'
-    )
-    general.add_argument(
-        '--evaluate', action='store_true', default=False,
-        help='Run evaluation metrics'
-    )
+    general.add_argument('--evaluate', action='store_true', default=False, help='Run evaluation metrics')
 
     stackgan = parser.add_argument_group('StackGAN settings')
     stackgan.add_argument(
-        '-s', '--stage', type=int, choices=[1, 2], required=False,
-        help='Whether to train stage 1 or 2.'
+        '-s', '--stage', type=int, choices=[1, 2], required=False, help='Whether to train stage 1 or 2.'
     )
 
     parsed_args = parser.parse_args(args_to_parse)
     return parsed_args
 
+
 def main(args):
     default_settings = get_default_settings(f'shenanigan/models/{args.model}/settings.yaml')
 
     if args.model == 'stackgan':
-        train_loader, val_loader, small_image_dims, _ = create_dataloaders(args.dataset_name, default_settings['common']['batch_size'])
+        train_loader, val_loader, small_image_dims, _ = create_dataloaders(
+            args.dataset_name, default_settings['common']['batch_size']
+        )
         results_dir = os.path.join(RESULTS_ROOT, args.name, f'stage-{args.stage}')
         save_options(options=args, save_dir=results_dir)
-        run_stackgan(train_loader, val_loader, small_image_dims, results_dir, default_settings, args.name, args.stage, args.use_pretrained, args.visualise, args.evaluate)
+        run_stackgan(
+            train_loader,
+            val_loader,
+            small_image_dims,
+            results_dir,
+            default_settings,
+            args.name,
+            args.stage,
+            args.use_pretrained,
+            args.visualise,
+            args.evaluate,
+        )
     elif args.model == 'inception':
         run_inception(args.name, args.dataset_name, default_settings)
     else:

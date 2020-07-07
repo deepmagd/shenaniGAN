@@ -43,11 +43,11 @@ def chunks(unchuncked_list, n):
     for i in range(0, len(unchuncked_list), n):
         yield unchuncked_list[i:i + n]
 
-def get_default_settings(settings_file='settings.yml'):
+def get_default_settings(settings_file='settings.yml') -> Any:
     with open(settings_file) as f:
         return yaml.safe_load(f)
 
-def sample_normal(mean, log_var):
+def sample_normal(mean: tf.Tensor, log_var: tf.Tensor) -> tf.Tensor:
     """ Use the reparameterization trick to sample a normal distribution.
         Arguments
         mean : Tensor
@@ -74,20 +74,20 @@ def product_list(num_list):
         product *= dim
     return product
 
-def mkdir(directory):
+def mkdir(directory: str):
     """ Create directory if it does not exist. """
     try:
         os.makedirs(directory)
     except OSError:
         pass
 
-def remove_file(file_name):
+def remove_file(file_name: str):
     try:
         os.remove(file_name)
     except OSError:
         pass
 
-def rmdir(dir_to_remove):
+def rmdir(dir_to_remove: str):
     if os.path.isdir(dir_to_remove):
         shutil.rmtree(dir_to_remove)
 

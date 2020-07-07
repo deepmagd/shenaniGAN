@@ -13,7 +13,7 @@ from .evaluate import evaluate as eval_fxn
 from .utils import get_trainer
 
 
-def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
+def load_model(settings, image_dims: Tuple[int, int], results_dir: str, stage: int, epoch_num: int = -1) -> StackGAN1:
     model = StackGAN1(
         img_size=image_dims,
         lr_g=settings['stage1']['generator']['learning_rate'],
@@ -38,14 +38,14 @@ def load_model(settings, image_dims, results_dir, stage, epoch_num=-1):
 def run(
     train_loader,
     val_loader,
-    small_image_dims,
-    results_dir,
+    small_image_dims: Tuple(int, int),
+    results_dir: str,
     settings,
-    experiment_name,
-    stage,
-    use_pretrained=False,
-    visualise=False,
-    evaluate=False,
+    experiment_name: str,
+    stage: int,
+    use_pretrained: bool = False,
+    visualise: bool = False,
+    evaluate: bool = False,
 ):
     lr_decay = LearningRateDecay(
         decay_factor=settings['callbacks']['learning_rate_decay']['decay_factor'],
