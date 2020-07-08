@@ -2,19 +2,20 @@ import os
 import pandas as pd
 import seaborn as sns
 from shenanigan.utils.utils import mkdir, remove_file
+from typing import Any, Dict
 
 
 class MetricsLogger(object):
     """ Define an object to handle all metric logging """
 
-    def __init__(self, path, use_pretrained=False):
+    def __init__(self, path: str, use_pretrained: bool = False):
         if os.path.exists(path) and not use_pretrained:
             os.remove(path)
         self.path = path
         self.use_pretrained = use_pretrained
         # self.epoch_history = self._set_epoch_history()
 
-    def __call__(self, metrics_dict):
+    def __call__(self, metrics_dict: Dict[str, Any]):
         """ Log metrics to file """
         if not self.use_pretrained and metrics_dict["epoch"] == 1:
             # First time, create the metrics file
@@ -37,12 +38,12 @@ class MetricsLogger(object):
 class LogPlotter(object):
     """ Generate plots from logs """
 
-    def __init__(self, root_path):
+    def __init__(self, root_path: str):
         self.root_path = root_path
         self.plot_dir = os.path.join(self.root_path, "plots")
         mkdir(self.plot_dir)
 
-    def _generate_learning_curve(self, method):
+    def _generate_learning_curve(self, method: str):
         log_path = os.path.join(self.root_path, f"{method}.csv")
         metric_df = pd.read_csv(log_path)
         metric_df = pd.melt(metric_df, "epoch", value_name="loss")

@@ -11,7 +11,7 @@ class Stage1Trainer(Trainer):
 
     def __init__(
         self,
-        model,
+        model: tf.keras.Model,
         batch_size: int,
         save_location: str,
         save_every: int,
@@ -45,7 +45,7 @@ class Stage1Trainer(Trainer):
         self.noise_size = kwargs.get("noise_size")
         self.augment = kwargs.get("augment")
 
-    def train_epoch(self, train_loader, epoch_num: int):
+    def train_epoch(self, train_loader: object, epoch_num: int):
         """ Training operations for a single epoch """
         acc_generator_loss = 0
         acc_discriminator_loss = 0
@@ -184,7 +184,7 @@ class Stage1Trainer(Trainer):
 
         return loss_metrics
 
-    def val_epoch(self, val_loader, epoch_num):
+    def val_epoch(self, val_loader: object, epoch_num: int):
         acc_generator_loss = 0
         acc_discriminator_loss = 0
         acc_kl_loss = 0

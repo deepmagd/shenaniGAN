@@ -11,14 +11,14 @@ class Stage2Trainer(Trainer):
 
     def __init__(
         self,
-        model,
-        batch_size,
-        save_location,
-        save_every,
-        save_best_after,
+        model: tf.keras.Model,
+        batch_size: int,
+        save_location: str,
+        save_every: int,
+        save_best_after: int,
         callbacks=None,
-        use_pretrained=False,
-        show_progress_bar=True,
+        use_pretrained: bool = False,
+        show_progress_bar: bool = True,
         **kwargs
     ):
         """ Initialise a model trainer for iamge data.
@@ -46,7 +46,7 @@ class Stage2Trainer(Trainer):
         self.augment = kwargs.get("augment")
         self.stage_1_generator = kwargs.get("stage_1_generator")
 
-    def train_epoch(self, train_loader, epoch_num):
+    def train_epoch(self, train_loader: object, epoch_num: int):
         """ Training operations for a single epoch """
         acc_generator_loss = 0
         acc_discriminator_loss = 0
@@ -180,7 +180,7 @@ class Stage2Trainer(Trainer):
             / (batch_idx + 1),
         }
 
-    def val_epoch(self, val_loader, epoch_num):
+    def val_epoch(self, val_loader: object, epoch_num: int):
         acc_generator_loss = 0
         acc_discriminator_loss = 0
         acc_kl_loss = 0

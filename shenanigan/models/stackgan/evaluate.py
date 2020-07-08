@@ -7,11 +7,11 @@ from shenanigan.utils.data_helpers import tensors_from_sample
 def evaluate(
     stage_1_generator,
     stage_2_generator,
-    dataloader,
-    experiment_name,
-    num_samples,
-    augment,
-    noise_size,
+    dataloader: object,
+    experiment_name: str,
+    num_samples: int,
+    augment: bool,
+    noise_size: int,
 ):
     incep_score = InceptionScore(experiment_name)
 

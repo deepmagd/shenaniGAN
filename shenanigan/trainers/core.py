@@ -1,4 +1,5 @@
 import os
+import tensorflow as tf
 
 from shenanigan.utils.logger import MetricsLogger
 from shenanigan.utils.model_helpers import Checkpointer
@@ -7,14 +8,14 @@ from shenanigan.utils.model_helpers import Checkpointer
 class Trainer(object):
     def __init__(
         self,
-        model,
-        batch_size,
-        save_location,
-        save_every,
-        save_best_after,
+        model: tf.keras.Model,
+        batch_size: int,
+        save_location: str,
+        save_every: int,
+        save_best_after: int,
         callbacks=None,
-        use_pretrained=False,
-        show_progress_bar=True,
+        use_pretrained: bool = False,
+        show_progress_bar: bool = True,
     ):
         """ Initialise the model trainer
             Arguments:
@@ -54,7 +55,7 @@ class Trainer(object):
             max_keep=20,
         )
 
-    def __call__(self, train_loader, val_loader, num_epochs):
+    def __call__(self, train_loader: object, val_loader: object, num_epochs: int):
         """ Trains the model.
             Arguments:
             train_loader: DirectoryIterator
@@ -109,14 +110,14 @@ class Trainer(object):
                 )
             self.run_callbacks(self.save_every_checkpointer.get_epoch_num())
 
-    def train_epoch(self, train_loader, epoch_num):
+    def train_epoch(self, train_loader: object, epoch_num: int):
         """ Training operations for a single epoch """
         pass
 
-    def val_epoch(self, val_loader, epoch_num):
+    def val_epoch(self, val_loader: object, epoch_num: int):
         pass
 
-    def is_best(self, current_loss):
+    def is_best(self, current_loss: float):
         if current_loss < self.minimum_loss:
             self.minimum_loss = current_loss
             return True

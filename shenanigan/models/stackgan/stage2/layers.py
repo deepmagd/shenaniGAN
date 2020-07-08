@@ -4,7 +4,7 @@ from tensorflow.keras.layers import BatchNormalization, Conv2D
 
 
 class ResidualLayerStage2(layers.Layer):
-    def __init__(self, filters, w_init, bn_init):
+    def __init__(self, filters: int, w_init: tf.Tensor, bn_init: tf.Tensor):
         super(ResidualLayerStage2, self).__init__()
         self.filters = filters
         self.w_init = w_init
@@ -29,7 +29,7 @@ class ResidualLayerStage2(layers.Layer):
         )
         self.bn_2 = BatchNormalization(gamma_initializer=self.bn_init)
 
-    def call(self, x, training=True):
+    def call(self, x: tf.Tensor, training: bool = True):
         inputs = x
 
         res = self.conv2d_1(x)

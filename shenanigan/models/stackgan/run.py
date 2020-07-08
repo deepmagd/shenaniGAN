@@ -47,8 +47,8 @@ def load_model(
 
 
 def run(
-    train_loader,
-    val_loader,
+    train_loader: object,
+    val_loader: object,
     small_image_dims: Tuple(int, int),
     results_dir: str,
     settings,

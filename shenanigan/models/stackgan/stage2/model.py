@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Activation, Conv2D, Dense
+from typing import Tuple
 
 from shenanigan.layers import ConvBlock, DeconvBlock
 from shenanigan.models import ConditionalGAN, Discriminator, Generator
@@ -39,7 +40,14 @@ class GeneratorStage2(Generator):
         fabricates images from a noisy distribution.
     """
 
-    def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr: float,
+        conditional_emb_size: int,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -136,7 +144,7 @@ class GeneratorStage2(Generator):
         )
         self.tanh = Activation("tanh")
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True):
         generated_image, embedding = inputs
 
         x = self.conv2d_1(generated_image)
@@ -176,7 +184,14 @@ class DiscriminatorStage2(Discriminator):
         classifies inputs as fake or genuine.
     """
 
-    def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr: float,
+        conditional_emb_size: int,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -190,7 +205,7 @@ class DiscriminatorStage2(Discriminator):
         self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
     def build(self, input_size):
-        activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
+        activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)  # noqa
 
         self.conv_1 = Conv2D(
             filters=self.d_dim,
@@ -294,7 +309,7 @@ class DiscriminatorStage2(Discriminator):
             kernel_initializer=self.w_init,
         )
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True):
         images, embedding = inputs
 
         x = self.conv_1(images)

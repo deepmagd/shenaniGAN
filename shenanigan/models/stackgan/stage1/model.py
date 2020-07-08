@@ -7,6 +7,7 @@ from tensorflow.keras.layers import (
     Dense,
     Reshape,
 )
+from typing import Tuple
 
 from shenanigan.layers import ConvBlock, DeconvBlock
 from shenanigan.models import ConditionalGAN, Discriminator, Generator
@@ -17,7 +18,15 @@ from shenanigan.utils.utils import kl_loss
 class StackGAN1(ConditionalGAN):
     """ Definition for the stage 1 StackGAN """
 
-    def __init__(self, img_size, lr_g, lr_d, conditional_emb_size, w_init, bn_init):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr_g: float,
+        lr_d: float,
+        conditional_emb_size: int,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
 
         generator = GeneratorStage1(
             img_size=img_size,
@@ -45,7 +54,14 @@ class GeneratorStage1(Generator):
         fabricates images from a noisy distribution.
     """
 
-    def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr: float,
+        conditional_emb_size: int,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -115,7 +131,7 @@ class GeneratorStage1(Generator):
 
         self.tanh = Activation("tanh")
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True):
         embedding, noise = inputs
         smoothed_embedding, mean, log_sigma = self.conditional_augmentation(embedding)
         noisy_embedding = tf.concat([noise, smoothed_embedding], 1)
@@ -152,7 +168,14 @@ class DiscriminatorStage1(Discriminator):
         classifies inputs as fake or genuine.
     """
 
-    def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr: float,
+        conditional_emb_size: int,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:
@@ -233,7 +256,7 @@ class DiscriminatorStage1(Discriminator):
             kernel_initializer=self.w_init,
         )
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True):
         images, embedding = inputs
         x = self.conv_1(images)
         x = tf.nn.leaky_relu(x, alpha=0.2)
