@@ -4,7 +4,6 @@ from tqdm import trange
 
 from shenanigan.trainers import Trainer
 from shenanigan.utils.data_helpers import tensors_from_sample
-from shenanigan.utils.utils import all_confusion_metics
 
 
 class Stage1Trainer(Trainer):
@@ -33,11 +32,18 @@ class Stage1Trainer(Trainer):
                 results from training the model.
         """
         super().__init__(
-            model, batch_size, save_location, save_every, save_best_after, callbacks, use_pretrained, show_progress_bar
+            model,
+            batch_size,
+            save_location,
+            save_every,
+            save_best_after,
+            callbacks,
+            use_pretrained,
+            show_progress_bar,
         )
-        self.num_samples = kwargs.get('num_samples')
-        self.noise_size = kwargs.get('noise_size')
-        self.augment = kwargs.get('augment')
+        self.num_samples = kwargs.get("num_samples")
+        self.noise_size = kwargs.get("noise_size")
+        self.augment = kwargs.get("augment")
 
     def train_epoch(self, train_loader, epoch_num: int):
         """ Training operations for a single epoch """
@@ -51,48 +57,79 @@ class Stage1Trainer(Trainer):
         all_wrong_predictions = []
         all_fake_predictions = []
         text_embedding_size = train_loader.dataset_object.text_embedding_dim
-        kwargs = dict(desc="Epoch {}".format(epoch_num), leave=False, disable=not self.show_progress_bar)
+        kwargs = dict(
+            desc="Epoch {}".format(epoch_num),
+            leave=False,
+            disable=not self.show_progress_bar,
+        )
         with trange(len(train_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(train_loader.parsed_subset):
-                batch_size = len(sample['text'].numpy())
+                batch_size = len(sample["text"].numpy())
                 image_small, wrong_image_small, text_tensor = tensors_from_sample(
-                    sample, batch_size, text_embedding_size, self.num_samples, self.augment, img_size='small'
+                    sample,
+                    batch_size,
+                    text_embedding_size,
+                    self.num_samples,
+                    self.augment,
+                    img_size="small",
                 )
 
                 with tf.GradientTape() as generator_tape, tf.GradientTape() as discriminator_tape:
                     noise_z = tf.random.normal((batch_size, self.noise_size))
-                    fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=True)
+                    fake_images, mean, log_sigma = self.model.generator(
+                        [text_tensor, noise_z], training=True
+                    )
 
                     assert (
                         fake_images.shape == image_small.shape
-                    ), 'Real ({}) and fakes ({}) images must have the same dimensions'.format(
+                    ), "Real ({}) and fakes ({}) images must have the same dimensions".format(
                         image_small.shape, fake_images.shape
                     )
 
-                    real_predictions = self.model.discriminator([image_small, text_tensor], training=True)
-                    wrong_predictions = self.model.discriminator([wrong_image_small, text_tensor], training=True)
-                    fake_predictions = self.model.discriminator([fake_images, text_tensor], training=True)
-
-                    assert (
-                        real_predictions.shape == wrong_predictions.shape == fake_predictions.shape
-                    ), 'Predictions for real ({}), wrong ({}), and fake ({}) images must have the same dimensions'.format(
-                        real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
+                    real_predictions = self.model.discriminator(
+                        [image_small, text_tensor], training=True
+                    )
+                    wrong_predictions = self.model.discriminator(
+                        [wrong_image_small, text_tensor], training=True
+                    )
+                    fake_predictions = self.model.discriminator(
+                        [fake_images, text_tensor], training=True
                     )
 
-                    generator_loss = self.model.generator.loss(tf.ones_like(fake_predictions), fake_predictions)
+                    assert (
+                        real_predictions.shape
+                        == wrong_predictions.shape
+                        == fake_predictions.shape
+                    ), "Preds for real ({}), wrong ({}), and fake ({}) images must have the same dimensions".format(
+                        real_predictions.shape,
+                        wrong_predictions.shape,
+                        fake_predictions.shape,
+                    )
+
+                    generator_loss = self.model.generator.loss(
+                        tf.ones_like(fake_predictions), fake_predictions
+                    )
                     kl_loss = sum(self.model.generator.losses)
                     generator_loss += kl_loss
 
                     disc_real_loss = self.model.discriminator.loss(
                         tf.fill(real_predictions.shape, 0.9), real_predictions
                     )
-                    disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
-                    disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
+                    disc_wrong_loss = self.model.discriminator.loss(
+                        tf.zeros_like(wrong_predictions), wrong_predictions
+                    )
+                    disc_fake_loss = self.model.discriminator.loss(
+                        tf.zeros_like(fake_predictions), fake_predictions
+                    )
 
-                    discriminator_loss = disc_real_loss + 0.5 * disc_wrong_loss + 0.5 * disc_fake_loss
+                    discriminator_loss = (
+                        disc_real_loss + 0.5 * disc_wrong_loss + 0.5 * disc_fake_loss
+                    )
 
                 # Update gradients
-                generator_gradients = generator_tape.gradient(generator_loss, self.model.generator.trainable_weights)
+                generator_gradients = generator_tape.gradient(
+                    generator_loss, self.model.generator.trainable_weights
+                )
                 discriminator_gradients = discriminator_tape.gradient(
                     discriminator_loss, self.model.discriminator.trainable_weights
                 )
@@ -101,7 +138,10 @@ class Stage1Trainer(Trainer):
                     zip(generator_gradients, self.model.generator.trainable_weights)
                 )
                 self.model.discriminator.optimizer.apply_gradients(
-                    zip(discriminator_gradients, self.model.discriminator.trainable_weights)
+                    zip(
+                        discriminator_gradients,
+                        self.model.discriminator.trainable_weights,
+                    )
                 )
                 # Update tqdm
                 t.set_postfix(
@@ -130,20 +170,17 @@ class Stage1Trainer(Trainer):
                 #     break
 
         loss_metrics = {
-            'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
-            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
-            'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
-            'discriminator_real_loss': np.asscalar(acc_disc_real_loss.numpy()) / (batch_idx + 1),
-            'discriminator_wrong_loss': np.asscalar(acc_disc_wrong_loss.numpy()) / (batch_idx + 1),
-            'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1),
+            "generator_loss": np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
+            "discriminator_loss": np.asscalar(acc_discriminator_loss.numpy())
+            / (batch_idx + 1),
+            "kl_loss": np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
+            "discriminator_real_loss": np.asscalar(acc_disc_real_loss.numpy())
+            / (batch_idx + 1),
+            "discriminator_wrong_loss": np.asscalar(acc_disc_wrong_loss.numpy())
+            / (batch_idx + 1),
+            "discriminator_fake_loss": np.asscalar(acc_disc_fake_loss.numpy())
+            / (batch_idx + 1),
         }
-
-        # confusion_metrics = all_confusion_metics(
-        #     tf.concat(all_real_predictions, axis=0),
-        #     tf.concat(all_wrong_predictions, axis=0),
-        #     tf.concat(all_fake_predictions, axis=0)
-        # )
-        # loss_metrics.update(confusion_metrics)
 
         return loss_metrics
 
@@ -158,41 +195,72 @@ class Stage1Trainer(Trainer):
         all_wrong_predictions = []
         all_fake_predictions = []
         text_embedding_size = val_loader.dataset_object.text_embedding_dim
-        kwargs = dict(desc="Epoch {}".format(epoch_num), leave=False, disable=not self.show_progress_bar)
+        kwargs = dict(
+            desc="Epoch {}".format(epoch_num),
+            leave=False,
+            disable=not self.show_progress_bar,
+        )
         with trange(len(val_loader), **kwargs) as t:
             for batch_idx, sample in enumerate(val_loader.parsed_subset):
-                batch_size = len(sample['text'].numpy())
+                batch_size = len(sample["text"].numpy())
                 image_small, wrong_image_small, text_tensor = tensors_from_sample(
-                    sample, batch_size, text_embedding_size, self.num_samples, self.augment, img_size='small'
+                    sample,
+                    batch_size,
+                    text_embedding_size,
+                    self.num_samples,
+                    self.augment,
+                    img_size="small",
                 )
                 noise_z = tf.random.normal((batch_size, self.noise_size))
-                fake_images, mean, log_sigma = self.model.generator([text_tensor, noise_z], training=False)
+                fake_images, mean, log_sigma = self.model.generator(
+                    [text_tensor, noise_z], training=False
+                )
 
                 assert (
                     fake_images.shape == image_small.shape
-                ), 'Real ({}) and fakes ({}) images must have the same dimensions'.format(
+                ), "Real ({}) and fakes ({}) images must have the same dimensions".format(
                     image_small.shape, fake_images.shape
                 )
 
-                real_predictions = self.model.discriminator([image_small, text_tensor], training=False)
-                wrong_predictions = self.model.discriminator([wrong_image_small, text_tensor], training=False)
-                fake_predictions = self.model.discriminator([fake_images, text_tensor], training=False)
-
-                assert (
-                    real_predictions.shape == wrong_predictions.shape == fake_predictions.shape
-                ), 'Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions'.format(
-                    real_predictions.shape, wrong_predictions.shape, fake_predictions.shape
+                real_predictions = self.model.discriminator(
+                    [image_small, text_tensor], training=False
+                )
+                wrong_predictions = self.model.discriminator(
+                    [wrong_image_small, text_tensor], training=False
+                )
+                fake_predictions = self.model.discriminator(
+                    [fake_images, text_tensor], training=False
                 )
 
-                generator_loss = self.model.generator.loss(tf.ones_like(fake_predictions), fake_predictions)
+                assert (
+                    real_predictions.shape
+                    == wrong_predictions.shape
+                    == fake_predictions.shape
+                ), "Predictions for real ({}), wrong ({}) and fakes ({}) images must have the same dimensions".format(
+                    real_predictions.shape,
+                    wrong_predictions.shape,
+                    fake_predictions.shape,
+                )
+
+                generator_loss = self.model.generator.loss(
+                    tf.ones_like(fake_predictions), fake_predictions
+                )
                 kl_loss = sum(self.model.generator.losses)
                 generator_loss += kl_loss
 
-                disc_real_loss = self.model.discriminator.loss(tf.ones_like(real_predictions), real_predictions)
-                disc_wrong_loss = self.model.discriminator.loss(tf.zeros_like(wrong_predictions), wrong_predictions)
-                disc_fake_loss = self.model.discriminator.loss(tf.zeros_like(fake_predictions), fake_predictions)
+                disc_real_loss = self.model.discriminator.loss(
+                    tf.ones_like(real_predictions), real_predictions
+                )
+                disc_wrong_loss = self.model.discriminator.loss(
+                    tf.zeros_like(wrong_predictions), wrong_predictions
+                )
+                disc_fake_loss = self.model.discriminator.loss(
+                    tf.zeros_like(fake_predictions), fake_predictions
+                )
 
-                discriminator_loss = disc_real_loss + 0.5 * disc_wrong_loss + 0.5 * disc_fake_loss
+                discriminator_loss = (
+                    disc_real_loss + 0.5 * disc_wrong_loss + 0.5 * disc_fake_loss
+                )
 
                 # Update tqdm
                 t.set_postfix(
@@ -221,19 +289,16 @@ class Stage1Trainer(Trainer):
                 #     break
 
         loss_metrics = {
-            'generator_loss': np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
-            'discriminator_loss': np.asscalar(acc_discriminator_loss.numpy()) / (batch_idx + 1),
-            'kl_loss': np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
-            'discriminator_real_loss': np.asscalar(acc_disc_real_loss.numpy()) / (batch_idx + 1),
-            'discriminator_wrong_loss': np.asscalar(acc_disc_wrong_loss.numpy()) / (batch_idx + 1),
-            'discriminator_fake_loss': np.asscalar(acc_disc_fake_loss.numpy()) / (batch_idx + 1),
+            "generator_loss": np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
+            "discriminator_loss": np.asscalar(acc_discriminator_loss.numpy())
+            / (batch_idx + 1),
+            "kl_loss": np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
+            "discriminator_real_loss": np.asscalar(acc_disc_real_loss.numpy())
+            / (batch_idx + 1),
+            "discriminator_wrong_loss": np.asscalar(acc_disc_wrong_loss.numpy())
+            / (batch_idx + 1),
+            "discriminator_fake_loss": np.asscalar(acc_disc_fake_loss.numpy())
+            / (batch_idx + 1),
         }
-
-        # confusion_metrics = all_confusion_metics(
-        #     tf.concat(all_real_predictions, axis=0),
-        #     tf.concat(all_wrong_predictions, axis=0),
-        #     tf.concat(all_fake_predictions, axis=0)
-        # )
-        # loss_metrics.update(confusion_metrics)
 
         return loss_metrics

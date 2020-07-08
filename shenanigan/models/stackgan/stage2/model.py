@@ -3,14 +3,14 @@ from tensorflow.keras.layers import Activation, Conv2D, Dense
 
 from shenanigan.layers import ConvBlock, DeconvBlock
 from shenanigan.models import ConditionalGAN, Discriminator, Generator
-from shenanigan.models.stackgan.layers import (ConditionalAugmentation,
-                                               ResidualLayer)
+from shenanigan.models.stackgan.layers import ConditionalAugmentation, ResidualLayer
 from shenanigan.models.stackgan.stage2.layers import ResidualLayerStage2
 from shenanigan.utils.utils import kl_loss
 
 
 class StackGAN2(ConditionalGAN):
     """ Definition for the stage 2 StackGAN """
+
     def __init__(self, img_size, lr_g, lr_d, conditional_emb_size, w_init, bn_init):
 
         generator = GeneratorStage2(
@@ -18,7 +18,7 @@ class StackGAN2(ConditionalGAN):
             lr=lr_g,
             conditional_emb_size=conditional_emb_size,
             w_init=w_init,
-            bn_init=bn_init
+            bn_init=bn_init,
         )
 
         discriminator = DiscriminatorStage2(
@@ -26,19 +26,19 @@ class StackGAN2(ConditionalGAN):
             lr=lr_d,
             conditional_emb_size=conditional_emb_size,
             w_init=w_init,
-            bn_init=bn_init
+            bn_init=bn_init,
         )
 
         super().__init__(
-            generator=generator,
-            discriminator=discriminator,
-            img_size=img_size
+            generator=generator, discriminator=discriminator, img_size=img_size
         )
+
 
 class GeneratorStage2(Generator):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
+
     def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
@@ -55,54 +55,86 @@ class GeneratorStage2(Generator):
         self.kl_coeff = 2
         self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-        assert self.num_output_channels == 3 or self.num_output_channels == 1, \
-            f'The number of output channels must be 2 or 1. Found {self.num_output_channels}'
+        assert (
+            self.num_output_channels == 3 or self.num_output_channels == 1
+        ), f"The number of output channels must be 2 or 1. Found {self.num_output_channels}"
 
     def build(self, input_shape):
 
         # NOTE in authors implementation they do not use w_init in stage 2
-        self.conv2d_1 = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), kernel_initializer=self.w_init)
+        self.conv2d_1 = Conv2D(
+            filters=128,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            kernel_initializer=self.w_init,
+        )
 
-        self.conv_block_1 = ConvBlock(filters=128*2,
-                                      kernel_size=(4, 4),
-                                      strides=(2, 2),
-                                      padding='same',
-                                      w_init=self.w_init,
-                                      bn_init=self.bn_init,
-                                      activation=tf.nn.relu
-                                      )
-        self.conv_block_2 = ConvBlock(filters=128*4,
-                                      kernel_size=(4, 4),
-                                      strides=(2, 2),
-                                      padding='same',
-                                      w_init=self.w_init,
-                                      bn_init=self.bn_init,
-                                      activation=tf.nn.relu
-                                      )
+        self.conv_block_1 = ConvBlock(
+            filters=128 * 2,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu,
+        )
+        self.conv_block_2 = ConvBlock(
+            filters=128 * 4,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu,
+        )
 
-        self.conditional_augmentation = ConditionalAugmentation(self.conditional_emb_size, self.w_init)
+        self.conditional_augmentation = ConditionalAugmentation(
+            self.conditional_emb_size, self.w_init
+        )
 
-        self.conv_block_3 = ConvBlock(filters=128*4,
-                                      kernel_size=(3, 3),
-                                      strides=(1, 1),
-                                      padding='same',
-                                      w_init=self.w_init,
-                                      bn_init=self.bn_init,
-                                      activation=tf.nn.relu
-                                      )
+        self.conv_block_3 = ConvBlock(
+            filters=128 * 4,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=tf.nn.relu,
+        )
 
-        self.res_block_1 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
-        self.res_block_2 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
-        self.res_block_3 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
-        self.res_block_4 = ResidualLayerStage2(filters=128*4, w_init=self.w_init, bn_init=self.bn_init)
+        self.res_block_1 = ResidualLayerStage2(
+            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+        )
+        self.res_block_2 = ResidualLayerStage2(
+            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+        )
+        self.res_block_3 = ResidualLayerStage2(
+            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+        )
+        self.res_block_4 = ResidualLayerStage2(
+            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+        )
 
-        self.deconv_block_1 = DeconvBlock(128*2, self.w_init, self.bn_init, activation=tf.nn.relu)
-        self.deconv_block_2 = DeconvBlock(128, self.w_init, self.bn_init, activation=tf.nn.relu)
-        self.deconv_block_3 = DeconvBlock(128//2, self.w_init, self.bn_init, activation=tf.nn.relu)
-        self.deconv_block_4 = DeconvBlock(128//4, self.w_init, self.bn_init, activation=tf.nn.relu)
+        self.deconv_block_1 = DeconvBlock(
+            128 * 2, self.w_init, self.bn_init, activation=tf.nn.relu
+        )
+        self.deconv_block_2 = DeconvBlock(
+            128, self.w_init, self.bn_init, activation=tf.nn.relu
+        )
+        self.deconv_block_3 = DeconvBlock(
+            128 // 2, self.w_init, self.bn_init, activation=tf.nn.relu
+        )
+        self.deconv_block_4 = DeconvBlock(
+            128 // 4, self.w_init, self.bn_init, activation=tf.nn.relu
+        )
 
-        self.conv2d_2 = Conv2D(filters=self.num_output_channels, kernel_size=(3, 3), strides=(1, 1), padding='same')
-        self.tanh = Activation('tanh')
+        self.conv2d_2 = Conv2D(
+            filters=self.num_output_channels,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            padding="same",
+        )
+        self.tanh = Activation("tanh")
 
     def call(self, inputs, training=True):
         generated_image, embedding = inputs
@@ -143,6 +175,7 @@ class DiscriminatorStage2(Discriminator):
     """ The definition for a network which
         classifies inputs as fake or genuine.
     """
+
     def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
@@ -156,44 +189,110 @@ class DiscriminatorStage2(Discriminator):
         self.conditional_emb_size = conditional_emb_size
         self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-
     def build(self, input_size):
         activation = lambda l: tf.nn.leaky_relu(l, alpha=0.2)
 
-        self.conv_1 = Conv2D(filters=self.d_dim, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                             kernel_initializer=self.w_init)
+        self.conv_1 = Conv2D(
+            filters=self.d_dim,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            kernel_initializer=self.w_init,
+        )
 
-        self.conv_block_2 = ConvBlock(filters=self.d_dim*2, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_2 = ConvBlock(
+            filters=self.d_dim * 2,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
-        self.conv_block_3 = ConvBlock(filters=self.d_dim*4, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_3 = ConvBlock(
+            filters=self.d_dim * 4,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
-        self.conv_block_4 = ConvBlock(filters=self.d_dim*8, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_4 = ConvBlock(
+            filters=self.d_dim * 8,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
-        self.conv_block_5 = ConvBlock(filters=self.d_dim*16, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_5 = ConvBlock(
+            filters=self.d_dim * 16,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
-        self.conv_block_6 = ConvBlock(filters=self.d_dim*32, kernel_size=(4, 4), strides=(2, 2), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_6 = ConvBlock(
+            filters=self.d_dim * 32,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
-        self.conv_block_7 = ConvBlock(filters=self.d_dim*16, kernel_size=(4, 4), strides=(1, 1), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_7 = ConvBlock(
+            filters=self.d_dim * 16,
+            kernel_size=(4, 4),
+            strides=(1, 1),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
-        self.conv_block_8 = ConvBlock(filters=self.d_dim*8, kernel_size=(4, 4), strides=(1, 1), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init)
+        self.conv_block_8 = ConvBlock(
+            filters=self.d_dim * 8,
+            kernel_size=(4, 4),
+            strides=(1, 1),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+        )
 
-        self.res_block = ResidualLayer(self.d_dim*2, self.d_dim*8, self.w_init, self.bn_init, activation)
+        self.res_block = ResidualLayer(
+            self.d_dim * 2, self.d_dim * 8, self.w_init, self.bn_init, activation
+        )
 
         self.dense_embed = Dense(units=self.conditional_emb_size)
 
-        self.conv_block_9 = ConvBlock(filters=self.d_dim*8, kernel_size=(1, 1), strides=(1, 1), padding='same',
-                                      w_init=self.w_init, bn_init=self.bn_init, activation=activation)
+        self.conv_block_9 = ConvBlock(
+            filters=self.d_dim * 8,
+            kernel_size=(1, 1),
+            strides=(1, 1),
+            padding="same",
+            w_init=self.w_init,
+            bn_init=self.bn_init,
+            activation=activation,
+        )
 
         # (4, 4) == 256/16
-        self.conv_2 = Conv2D(filters=1, kernel_size=(4, 4), strides=(4, 4), padding='same',
-                             kernel_initializer=self.w_init)
+        self.conv_2 = Conv2D(
+            filters=1,
+            kernel_size=(4, 4),
+            strides=(4, 4),
+            padding="same",
+            kernel_initializer=self.w_init,
+        )
 
     def call(self, inputs, training=True):
         images, embedding = inputs

@@ -14,17 +14,29 @@ class ResidualLayer(layers.Layer):
 
     def build(self, input_shape):
         self.conv2d_1 = Conv2D(
-            filters=self.filters_in, kernel_size=(1, 1), strides=(1, 1), padding='valid', kernel_initializer=self.w_init
+            filters=self.filters_in,
+            kernel_size=(1, 1),
+            strides=(1, 1),
+            padding="valid",
+            kernel_initializer=self.w_init,
         )
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
 
         self.conv2d_2 = Conv2D(
-            filters=self.filters_in, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
+            filters=self.filters_in,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            padding="same",
+            kernel_initializer=self.w_init,
         )
         self.bn_2 = BatchNormalization(gamma_initializer=self.bn_init)
 
         self.conv2d_3 = Conv2D(
-            filters=self.filters_out, kernel_size=(3, 3), strides=(1, 1), padding='same', kernel_initializer=self.w_init
+            filters=self.filters_out,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            padding="same",
+            kernel_initializer=self.w_init,
         )
         self.bn_3 = BatchNormalization(gamma_initializer=self.bn_init)
 
@@ -48,8 +60,12 @@ class ConditionalAugmentation(layers.Layer):
         self.w_init = w_init
 
     def build(self, input_shape):
-        self.dense_mean = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
-        self.dense_sigma = Dense(units=self.conditional_emb_size, kernel_initializer=self.w_init)
+        self.dense_mean = Dense(
+            units=self.conditional_emb_size, kernel_initializer=self.w_init
+        )
+        self.dense_sigma = Dense(
+            units=self.conditional_emb_size, kernel_initializer=self.w_init
+        )
 
     def call(self, embedding):
         mean = tf.nn.leaky_relu(self.dense_mean(embedding), alpha=0.2)

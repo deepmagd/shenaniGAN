@@ -7,10 +7,10 @@ from tensorflow.keras.models import load_model
 
 
 class InceptionScore(object):
-    def __init__(self, experiment_name: str, n_split: int = 10, eps: float = 1E-16):
-        base_path = os.path.join('results', experiment_name)
-        self.model_path = os.path.join(base_path, 'inception', 'model')
-        self.save_path = os.path.join(base_path, 'inception_score.csv')
+    def __init__(self, experiment_name: str, n_split: int = 10, eps: float = 1e-16):
+        base_path = os.path.join("results", experiment_name)
+        self.model_path = os.path.join(base_path, "inception", "model")
+        self.save_path = os.path.join(base_path, "inception_score.csv")
         self.n_split = n_split
         self.eps = eps
         self.model = self._load_model()
@@ -20,12 +20,12 @@ class InceptionScore(object):
         return load_model(self.model_path)
 
     def _save_scores(self, mean: float, std: float):
-        with open(self.save_path, 'w+') as fd:
-            write_str = f'{mean},{std}'
+        with open(self.save_path, "w+") as fd:
+            write_str = f"{mean},{std}"
             fd.write(write_str)
 
     def predict_on_batch(self, images: np.ndarray):
-        processed = np.asarray((images + 1) * 255. / 2, np.uint8)
+        processed = np.asarray((images + 1) * 255.0 / 2, np.uint8)
         processed = preprocess_input(processed)
         yhat = self.model.predict(processed)
         yhat = softmax(yhat, axis=1)

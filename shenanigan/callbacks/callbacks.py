@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-class LearningRateDecay(object):
 
+class LearningRateDecay(object):
     def __init__(self, decay_factor: float, every_n: int = 1):
         """
         Arguments:
@@ -21,13 +21,19 @@ class LearningRateDecay(object):
             epoch_num: int
                 Current epoch number
         """
-        if not hasattr(model, 'optimizer'):
-            raise Exception("model has no optimizer attribute, cannot run learning rate decay")
+        if not hasattr(model, "optimizer"):
+            raise Exception(
+                "model has no optimizer attribute, cannot run learning rate decay"
+            )
 
-        if not hasattr(model.optimizer, 'lr'):
-            raise Exception("model optimizer has no lr attribute, cannot run learning rate decay")
+        if not hasattr(model.optimizer, "lr"):
+            raise Exception(
+                "model optimizer has no lr attribute, cannot run learning rate decay"
+            )
 
         if ((epoch_num + 1) % self.every_n) == 0:
             new_lr = model.optimizer.lr * self.decay_factor
-            print(f'Updating model learning rate {float(model.optimizer.lr):.8f} --> {new_lr:.8f}')
+            print(
+                f"Updating model learning rate {float(model.optimizer.lr):.8f} --> {new_lr:.8f}"
+            )
             model.optimizer.lr.assign(new_lr)

@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from typing import Optional
+from typing import Optional, List
 from PIL import Image
 
 from shenanigan.utils.utils import mkdir, rmdir
@@ -26,11 +26,15 @@ def compare_generated_to_real(
     rmdir(save_location)
     mkdir(save_location)
 
-    noise_list = [np.random.normal(0, 1, (1, noise_size)).astype('float32') for idx in range(num_images)]
+    noise_list = [
+        np.random.normal(0, 1, (1, noise_size)).astype("float32")
+        for idx in range(num_images)
+    ]
     samples = sample_data(dataloader, num_samples=num_images, img_size=img_size)
     real_tensors, real_embeddings = zip(*samples)
     stage1_tensors = [
-        model.generator([embedding, noise], training=False)[0] for embedding, noise in zip(real_embeddings, noise_list)
+        model.generator([embedding, noise], training=False)[0]
+        for embedding, noise in zip(real_embeddings, noise_list)
     ]
 
     real_images = format_as_images(real_tensors, is_real=True)
@@ -42,13 +46,17 @@ def compare_generated_to_real(
             for generated_image, embedding in zip(stage1_tensors, real_embeddings)
         ]
         stage2_images = format_as_images(stage2_tensors, is_real=False)
-        for i, (real_image, stage1_image, stage2_image) in enumerate(zip(real_images, stage1_images, stage2_images)):
-            image = concate_horizontallly(real_image, stage1_img=stage1_image, stage2_img=stage2_image)
-            image.save(os.path.join(save_location, f'fake-vs-real-{i}.png'))
+        for i, (real_image, stage1_image, stage2_image) in enumerate(
+            zip(real_images, stage1_images, stage2_images)
+        ):
+            image = concate_horizontallly(
+                real_image, stage1_img=stage1_image, stage2_img=stage2_image
+            )
+            image.save(os.path.join(save_location, f"fake-vs-real-{i}.png"))
     else:
         for i, (real_image, stage1_image) in enumerate(zip(real_images, stage1_images)):
             image = concate_horizontallly(real_image, stage1_img=stage1_image)
-            image.save(os.path.join(save_location, f'fake-vs-real-{i}.png'))
+            image.save(os.path.join(save_location, f"fake-vs-real-{i}.png"))
 
 
 def format_as_images(tensors: List[tf.Tensor], is_real: bool = False) -> List[Image]:
