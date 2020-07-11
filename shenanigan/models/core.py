@@ -1,18 +1,32 @@
 import tensorflow as tf
 from tensorflow.keras import Model
+from typing import Tuple
+
 
 class ConditionalGAN(Model):
     """ Definition for a generalisable conditional GAN """
-    def __init__(self, generator, discriminator, **kwargs):
+
+    def __init__(
+        self, generator: tf.keras.Model, discriminator: tf.keras.Model, **kwargs
+    ):
         super().__init__()
         self.generator = generator
         self.discriminator = discriminator
+
 
 class Generator(Model):
     """ The definition for a network which
         fabricates images from a noisy distribution.
     """
-    def __init__(self, img_size, lr, conditional_emb_size, w_init, bn_init):
+
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr: float,
+        conditional_emb_size: int,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:'
@@ -36,7 +50,14 @@ class Discriminator(Model):
     """ The definition for a network which
         classifies inputs as fake or genuine.
     """
-    def __init__(self, img_size, lr, w_init, bn_init):
+
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        lr: float,
+        w_init: tf.Tensor,
+        bn_init: tf.Tensor,
+    ):
         """ Initialise a Generator instance.
             TODO: Deal with this parameters and make it more logical
                 Arguments:

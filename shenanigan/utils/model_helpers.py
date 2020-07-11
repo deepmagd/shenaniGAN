@@ -1,5 +1,3 @@
-import os
-
 import tensorflow as tf
 from shenanigan.utils import rmdir
 
@@ -12,10 +10,12 @@ class Checkpointer(object):
             generator=model.generator,
             g_optimizer=model.generator.optimizer,
             d_optimizer=model.discriminator.optimizer,
-            loss=tf.Variable(1E06) # some large number
+            loss=tf.Variable(1e06),  # some large number
         )
         self.checkpoint_dir = save_dir
-        self.ckpt_manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_dir, max_to_keep=max_keep)
+        self.ckpt_manager = tf.train.CheckpointManager(
+            self.ckpt, self.checkpoint_dir, max_to_keep=max_keep
+        )
 
     def restore(self, use_pretrained: bool = False, evaluate: bool = False):
         if use_pretrained:
