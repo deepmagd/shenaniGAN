@@ -3,12 +3,13 @@ from tensorflow.keras.layers import BatchNormalization, Conv2D, Conv2DTranspose
 
 
 class DeconvBlock(layers.Layer):
-    def __init__(self, filters, w_init, bn_init, activation=None):
+    def __init__(self, filters, w_init, bn_init, activation=None, w_init_conv=None):
         super(DeconvBlock, self).__init__()
         self.activation = activation
         self.filters = filters
         self.w_init = w_init
         self.bn_init = bn_init
+        self.w_init_conv = w_init_conv
 
     def build(self, inout_shape):
         self.deconv2d = Conv2DTranspose(
@@ -23,7 +24,7 @@ class DeconvBlock(layers.Layer):
             kernel_size=(3, 3),
             strides=(1, 1),
             padding="same",
-            kernel_initializer=self.w_init,
+            kernel_initializer=self.w_init_conv if self.w_init_conv is not None else self.w_init,
         )
         self.bn = BatchNormalization(gamma_initializer=self.bn_init)
 

@@ -68,13 +68,14 @@ class GeneratorStage2(Generator):
         ), f"The number of output channels must be 2 or 1. Found {self.num_output_channels}"
 
     def build(self, input_shape):
+        he_init = tf.keras.initializers.VarianceScaling(scale=2.0, mode='fan_in', distribution='truncated_normal')
 
         # NOTE in authors implementation they do not use w_init in stage 2
         self.conv2d_1 = Conv2D(
             filters=128,
             kernel_size=(3, 3),
             strides=(1, 1),
-            kernel_initializer=self.w_init,
+            kernel_initializer=he_init,
         )
 
         self.conv_block_1 = ConvBlock(
@@ -82,7 +83,7 @@ class GeneratorStage2(Generator):
             kernel_size=(4, 4),
             strides=(2, 2),
             padding="same",
-            w_init=self.w_init,
+            w_init=he_init,
             bn_init=self.bn_init,
             activation=tf.nn.relu,
         )
@@ -91,7 +92,7 @@ class GeneratorStage2(Generator):
             kernel_size=(4, 4),
             strides=(2, 2),
             padding="same",
-            w_init=self.w_init,
+            w_init=he_init,
             bn_init=self.bn_init,
             activation=tf.nn.relu,
         )
@@ -105,35 +106,35 @@ class GeneratorStage2(Generator):
             kernel_size=(3, 3),
             strides=(1, 1),
             padding="same",
-            w_init=self.w_init,
+            w_init=he_init,
             bn_init=self.bn_init,
             activation=tf.nn.relu,
         )
 
         self.res_block_1 = ResidualLayerStage2(
-            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+            filters=128 * 4, w_init=he_init, bn_init=self.bn_init
         )
         self.res_block_2 = ResidualLayerStage2(
-            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+            filters=128 * 4, w_init=he_init, bn_init=self.bn_init
         )
         self.res_block_3 = ResidualLayerStage2(
-            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+            filters=128 * 4, w_init=he_init, bn_init=self.bn_init
         )
         self.res_block_4 = ResidualLayerStage2(
-            filters=128 * 4, w_init=self.w_init, bn_init=self.bn_init
+            filters=128 * 4, w_init=he_init, bn_init=self.bn_init
         )
 
         self.deconv_block_1 = DeconvBlock(
-            128 * 2, self.w_init, self.bn_init, activation=tf.nn.relu
+            128 * 2, self.w_init, self.bn_init, activation=tf.nn.relu, w_init_conv=he_init
         )
         self.deconv_block_2 = DeconvBlock(
-            128, self.w_init, self.bn_init, activation=tf.nn.relu
+            128, self.w_init, self.bn_init, activation=tf.nn.relu, w_init_conv=he_init
         )
         self.deconv_block_3 = DeconvBlock(
-            128 // 2, self.w_init, self.bn_init, activation=tf.nn.relu
+            128 // 2, self.w_init, self.bn_init, activation=tf.nn.relu, w_init_conv=he_init
         )
         self.deconv_block_4 = DeconvBlock(
-            128 // 4, self.w_init, self.bn_init, activation=tf.nn.relu
+            128 // 4, self.w_init, self.bn_init, activation=tf.nn.relu, w_init_conv=he_init
         )
 
         self.conv2d_2 = Conv2D(
@@ -141,6 +142,7 @@ class GeneratorStage2(Generator):
             kernel_size=(3, 3),
             strides=(1, 1),
             padding="same",
+            kernel_initializer=he_init
         )
         self.tanh = Activation("tanh")
 
@@ -285,7 +287,7 @@ class DiscriminatorStage2(Discriminator):
         )
 
         self.res_block = ResidualLayer(
-            self.d_dim * 2, self.d_dim * 8, self.w_init, self.bn_init, activation
+            self.d_dim * 2, self.d_dim * 8, self.w_init, self.bn_init, activation, first_conv_pad="same"
         )
 
         self.dense_embed = Dense(units=self.conditional_emb_size)

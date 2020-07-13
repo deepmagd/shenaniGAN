@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.layers import BatchNormalization, Conv2D, Dense
-from typing import Function
 
 
 class ResidualLayer(layers.Layer):
@@ -11,7 +10,8 @@ class ResidualLayer(layers.Layer):
         filters_out: int,
         w_init: tf.Tensor,
         bn_init: tf.Tensor,
-        activation: Function,
+        activation,
+        first_conv_pad: str="valid"
     ):
         super(ResidualLayer, self).__init__()
         self.filters_in = filters_in
@@ -19,13 +19,14 @@ class ResidualLayer(layers.Layer):
         self.w_init = w_init
         self.bn_init = bn_init
         self.activation = activation
+        self.first_conv_pad = first_conv_pad
 
     def build(self, input_shape):
         self.conv2d_1 = Conv2D(
             filters=self.filters_in,
             kernel_size=(1, 1),
             strides=(1, 1),
-            padding="valid",
+            padding=self.first_conv_pad,
             kernel_initializer=self.w_init,
         )
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
