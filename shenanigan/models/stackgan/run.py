@@ -49,7 +49,7 @@ def load_model(
 def run(
     train_loader: object,
     val_loader: object,
-    small_image_dims: Tuple(int, int),
+    small_image_dims,
     results_dir: str,
     settings,
     experiment_name: str,

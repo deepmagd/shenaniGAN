@@ -59,7 +59,7 @@ def compare_generated_to_real(
             image.save(os.path.join(save_location, f"fake-vs-real-{i}.png"))
 
 
-def format_as_images(tensors: List[tf.Tensor], is_real: bool = False) -> List[Image]:
+def format_as_images(tensors, is_real):
     image_list = []
     for tensor in tensors:
         if is_real:
