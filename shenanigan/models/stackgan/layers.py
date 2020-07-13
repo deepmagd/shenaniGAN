@@ -12,6 +12,7 @@ class ResidualLayer(layers.Layer):
         w_init: tf.Tensor,
         bn_init: tf.Tensor,
         activation: Function,
+        first_conv_pad: str="valid"
     ):
         super(ResidualLayer, self).__init__()
         self.filters_in = filters_in
@@ -19,13 +20,14 @@ class ResidualLayer(layers.Layer):
         self.w_init = w_init
         self.bn_init = bn_init
         self.activation = activation
+        self.first_conv_pad = first_conv_pad
 
     def build(self, input_shape):
         self.conv2d_1 = Conv2D(
             filters=self.filters_in,
             kernel_size=(1, 1),
             strides=(1, 1),
-            padding="valid",
+            padding=self.first_conv_pad,
             kernel_initializer=self.w_init,
         )
         self.bn_1 = BatchNormalization(gamma_initializer=self.bn_init)
