@@ -20,7 +20,11 @@ def format_file_name(image_source_dir: str, file_name: str) -> str:
 
 
 def read_pickle(path_to_pickle: str) -> Any:
-    """ Read a pickle file in latin encoding and return the contents """
+    """Read a pickle file in latin encoding and return the contents.
+
+    WARNING: pickle.load() can execute arbitrary code. Only call this
+    function with pickle files from the known dataset sources.
+    """
     with open(path_to_pickle, "rb") as pickle_file:
         content = pickle.load(pickle_file, encoding="latin1")
     return content
@@ -86,10 +90,7 @@ def product_list(num_list: List[Union[int, float]]) -> float:
 
 def mkdir(directory: str):
     """ Create directory if it does not exist. """
-    try:
-        os.makedirs(directory)
-    except OSError:
-        pass
+    os.makedirs(directory, exist_ok=True)
 
 
 def remove_file(file_name: str):

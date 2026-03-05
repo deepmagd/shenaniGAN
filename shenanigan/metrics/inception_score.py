@@ -34,7 +34,7 @@ class InceptionScore(object):
     def score(self, save: bool = False):
         """
         adapted from: https://machinelearningmastery.com/how-to-implement-the-inception-score-from-scratch-for-evaluating-generated-images/
-        """
+        """  # noqa: E501
         self.predictions = np.asarray(self.predictions)
 
         scores = []

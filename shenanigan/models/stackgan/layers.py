@@ -11,7 +11,7 @@ class ResidualLayer(layers.Layer):
         w_init: tf.Tensor,
         bn_init: tf.Tensor,
         activation,
-        first_conv_pad: str="valid"
+        first_conv_pad: str = "valid"
     ):
         super(ResidualLayer, self).__init__()
         self.filters_in = filters_in

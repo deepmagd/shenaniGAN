@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install flake8
+      - run: flake8 shenanigan/ main.py
+
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+      - name: Run security audit
+        # The following CVEs require upgrading TensorFlow to 2.16+ which has breaking
+        # API changes throughout the codebase. They are tracked separately:
+        #   keras CVEs (CVE-2024-55459, CVE-2025-9906, CVE-2025-12058, CVE-2025-12060):
+        #     fixed in keras >= 3.11, bundled with TensorFlow >= 2.16
+        #   CVE-2026-0994 (protobuf): fixed in protobuf >= 5.x, but TF 2.15 requires protobuf < 5
+        run: |
+          pip-audit -r requirements.txt \
+            --ignore-vuln CVE-2024-55459 \
+            --ignore-vuln CVE-2025-9906 \
+            --ignore-vuln CVE-2025-12058 \
+            --ignore-vuln CVE-2025-12060 \
+            --ignore-vuln CVE-2026-0994

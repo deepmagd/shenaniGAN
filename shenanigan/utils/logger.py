@@ -30,7 +30,7 @@ class MetricsLogger(object):
             metric_history_df = metric_history_df[
                 metric_history_df["epoch"] != metrics_dict["epoch"]
             ]
-            metric_history_df = metric_history_df.append(new_metrics_df)
+            metric_history_df = pd.concat([metric_history_df, new_metrics_df])
             remove_file(self.path)
             metric_history_df.to_csv(self.path, index=False)
 

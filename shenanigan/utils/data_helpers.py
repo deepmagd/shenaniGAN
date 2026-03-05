@@ -1,4 +1,4 @@
-from google_drive_downloader import GoogleDriveDownloader as gdd
+import gdown
 import io
 import numpy as np
 import os
@@ -16,6 +16,27 @@ import zipfile
 from shenanigan.utils.utils import format_file_name, mkdir, normalise, read_pickle
 
 NUM_COLOUR_CHANNELS = 3
+
+
+def _safe_tar_extractall(tar, dest):
+    """Extract tar archive, rejecting any members with path traversal."""
+    dest = os.path.realpath(dest)
+    for member in tar.getmembers():
+        member_path = os.path.realpath(os.path.join(dest, member.name))
+        if not member_path.startswith(dest + os.sep):
+            raise ValueError(f"Attempted path traversal in tar: {member.name}")
+    tar.extractall(dest)
+
+
+def _safe_zip_extractall(zf, dest):
+    """Extract zip archive, rejecting any members with path traversal."""
+    dest = os.path.realpath(dest)
+    for member in zf.namelist():
+        member_path = os.path.realpath(os.path.join(dest, member))
+        if not member_path.startswith(dest + os.sep):
+            raise ValueError(f"Attempted path traversal in zip: {member}")
+    zf.extractall(dest)
+
 
 IMAGE_SIZE_CONVERSION = {76: 64, 304: 256}
 
@@ -69,7 +90,7 @@ def download_dataset(dataset: str):
 def download_cub():
     """ Download the birds dataset (CUB-200-2011) and text """
     BIRDS_DATASET_URL = (
-        "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
+        "https://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
     )
 
     cub_download_location = "data/CUB_200_2011.tgz"
@@ -85,7 +106,7 @@ def download_cub():
         mkdir("data/backup")
         shutil.copy(cub_download_location, cub_backup_location)
     tar = tarfile.open(cub_download_location, "r:gz")
-    tar.extractall("data/CUB_200_2011_with_text/images/")
+    _safe_tar_extractall(tar, "data/CUB_200_2011_with_text/images/")
     tar.close()
     os.remove(cub_download_location)
 
@@ -100,7 +121,7 @@ def download_cub():
 def download_flowers():
     """ Download the flowers dataset """
     FLOWERS_DATASET_URL = (
-        "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
+        "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
     )
     print("Downloading the flowers dataset from: {}".format(FLOWERS_DATASET_URL))
 
@@ -109,18 +130,18 @@ def download_flowers():
     flowers_download_loc = pathlib.Path("data/flowers.tgz")
     urllib.request.urlretrieve(FLOWERS_DATASET_URL, flowers_download_loc)
     tar = tarfile.open(flowers_download_loc, "r:gz")
-    tar.extractall(images_save_location)
+    _safe_tar_extractall(tar, images_save_location)
     tar.close()
     os.remove(flowers_download_loc)
 
-    DATA_SPLITS_URL = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
+    DATA_SPLITS_URL = "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/setid.mat"
     data_splits_download_loc = pathlib.Path(
         os.path.join(images_save_location, "setid.mat")
     )
     urllib.request.urlretrieve(DATA_SPLITS_URL, data_splits_download_loc)
 
     IMAGE_LABELS_URL = (
-        "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
+        "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
     )
     image_labels_download_loc = pathlib.Path(
         os.path.join(images_save_location, "imagelabels.mat")
@@ -145,12 +166,12 @@ def download_captions(
         print("Retrieving dataset from: {}".format(backup_location))
         shutil.copy(backup_location, text_download_location)
         with zipfile.ZipFile(backup_location, "r") as zipfd:
-            zipfd.extractall("data/")
+            _safe_zip_extractall(zipfd, "data/")
     else:
         print("Downloading text from Google Drive ID: {}".format(GDRIVE_ID))
-        gdd.download_file_from_google_drive(
-            file_id=GDRIVE_ID, dest_path=text_download_location, unzip=True
-        )
+        gdown.download(id=GDRIVE_ID, output=text_download_location, quiet=False)
+        with zipfile.ZipFile(text_download_location, "r") as zipfd:
+            _safe_zip_extractall(zipfd, "data/")
         mkdir("data/backup")
         shutil.copy(text_download_location, backup_location)
 
@@ -373,7 +394,7 @@ def get_byte_images(
         byte_image = image_to_bytes(new_img)
         large_image_list.append(byte_image)
 
-        new_img.thumbnail(small_image_dims, Image.ANTIALIAS)
+        new_img.thumbnail(small_image_dims, Image.LANCZOS)
         downsampled_byte_image = image_to_bytes(new_img)
         small_image_list.append(downsampled_byte_image)
 
@@ -393,7 +414,7 @@ def get_image(
     bounding_boxes: dict,
     preprocessing: str = "pad",
 ) -> Image:
-    image = Image.open(image_path, "r")
+    image = Image.open(image_path)
     if len(image.size) == 2:
         image = image.convert("RGB")
     if preprocessing == "pad":
