@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+# E203: whitespace before ':' — triggered by valid slice notation (e.g. x[a : b])
+# F401 in __init__.py: intentional public re-exports
+extend-ignore = E203
+per-file-ignores =
+    */__init__.py: F401

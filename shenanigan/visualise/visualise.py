@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from typing import Optional, List
+from typing import Optional
 from PIL import Image
 
 from shenanigan.utils.utils import mkdir, rmdir

@@ -238,6 +238,6 @@ def run(
             stage_1_generator=model_stage1.generator,
         )
 
-        trainer(train_loader, val_loader, num_epochs=settings[f"stage2"]["num_epochs"])
+        trainer(train_loader, val_loader, num_epochs=settings["stage2"]["num_epochs"])
         plotter = LogPlotter(results_dir)
         plotter.learning_curve()

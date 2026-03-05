@@ -37,6 +37,7 @@ def _safe_zip_extractall(zf, dest):
             raise ValueError(f"Attempted path traversal in zip: {member}")
     zf.extractall(dest)
 
+
 IMAGE_SIZE_CONVERSION = {76: 64, 304: 256}
 
 
@@ -393,7 +394,7 @@ def get_byte_images(
         byte_image = image_to_bytes(new_img)
         large_image_list.append(byte_image)
 
-        new_img.thumbnail(small_image_dims, Image.ANTIALIAS)
+        new_img.thumbnail(small_image_dims, Image.LANCZOS)
         downsampled_byte_image = image_to_bytes(new_img)
         small_image_list.append(downsampled_byte_image)
 
