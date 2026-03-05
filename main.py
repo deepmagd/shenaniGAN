@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import sys
 
 import numpy as np
@@ -82,6 +83,11 @@ def main(args):
     )
 
     if args.model == "stackgan":
+        if not re.match(r'^[\w\-]+$', args.name):
+            raise ValueError(
+                f"Invalid model name '{args.name}'. "
+                "Use only letters, digits, underscores, and hyphens."
+            )
         train_loader, val_loader, small_image_dims, _ = create_dataloaders(
             args.dataset_name, default_settings["common"]["batch_size"]
         )

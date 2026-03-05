@@ -10,12 +10,7 @@ from shenanigan.utils.data_helpers import (
     get_record_paths,
 )
 
-DATASETS_DICT = {
-    "birds-with-text": "BirdsWithWordsDataset",
-    "flowers-with-text": "FlowersWithWordsDataset",
-    "xrays": "XRaysDataset",
-}
-DATASETS = list(DATASETS_DICT.keys())
+DATASETS = ["birds-with-text", "flowers-with-text", "xrays"]
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
@@ -178,13 +173,17 @@ class XRaysDataset(StackGANDataset):
             )
 
 
+DATASETS_DICT = {
+    "birds-with-text": BirdsWithWordsDataset,
+    "flowers-with-text": FlowersWithWordsDataset,
+    "xrays": XRaysDataset,
+}
+
+
 def get_dataset(dataset_name: str) -> StackGANDataset:
     """ Get the dataset object which contains information
         about the properties of the dataset
     """
-    if dataset_name in DATASETS:
-        dataset = DATASETS_DICT[dataset_name]
-        print(dataset)
-        return eval(dataset)()
-    else:
+    if dataset_name not in DATASETS_DICT:
         raise Exception("Invalid dataset name {}.".format(dataset_name))
+    return DATASETS_DICT[dataset_name]()
