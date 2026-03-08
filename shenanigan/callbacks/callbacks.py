@@ -26,14 +26,14 @@ class LearningRateDecay(object):
                 "model has no optimizer attribute, cannot run learning rate decay"
             )
 
-        if not hasattr(model.optimizer, "lr"):
+        if not hasattr(model.optimizer, "learning_rate"):
             raise Exception(
-                "model optimizer has no lr attribute, cannot run learning rate decay"
+                "model optimizer has no learning_rate attribute, cannot run learning rate decay"
             )
 
         if ((epoch_num + 1) % self.every_n) == 0:
-            new_lr = model.optimizer.lr * self.decay_factor
+            new_lr = model.optimizer.learning_rate * self.decay_factor
             print(
-                f"Updating model learning rate {float(model.optimizer.lr):.8f} --> {new_lr:.8f}"
+                f"Updating model learning rate {float(model.optimizer.learning_rate):.8f} --> {new_lr:.8f}"
             )
-            model.optimizer.lr.assign(new_lr)
+            model.optimizer.learning_rate.assign(new_lr)
