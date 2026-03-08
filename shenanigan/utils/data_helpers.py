@@ -394,7 +394,7 @@ def get_byte_images(
         byte_image = image_to_bytes(new_img)
         large_image_list.append(byte_image)
 
-        new_img.thumbnail(small_image_dims, Image.LANCZOS)
+        new_img.thumbnail(small_image_dims, Image.Resampling.LANCZOS)
         downsampled_byte_image = image_to_bytes(new_img)
         small_image_list.append(downsampled_byte_image)
 
@@ -421,7 +421,7 @@ def get_image(
         old_size = image.size[:2]
         ratio = max(image_dims) / max(old_size)
         new_size = tuple([int(x * ratio) for x in old_size])
-        image = image.resize(new_size, Image.BICUBIC)
+        image = image.resize(new_size, Image.Resampling.BICUBIC)
         new_img = Image.new("RGB", image_dims)
         new_img.paste(
             image,
@@ -439,7 +439,7 @@ def get_image(
         x2 = min(img.shape[1], cx + crop_size)
         img = img[y1:y2, x1:x2, :]
         new_img = np.array(
-            Image.fromarray(img).resize(image_dims, Image.BICUBIC)
+            Image.fromarray(img).resize(image_dims, Image.Resampling.BICUBIC)
         ).astype("uint8")
         new_img = Image.fromarray(new_img)
     else:
