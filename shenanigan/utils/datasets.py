@@ -11,7 +11,7 @@ from shenanigan.utils.data_helpers import (
 )
 
 DATASETS = ["birds-with-text", "flowers-with-text", "xrays"]
-AUTOTUNE = tf.data.experimental.AUTOTUNE
+AUTOTUNE = tf.data.AUTOTUNE
 
 
 class StackGANDataset(object):

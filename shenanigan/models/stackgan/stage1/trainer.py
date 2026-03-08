@@ -170,16 +170,12 @@ class Stage1Trainer(Trainer):
                 #     break
 
         loss_metrics = {
-            "generator_loss": np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
-            "discriminator_loss": np.asscalar(acc_discriminator_loss.numpy())
-            / (batch_idx + 1),
-            "kl_loss": np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
-            "discriminator_real_loss": np.asscalar(acc_disc_real_loss.numpy())
-            / (batch_idx + 1),
-            "discriminator_wrong_loss": np.asscalar(acc_disc_wrong_loss.numpy())
-            / (batch_idx + 1),
-            "discriminator_fake_loss": np.asscalar(acc_disc_fake_loss.numpy())
-            / (batch_idx + 1),
+            "generator_loss": float(acc_generator_loss) / (batch_idx + 1),
+            "discriminator_loss": float(acc_discriminator_loss) / (batch_idx + 1),
+            "kl_loss": float(acc_kl_loss) / (batch_idx + 1),
+            "discriminator_real_loss": float(acc_disc_real_loss) / (batch_idx + 1),
+            "discriminator_wrong_loss": float(acc_disc_wrong_loss) / (batch_idx + 1),
+            "discriminator_fake_loss": float(acc_disc_fake_loss) / (batch_idx + 1),
         }
 
         return loss_metrics
@@ -289,16 +285,12 @@ class Stage1Trainer(Trainer):
                 #     break
 
         loss_metrics = {
-            "generator_loss": np.asscalar(acc_generator_loss.numpy()) / (batch_idx + 1),
-            "discriminator_loss": np.asscalar(acc_discriminator_loss.numpy())
-            / (batch_idx + 1),
-            "kl_loss": np.asscalar(acc_kl_loss.numpy()) / (batch_idx + 1),
-            "discriminator_real_loss": np.asscalar(acc_disc_real_loss.numpy())
-            / (batch_idx + 1),
-            "discriminator_wrong_loss": np.asscalar(acc_disc_wrong_loss.numpy())
-            / (batch_idx + 1),
-            "discriminator_fake_loss": np.asscalar(acc_disc_fake_loss.numpy())
-            / (batch_idx + 1),
+            "generator_loss": float(acc_generator_loss) / (batch_idx + 1),
+            "discriminator_loss": float(acc_discriminator_loss) / (batch_idx + 1),
+            "kl_loss": float(acc_kl_loss) / (batch_idx + 1),
+            "discriminator_real_loss": float(acc_disc_real_loss) / (batch_idx + 1),
+            "discriminator_wrong_loss": float(acc_disc_wrong_loss) / (batch_idx + 1),
+            "discriminator_fake_loss": float(acc_disc_fake_loss) / (batch_idx + 1),
         }
 
         return loss_metrics
